@@ -1,0 +1,48 @@
+---
+title: "CycleSynch"
+author: "Michael Gurkov"
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::pdf_document:
+    latex_engine: xelatex
+    number_sections: true
+    keep_tex: false
+bibliography: C:\\Users\\Misha\\Documents\\References\\Financial_Cycle-Global_Financial_Cycle.bib
+
+vignette: >
+  %\VignetteIndexEntry{CycleSynch}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,echo = FALSE,
+  message = FALSE,warning = FALSE,
+  comment = "#>"
+)
+```
+
+
+```{r load_package}
+
+devtools::load_all()
+
+
+```
+
+
+```{r Import_gdp_per_capita}
+
+gdp_wdi_per_capita = read.csv(paste0("C:\\Users\\Misha\\Documents\\Data\\",
+                                     "World Bank\\",
+                                     "GDP_per_capita_panel.csv"))
+
+gdp_wdi_per_capita = process.wdi.file(gdp_wdi_per_capita,
+                                      GDP_per_Capita)
+
+```
+
+
+
+The gdp per capita file has `r nrow(gdp_wdi_per_capita)` rows.
