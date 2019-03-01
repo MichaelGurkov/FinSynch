@@ -14,26 +14,23 @@
 
 process.wdi.file = function(temp_file, var_name){
 
-stopifnot("Country.Name" %in%  names(temp_file))
+  stopifnot("Country.Name" %in%  names(temp_file))
 
- var_name = enquo(var_name)
+  temp_file = temp_file %>%
+    select(c(Country.Name, grep("^X", names(.),value = TRUE))) %>%
+    rename(Country = Country.Name)
 
- temp_file = temp_file %>%
-   select(c(Country.Name, grep("^X", names(.),value = TRUE))) %>%
-   rename(Country = Country.Name)
-
- temp_file = temp_file %>%
-   gather(.,key = Year,value = UQ(var_name),-Country) %>%
-   mutate(Year = str_extract(Year, "X[\\d]{4}")) %>%
-   mutate(Year = sub("X","",Year)) %>%
-   mutate(Country = levels(Country)[Country]) %>%
-   mutate(Country = gsub("\\s","_",Country))
+  temp_file = temp_file %>%
+    gather(.,key = Year,value = UQ(var_name),-Country) %>%
+    mutate(Year = str_extract(Year, "X[\\d]{4}")) %>%
+    mutate(Year = sub("X","",Year)) %>%
+    mutate(Country = levels(Country)[Country]) %>%
+    mutate(Country = gsub("\\s","_",Country))
 
 
- temp_file = temp_file %>%
-   mutate(!! quo_name(var_name) := as.numeric(UQ(var_name)))
+  temp_file = temp_file %>%
+    mutate(!! var_name := as.numeric((!!quo(!!sym(var_name)))))
 
- return(temp_file)
+  return(temp_file)
 
 }
-
