@@ -136,3 +136,56 @@ import_wdi_df = function(filepath_list = NULL,
   return(wdi_data)
 
 }
+
+
+#' This helper function imports export import data from
+#' WDI  data base
+#'
+#' @import readxl
+#'
+#' @import dplyr
+#'
+#' @export
+#'
+
+
+import_bis_fin_cycle_df = function(filepath_list = NULL,
+                         countries_vec = NULL){
+
+  if(is.null(filepath_list)){
+
+    filepath_list = list(Credit_GDP =
+                           paste0("C:\\Users\\Misha\\Documents\\Data\\",
+                                  "BIS\\temp_credit_gdp_BIS.rds"),
+                         Total_credit =
+                           paste0("C:\\Users\\Misha\\Documents\\Data\\",
+                                  "BIS\\temp_tot_credit_BIS.rds"),
+                         House =
+                           paste0("C:\\Users\\Misha\\Documents\\Data\\",
+                                  "BIS\\temp_house_bis.rds"))
+
+
+  }
+
+  df = lapply(names(filepath_list), function(temp_name){
+
+    res = read_rds(filepath_list[[temp_name]])
+
+    if(!is.null(countries_vec)){
+
+      res = res %>%
+        filter(Country %in% countries_vec)
+    }
+
+    return(res)
+
+  })
+
+
+  bis_data = df %>%
+    purrr::reduce(full_join, by = c("Country","Date"))
+
+  return(bis_data)
+
+}
+
