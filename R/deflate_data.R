@@ -8,7 +8,8 @@
 #' @export
 
 
-deflate.data = function(df, vars_to_deflate,cpi = NULL){
+deflate.data = function(df, vars_to_deflate,cpi = NULL,
+                        remove_cpi_col = TRUE){
 
   if(is.null(cpi)){cpi = import.bis.cpi.data()}
 
@@ -20,6 +21,8 @@ deflate.data = function(df, vars_to_deflate,cpi = NULL){
 
   df = df %>%
     mutate(!!vars_to_deflate_name := !!vars_to_deflate / US_CPI)
+
+  if(remove_cpi_col){df %>% select(-US_CPI)}
 
   return(df)
 
