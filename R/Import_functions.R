@@ -169,7 +169,7 @@ import_bis_fin_cycle_df = function(filepath_list = NULL,
 
   df = lapply(names(filepath_list), function(temp_name){
 
-    res = read_rds(filepath_list[[temp_name]])
+    res = readRDS(filepath_list[[temp_name]])
 
     if(!is.null(countries_vec)){
 
@@ -180,7 +180,6 @@ import_bis_fin_cycle_df = function(filepath_list = NULL,
     return(res)
 
   })
-
 
   bis_data = df %>%
     purrr::reduce(full_join, by = c("Country","Date"))
