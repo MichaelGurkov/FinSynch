@@ -14,11 +14,10 @@
 
 process.wdi.file = function(temp_file, var_name){
 
-  stopifnot("Country.Name" %in%  names(temp_file))
+  names(temp_file)[grepl("Country\\.Name$",names(temp_file))] == "Country"
 
   temp_file = temp_file %>%
-    select(c(Country.Name, grep("^X", names(.),value = TRUE))) %>%
-    rename(Country = Country.Name)
+  select(c(Country, grep("^X", names(.),value = TRUE)))
 
   temp_file = temp_file %>%
     gather(.,key = Year,value = UQ(var_name),-Country) %>%
