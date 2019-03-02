@@ -11,11 +11,13 @@ get.clean.cycle = function(timeseries, my_pl = 8,
   if(sum(is.na(timeseries)) >=5){return(rep(NA, length(timeseries)))}
 
   if(filter == "bk"){return(bkfilter(timeseries,pl = my_pl,
-                                     pu = my_pu)[["cycle"]])}
+                                     pu = my_pu)
+                            [["cycle"]] / timeseries)}
 
   else if(filter == "cf"){return(cffilter(timeseries,pl = my_pl,
                                           pu = my_pu,
-                                          drift = TRUE)[["cycle"]])}
+                                          drift = TRUE)
+                                 [["cycle"]] / timeseries)}
 
 
 }
