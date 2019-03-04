@@ -85,7 +85,7 @@ import.bis.cpi.data = function(filepath =
 }
 
 
-#' This helper function imports export import data from
+#' This helper function imports GDP and population data from
 #' WDI  data base
 #'
 #' @import readxl
@@ -138,10 +138,7 @@ import_wdi_df = function(filepath_list = NULL,
 }
 
 
-#' This helper function imports export import data from
-#' WDI  data base
-#'
-#' @import readxl
+#' This helper function imports credit data from BIS  data base
 #'
 #' @import dplyr
 #'
@@ -187,4 +184,48 @@ import_bis_fin_cycle_df = function(filepath_list = NULL,
   return(bis_data)
 
 }
+
+
+#' This helper function imports cross border banking from BIS  data base
+#'
+#' @import dplyr
+#'
+#' @export
+#'
+
+
+
+import_cross_border_balance = function(filepath = NULL,
+                                countries_vec = NULL){
+
+  if(is.null(filepath)){
+    filepath = paste0("C:\\Users\\Misha\\Documents\\Data\\BIS",
+                                          "\\temp_credit_flows.rds")
+    }
+
+
+  credit_flows_df = readRDS(filepath)
+
+  credit_flows_df = credit_flows_df %>%
+    filter(Country %in% countries_vec) %>%
+    filter(Counter_Country %in% countries_vec) %>%
+    rename(Balance = Balance.sheet.position) %>%
+    mutate(Date = format(Date,"%Y")) %>%
+    group_by(Date, Country,Counter_Country,Balance) %>%
+    summarise(Avg_Balance = mean(Flow_Val, na.rm = TRUE)) %>%
+    ungroup() %>%
+    mutate(CountryPair = ifelse(Country < Counter_Country,
+                                paste(Country, Counter_Country, sep = "-"),
+                                paste(Counter_Country,Country,
+                                      sep = "-"))) %>%
+    select(Date,CountryPair,Balance,Avg_Balance) %>%
+    ungroup()
+
+
+  return(credit_flows_df)
+
+
+
+}
+
 
