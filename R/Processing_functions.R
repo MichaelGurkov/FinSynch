@@ -114,3 +114,38 @@ normalize.imf.data = function(imf_df,wdi_df, norm_val = "GDP"){
   return(imf_df)
 
 }
+
+
+#' This function merges data required for sensitivity regression
+#'
+#'  @import dplyr
+#'
+
+make.sens.reg.df = function(var_name){
+
+  temp_df = lapply(synch_measures, function(temp_list){
+    temp_list[grep(paste0("^",var_name),
+                   names(temp_list),value = TRUE)]})
+
+  temp_df = unlist(temp_df, recursive = FALSE)
+
+  temp_df = c(temp_df,
+              list(bank_int$bank_pop, bank_int$bank_gdp,
+                          trade_int$trade_pop, trade_int$trade_gdp)) %>%
+  purrr::reduce(inner_join, by = c("Date","CountryPair"),
+                suffix = c("_2","_3"))
+
+  temp_df = append.countrypair.dataframe(temp_df,
+                                         df %>%
+                                           select(Date, Country,
+                                                  GDP_per_Capita_real,
+                                                  Pop)) %>%
+  mutate(LGDP = log(GDP_per_Capita_real_A) * log(GDP_per_Capita_real_B)) %>%
+  mutate(LPop = log(Pop_A) * log(Pop_B)) %>%
+  mutate(DGDP = log(GDP_per_Capita_real_A) - log(GDP_per_Capita_real_B)) %>%
+  select(-ends_with("_A")) %>%
+  select(-ends_with("_B"))
+
+  return(temp_df)
+
+}
