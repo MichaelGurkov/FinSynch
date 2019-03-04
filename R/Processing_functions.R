@@ -85,7 +85,7 @@ normalize.imf.data = function(imf_df,wdi_df, norm_val = "GDP"){
     select(Country,Date, !!enquo(norm_val))
 
   var = names(imf_df)[!names(imf_df) %in% c("Date",
-                                            "CountryPair")]
+                                            "CountryPair", "Balance")]
 
 
   stopifnot(length(var) == 1)
