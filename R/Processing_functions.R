@@ -133,7 +133,7 @@ make.sens.reg.df = function(var_name){
               list(bank_int$bank_pop, bank_int$bank_gdp,
                           trade_int$trade_pop, trade_int$trade_gdp)) %>%
   purrr::reduce(inner_join, by = c("Date","CountryPair"),
-                suffix = c("_2","_3"))
+                suffix = c("_1","_2"))
 
   temp_df = append.countrypair.dataframe(temp_df,
                                          df %>%
@@ -145,6 +145,18 @@ make.sens.reg.df = function(var_name){
   mutate(DGDP = log(GDP_per_Capita_real_A) - log(GDP_per_Capita_real_B)) %>%
   select(-ends_with("_A")) %>%
   select(-ends_with("_B"))
+
+  # Rename
+
+  for(i in c("","_2","_3")){
+
+    names(temp_df)[grep(paste0("ret",i,"$"),
+                        names(temp_df))] = paste0("Ret",i)
+
+    names(temp_df)[grep(paste0("cycle",i,"$"),
+                        names(temp_df))] = paste0("Cycle",i)
+
+  }
 
   return(temp_df)
 
