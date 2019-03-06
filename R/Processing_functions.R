@@ -163,7 +163,8 @@ make.synch.data = function(df,win_len){
 #' @import purrr
 #'
 
-make.sens.reg.df = function(df,bank_int,trade_int,win_len,sector = "GDP"){
+make.sens.reg.df = function(df,bank_int,trade_int,win_len,
+                            sector = "GDP"){
 
   if(sector == "GDP"){
 
@@ -172,33 +173,72 @@ make.sens.reg.df = function(df,bank_int,trade_int,win_len,sector = "GDP"){
                                        GDP_per_Capita_real_ret,
                                        GDP_per_Capita_real_cycle),
                               win_len = win_len)
+
+    temp_df = list(temp_df, bank_int$bank_pop, bank_int$bank_gdp,
+                   trade_int$trade_pop, trade_int$trade_gdp) %>%
+      reduce(full_join, by = c("CountryPair", "Date"))
+
+    temp_df = append.countrypair.dataframe(temp_df, df %>%
+                                             select(Date, Country,
+                                                    GDP_per_Capita_real,
+                                                    Pop))
+
+    temp_df = temp_df %>%
+      mutate(LPop = log(Pop_A) * log(Pop_B)) %>%
+      mutate(LGDP = log(GDP_per_Capita_real_A) * log(GDP_per_Capita_real_B)) %>%
+      select(-ends_with("_A")) %>%
+      select(-ends_with("_B"))
+
+    return(temp_df)
+
   } else {
 
     temp_df = make.synch.data(df %>%
                                 select(Date, Country,Fin_ret,
                                        Fin_cycle),win_len = win_len)
-    }
 
-  temp_df = list(temp_df, bank_int$bank_pop, bank_int$bank_gdp,
-                 trade_int$trade_pop, trade_int$trade_gdp) %>%
-    reduce(full_join, by = c("CountryPair", "Date"))
+    temp_df = list(temp_df, bank_int$bank_pop, bank_int$bank_gdp,
+                   trade_int$trade_pop, trade_int$trade_gdp) %>%
+      reduce(full_join, by = c("CountryPair", "Date"))
 
-  temp_df = append.countrypair.dataframe(temp_df, df %>%
+    temp_df = append.countrypair.dataframe(temp_df, df %>%
                                              select(Date, Country,
                                                     GDP_per_Capita_real,
-                                                    Pop))
+                                                    Pop,FX, Avg_Policy_Rate))
 
-  temp_df = temp_df  %>%
-    mutate(LGDP = log(GDP_per_Capita_real_A) * log(GDP_per_Capita_real_B)) %>%
-    mutate(LPop = log(Pop_A) * log(Pop_B)) %>%
-    mutate(DGDP = log(GDP_per_Capita_real_A) - log(GDP_per_Capita_real_B)) %>%
-    select(-ends_with("_A")) %>%
-    select(-ends_with("_B"))
+    temp_df = temp_df %>%
+      mutate_at(vars(starts_with("GDP")),.funs = list(~log)) %>%
+      mutate_at(vars(starts_with("Pop")),.funs = list(~log)) %>%
+      get.suffix.diff(.) %>%
+      select(-ends_with("_A")) %>%
+      select(-ends_with("_B"))
+
+    return(temp_df)
+
+    }
+
+}
 
 
+#' This function calculates the difference of columns
+#' with given suffixes
 
 
-  return(temp_df)
+get.suffix.diff = function(df, suffix_A = "_A", suffix_B = "_B"){
+
+  a_cols = names(df)[grepl(suffix_A,names(df))]
+
+  a_cols = a_cols[order(a_cols)]
+
+  b_cols = names(df)[grepl(suffix_B,names(df))]
+
+  b_cols = b_cols[order(b_cols)]
+
+  new_cols = gsub(suffix_A,"_diff",a_cols)
+
+  df[,new_cols] = df[,a_cols] - df[,b_cols]
+
+  return(df)
 
 
 }
