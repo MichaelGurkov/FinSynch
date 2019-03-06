@@ -116,48 +116,89 @@ normalize.imf.data = function(imf_df,wdi_df, norm_val = "GDP"){
 }
 
 
-#' This function merges data required for sensitivity regression
+#' This function calculates all the synch measures and merges them
+#' into one dataset named accordingly
 #'
-#'  @import dplyr
+#' @import dplyr
+#'
+#' @import purrr
 #'
 
-make.sens.reg.df = function(var_name){
+make.synch.data = function(df,win_len){
 
-  temp_df = lapply(synch_measures, function(temp_list){
-    temp_list[grep(paste0("^",var_name),
-                   names(temp_list),value = TRUE)]})
+  synch_1_df = df %>%
+    get.synch1.list() %>%
+    purrr::reduce(full_join, by = c("CountryPair", "Date")) %>%
+    rename_at(vars(ends_with("_ret")), .funs = ~"Synch1_ret") %>%
+    rename_at(vars(ends_with("_cycle")), .funs = ~"Synch1_cycle")
 
-  temp_df = unlist(temp_df, recursive = FALSE)
 
-  temp_df = c(temp_df,
-              list(bank_int$bank_pop, bank_int$bank_gdp,
-                          trade_int$trade_pop, trade_int$trade_gdp)) %>%
-  purrr::reduce(inner_join, by = c("Date","CountryPair"),
-                suffix = c("_1","_2"))
+  synch_2_df = df %>%
+    get.synch2.list() %>%
+    purrr::reduce(full_join, by = c("CountryPair", "Date")) %>%
+    rename_at(vars(ends_with("_ret")), .funs = ~"Synch2_ret") %>%
+    rename_at(vars(ends_with("_cycle")), .funs = ~"Synch2_cycle")
 
-  temp_df = append.countrypair.dataframe(temp_df,
-                                         df %>%
-                                           select(Date, Country,
-                                                  GDP_per_Capita_real,
-                                                  Pop)) %>%
-  mutate(LGDP = log(GDP_per_Capita_real_A) * log(GDP_per_Capita_real_B)) %>%
-  mutate(LPop = log(Pop_A) * log(Pop_B)) %>%
-  mutate(DGDP = log(GDP_per_Capita_real_A) - log(GDP_per_Capita_real_B)) %>%
-  select(-ends_with("_A")) %>%
-  select(-ends_with("_B"))
 
-  # Rename
 
-  for(i in c("","_2","_3")){
+  synch_3_df = df  %>%
+    get.synch3.list(.,win_len) %>%
+    purrr::reduce(full_join, by = c("CountryPair", "Date")) %>%
+    rename_at(vars(ends_with("_ret")), .funs = ~"Synch3_ret") %>%
+    rename_at(vars(ends_with("_cycle")), .funs = ~"Synch3_cycle")
 
-    names(temp_df)[grep(paste0("ret",i,"$"),
-                        names(temp_df))] = paste0("Ret",i)
+  temp_df = list(synch_1_df, synch_2_df, synch_3_df) %>%
+    purrr::reduce(full_join, by = c("CountryPair", "Date"))
 
-    names(temp_df)[grep(paste0("cycle",i,"$"),
-                        names(temp_df))] = paste0("Cycle",i)
-
-  }
 
   return(temp_df)
+
+}
+
+
+#' This function constructs full df for sensitivity regression
+#'
+#' @import dplyr
+#'
+#' @import purrr
+#'
+
+make.sens.reg.df = function(df,bank_int,trade_int,win_len,sector = "GDP"){
+
+  if(sector == "GDP"){
+
+    temp_df = make.synch.data(df %>%
+                                select(Date, Country,
+                                       GDP_per_Capita_real_ret,
+                                       GDP_per_Capita_real_cycle),
+                              win_len = win_len)
+  } else {
+
+    temp_df = make.synch.data(df %>%
+                                select(Date, Country,Fin_ret,
+                                       Fin_cycle),win_len = win_len)
+    }
+
+  temp_df = list(temp_df, bank_int$bank_pop, bank_int$bank_gdp,
+                 trade_int$trade_pop, trade_int$trade_gdp) %>%
+    reduce(full_join, by = c("CountryPair", "Date"))
+
+  temp_df = append.countrypair.dataframe(temp_df, df %>%
+                                             select(Date, Country,
+                                                    GDP_per_Capita_real,
+                                                    Pop))
+
+  temp_df = temp_df  %>%
+    mutate(LGDP = log(GDP_per_Capita_real_A) * log(GDP_per_Capita_real_B)) %>%
+    mutate(LPop = log(Pop_A) * log(Pop_B)) %>%
+    mutate(DGDP = log(GDP_per_Capita_real_A) - log(GDP_per_Capita_real_B)) %>%
+    select(-ends_with("_A")) %>%
+    select(-ends_with("_B"))
+
+
+
+
+  return(temp_df)
+
 
 }
