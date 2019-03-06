@@ -1,6 +1,9 @@
 #' This helper function imports export import data from
 #' IMF Direction of Trade data base
 #'
+#' The function returns country pairs formatted in:
+#' small (namewise) country first order
+#'
 #' @import readxl
 #'
 #' @import dplyr
@@ -34,7 +37,7 @@ import_imf_df = function(filepath, filter_countries = NULL){
   temp = temp %>%
     gather(.,key = Date, value = !!quo_name(category),
            -Counter_Country) %>%
-    mutate(CountryPair = ifelse(Counter_Country > country,
+    mutate(CountryPair = ifelse(Counter_Country < country,
                                 paste(Counter_Country,
                                       country, sep = "-"),
                                 paste(country,Counter_Country,
@@ -159,7 +162,13 @@ import_bis_fin_cycle_df = function(filepath_list = NULL,
                                   "BIS\\temp_tot_credit_BIS.rds"),
                          House =
                            paste0("C:\\Users\\Misha\\Documents\\Data\\",
-                                  "BIS\\temp_house_bis.rds"))
+                                  "BIS\\temp_house_bis.rds"),
+                         FX =
+                           paste0("C:\\Users\\Misha\\Documents\\Data\\",
+                                  "BIS\\temp_FX_USD.rds"),
+                         Rate =
+                           paste0("C:\\Users\\Misha\\Documents\\Data\\",
+                                  "BIS\\temp_Policy_Rates.rds"))
 
 
   }
