@@ -20,7 +20,7 @@ get.reg.list = function(reg_df, dep_var_name){
                      "Pop_diff","GDP_per_Capita_real_diff",
                      "FX_diff",sep = "+")
 
-  x_vars_gdp = names(reg_df)[names(reg_df) %in% x_vars_gdp]
+  x_vars_gdp = names(reg_df)[names(reg_df) %in% gdp]
 
   pop_reg = plm(formula(paste(dep_var_name, x_vars_pop, sep = "~")),
                 data = reg_df, model = "within", effect = "twoways")
@@ -42,7 +42,10 @@ get.reg.list = function(reg_df, dep_var_name){
 
 get.sens.reg = function(reg_df){
 
-  dep_vars = names(reg_df)[!grepl("bank|trade|LGDP|LPop|DGDP|CountryPair|Date",
+  dep_vars = names(reg_df)[!grepl(
+    paste("bank","trade","LGDP","LPop","DGDP","CountryPair","Date",
+          "Avg_Policy_Rate_diff","FX_diff","GDP_per_Capita_real_diff",
+          "Pop_diff",sep = "|"),
                            names(reg_df))]
 
   sens_reg = lapply(dep_vars, get.reg.list, reg_df = reg_df)
