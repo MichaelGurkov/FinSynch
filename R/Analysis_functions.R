@@ -10,17 +10,19 @@
 
 get.reg.list = function(reg_df, dep_var_name){
 
-  x_vars_pop = paste("bank_pop","trade_pop","LGDP","LPop",
+  x_vars_pop = c("bank_pop","trade_pop","LGDP","LPop",
                      "Pop_diff","GDP_per_Capita_real_diff",
-                     "FX_diff",sep = "+")
+                     "FX_diff")
 
-  x_vars_pop = names(reg_df)[names(reg_df) %in% x_vars_pop]
+  x_vars_pop = paste(names(reg_df)[names(reg_df) %in% x_vars_pop],
+                     sep = "+")
 
-  x_vars_gdp = paste("bank_gdp","trade_gdp","LGDP","LPop",
+  x_vars_gdp = c("bank_gdp","trade_gdp","LGDP","LPop",
                      "Pop_diff","GDP_per_Capita_real_diff",
-                     "FX_diff",sep = "+")
+                     "FX_diff")
 
-  x_vars_gdp = names(reg_df)[names(reg_df) %in% gdp]
+  x_vars_gdp = paste(names(reg_df)[names(reg_df) %in% x_vars_gdp],
+                     sep = "+")
 
   pop_reg = plm(formula(paste(dep_var_name, x_vars_pop, sep = "~")),
                 data = reg_df, model = "within", effect = "twoways")
