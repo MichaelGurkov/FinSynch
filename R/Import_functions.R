@@ -14,7 +14,7 @@
 #'
 
 
-import_imf_df = function(filepath, filter_countries = NULL){
+import_imf_df = function(filepath, countries_vec = NULL){
 
   category = str_extract(filepath,"-\\s?(\\w*?)_") %>%
     str_replace_all(.,pattern = "[-_\\s]","")
@@ -29,12 +29,8 @@ import_imf_df = function(filepath, filter_countries = NULL){
   names(temp)[1] = "Counter_Country"
 
   temp = temp %>%
-    mutate(Counter_Country = gsub("\\s","_",Counter_Country))
-
-  if(!is.null(filter_countries)){temp = temp %>%
-    filter(Counter_Country %in% filter_countries)}
-
-  temp = temp %>%
+    mutate(Counter_Country = gsub("\\s","_",Counter_Country)) %>%
+    {if(!is.null(countries_vec)) filter(Country %in% countries_vec) else .} %>%
     gather(.,key = Date, value = !!quo_name(category),
            -Counter_Country) %>%
     mutate(CountryPair = ifelse(Counter_Country < country,
@@ -216,7 +212,7 @@ import_cross_border_balance = function(filepath = NULL,
   credit_flows_df = readRDS(filepath)
 
   credit_flows_df = credit_flows_df %>%
-    filter(Country %in% countries_vec) %>%
+    {if(!is.null(countries_vec)) filter(Country %in% countries_vec) else .} %>%
     filter(Counter_Country %in% countries_vec) %>%
     rename(Balance = Balance.sheet.position) %>%
     mutate(Date = format(Date,"%Y")) %>%
@@ -238,3 +234,117 @@ import_cross_border_balance = function(filepath = NULL,
 }
 
 
+#' This function imports indexes of financial trilemma (capital openess)
+#'
+#'  @import readxl
+#'
+#'  @import dplyr
+#'
+
+import.trilemma.ind = function(filepath = paste0(
+  "C:\\Users\\Misha\\Documents\\Data",
+  "\\AizenmanChinnIto\\trilemma_indexes_update2018.xlsx")){
+
+  temp_df = read_xlsx(filepath)
+
+  temp_df = temp_df %>%
+    select(-`IMF-World Bank Country Code`) %>%
+    rename(Date = year) %>%
+    mutate(Date = as.character(Date)) %>%
+    rename(FX_stab = `Exchange Rate Stability Index`) %>%
+    rename(MI_ind = `Monetary Independence Index`) %>%
+    rename(FO_ind = `Financial Openness Index`) %>%
+    rename(Country = `Country Name`) %>%
+    mutate(Country = gsub("\\s","_", Country))
+
+
+
+
+}
+
+
+#' This function imports macroprudential (Cerutti) data
+#'
+#'  @import readxl
+#'
+#'  @import dplyr
+#'
+
+import.macropru.ind = function(filepath = paste0(
+  "C:\\Users\\Misha\\Documents",
+  "\\Data\\Cerutti\\prudential_ind_3.xlsx"),
+  countries_vec = NULL){
+
+  temp_df = read_xlsx(filepath, sheet = "Data")
+
+   df = temp_df %>%
+    select(year, country, PruC, PruC2) %>%
+    rename(Country = country) %>%
+    mutate(Country = gsub("\\s","_", Country)) %>%
+    {if(!is.null(countries_vec)) filter(Country %in% countries_vec) else .} %>%
+    rename(Date = year) %>%
+    mutate(Date = as.character(Date)) %>%
+    group_by(Date, Country) %>%
+    summarise_all(.,.funs = list(~max))
+
+
+  return(df)
+
+
+}
+
+
+#' This function imports capital account openess (Chinn Ito) data
+#'
+#'  @import readxl
+#'
+#'  @import dplyr
+#'
+
+import.kaopen.ind = function(filepath = paste0(
+  "C:\\Users\\Misha\\Documents\\Data\\Chin-Ito\\kaopen_2016.xls"),
+  countries_vec = NULL){
+
+  temp_df = read_xls(filepath)
+
+  df = temp_df %>%
+    select(year, country_name, kaopen, ka_open) %>%
+    rename(Country = country_name) %>%
+    mutate(Country = gsub("\\s","_", Country)) %>%
+    {if(!is.null(countries_vec)) filter(Country %in% countries_vec) else .} %>%
+    rename(Date = year) %>%
+    mutate(Date = as.character(Date))
+
+
+  return(df)
+
+
+}
+
+
+#' This function imports financial development data
+#'
+#'  @import readxl
+#'
+#'  @import dplyr
+#'
+
+import.fin.dev.ind = function(filepath = paste0(
+  "C:\\Users\\Misha\\Documents\\Data\\Svirydzenka\\FinDev.xlsx"),
+  countries_vec = NULL){
+
+  temp_df = read_xlsx(filepath)
+
+  df = temp_df %>%
+    select(year, country, FD, FI) %>%
+    rename(Country = country) %>%
+    mutate(Country = gsub("\\s","_", Country)) %>%
+    {if(!is.null(countries_vec)) filter(Country %in% countries_vec) else .} %>%
+    rename(Date = year) %>%
+    mutate(Date = as.character(Date))
+
+
+  return(df)
+
+
+}
