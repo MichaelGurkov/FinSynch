@@ -30,7 +30,7 @@ import_imf_df = function(filepath, countries_vec = NULL){
 
   temp = temp %>%
     mutate(Counter_Country = gsub("\\s","_",Counter_Country)) %>%
-    {if(!is.null(countries_vec)) filter(Country %in% countries_vec) else .} %>%
+    {if(!is.null(countries_vec)) filter(.,Counter_Country %in% countries_vec) else .} %>%
     gather(.,key = Date, value = !!quo_name(category),
            -Counter_Country) %>%
     mutate(CountryPair = ifelse(Counter_Country < country,
@@ -212,7 +212,7 @@ import_cross_border_balance = function(filepath = NULL,
   credit_flows_df = readRDS(filepath)
 
   credit_flows_df = credit_flows_df %>%
-    {if(!is.null(countries_vec)) filter(Country %in% countries_vec) else .} %>%
+    {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec) else .} %>%
     filter(Counter_Country %in% countries_vec) %>%
     rename(Balance = Balance.sheet.position) %>%
     mutate(Date = format(Date,"%Y")) %>%
@@ -281,7 +281,7 @@ import.macropru.ind = function(filepath = paste0(
     select(year, country, PruC, PruC2) %>%
     rename(Country = country) %>%
     mutate(Country = gsub("\\s","_", Country)) %>%
-    {if(!is.null(countries_vec)) filter(Country %in% countries_vec) else .} %>%
+    {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec) else .} %>%
     rename(Date = year) %>%
     mutate(Date = as.character(Date)) %>%
     group_by(Date, Country) %>%
@@ -311,7 +311,7 @@ import.kaopen.ind = function(filepath = paste0(
     select(year, country_name, kaopen, ka_open) %>%
     rename(Country = country_name) %>%
     mutate(Country = gsub("\\s","_", Country)) %>%
-    {if(!is.null(countries_vec)) filter(Country %in% countries_vec) else .} %>%
+    {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec) else .} %>%
     rename(Date = year) %>%
     mutate(Date = as.character(Date))
 
@@ -339,7 +339,7 @@ import.fin.dev.ind = function(filepath = paste0(
     select(year, country, FD, FI) %>%
     rename(Country = country) %>%
     mutate(Country = gsub("\\s","_", Country)) %>%
-    {if(!is.null(countries_vec)) filter(Country %in% countries_vec) else .} %>%
+    {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec) else .} %>%
     rename(Date = year) %>%
     mutate(Date = as.character(Date))
 
