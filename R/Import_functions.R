@@ -22,7 +22,22 @@ import_imf_df = function(filepath, countries_vec = NULL){
   country = str_extract(filepath,"(\\w*?)\\s-") %>%
     str_replace_all(.,pattern = "[-\\s]","")
 
-  my_range = ifelse(country == "Belgium","B7:W219","B7:AP215")
+  # my_range = ifelse(country == "Belgium","B7:W219","B7:AP215")
+
+ if(country == "Belgium"){
+
+   my_range = "B7:W219"
+
+ } else if(country == "Czech_Republic"){
+
+   my_range = "B7:AB219"
+
+ } else if(country == "Luxemburg"){
+
+   my_range = "B7:X217"
+
+ } else {my_range ="B7:AP215"}
+
 
   temp = suppressMessages(read_xlsx(filepath,range = my_range))
 
@@ -38,7 +53,8 @@ import_imf_df = function(filepath, countries_vec = NULL){
                                       country, sep = "-"),
                                 paste(country,Counter_Country,
                                       sep = "-"))) %>%
-    select(Date, CountryPair, !!quo_name(category))
+    select(Date, CountryPair, !!quo_name(category)) %>%
+    mutate(!!quo_name(category) := str_remove(!!quo(!!sym(category)),"e"))
 
   return(temp)
 
