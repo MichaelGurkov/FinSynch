@@ -1,0 +1,33 @@
+---
+title: "Identifying the Financial Cycle"
+institute: "Bank of Israel \\newline Research Department, Finance Division"
+author: "Michael Gurkov"
+date: "August 15, 2018"
+classoption: t
+output:
+  beamer_presentation:
+    keep_tex: true
+    includes:
+      in_header: GlobalFinCyclePreamble.tex
+    latex_engine: xelatex
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# Motivation
+
+\begin{itemize}
+  \item
+  Kalemi-Ozcan et all (Journal of Finance, 2013) find \textbf{negative} association between financial integration and business cycles synchronization
+
+
+\end{itemize}
