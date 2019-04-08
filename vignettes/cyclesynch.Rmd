@@ -28,21 +28,960 @@ knitr::opts_chunk$set(
 
 devtools::load_all()
 
+library(ggplot2)
+
+library(foreign)
+
+library(plm)
+
+library(stargazer)
+
+library(sandwich)
+
+library(clubSandwich)
+
+library(lmtest)
+
+library(purrr)
 
 ```
 
 
-```{r Import_gdp_per_capita}
+```{r params_setup}
 
-gdp_wdi_per_capita = read.csv(paste0("C:\\Users\\Misha\\Documents\\Data\\",
-                                     "World Bank\\",
-                                     "GDP_per_capita_panel.csv"))
+oecd_countries_vec = c("Australia","Austria","Belgium","Canada","Chile",
+                  "Czech_Republic","Denmark","Estonia","Finland","France",
+                  "Germany","Greece","Hungary", "Iceland","Ireland",
+                  "Israel","Italy","Japan","Korea","Latvia",
+                  "Lithuania","Luxembourg","Mexico","Netherlands",
+                  "New_Zealand","Norway","Poland","Portugal",
+                  "Slovak_Republic","Slovenia","Spain","Sweden",
+                  "Switzerland","Turkey","United_Kingdom"
+                  ,"United_States")
 
-gdp_wdi_per_capita = process.wdi.file(gdp_wdi_per_capita,
-                                      GDP_per_Capita)
+strong_countries = c("Australia","Austria","Belgium","Canada",
+                  "Switzerland","Germany","Denmark","Spain",
+                  "Finland","France","United_Kingdom","Ireland",
+                  "Italy","Japan","Netherlands","Portugal",
+                  "Sweden","United_States")
+
+weak_countries = oecd_countries_vec[!oecd_countries_vec %in% strong_countries]
+
+
+strong_countries_pairs = apply(combn(strong_countries,2), 2,
+                        function(temp_col){
+                          ifelse(temp_col[1]<temp_col[2],
+                                 paste(temp_col[1],temp_col[2],sep = "-"),
+                                 paste(temp_col[2],temp_col[1],sep = "-"))})
+
+weak_countries_pairs = apply(combn(weak_countries,2), 2,
+                        function(temp_col){
+                          ifelse(temp_col[1]<temp_col[2],
+                                 paste(temp_col[1],temp_col[2],sep = "-"),
+                                 paste(temp_col[2],temp_col[1],sep = "-"))})
+
+oecd_countries_pairs = apply(combn(oecd_countries_vec,2), 2,
+                        function(temp_col){
+                          ifelse(temp_col[1]<temp_col[2],
+                                 paste(temp_col[1],temp_col[2],sep = "-"),
+                                 paste(temp_col[2],temp_col[1],sep = "-"))})
+
+cross_country_pairs = oecd_countries_pairs[!oecd_countries_pairs %in% strong_countries_pairs & !oecd_countries_pairs %in% weak_countries_pairs]
+
+
+```
+
+
+```{r Import_data}
+
+
+wdi_data = import_wdi_df(NULL,countries_vec = oecd_countries_vec) %>%
+  rename(Date = Year) %>% 
+  mutate_at(.,vars(starts_with("GDP")),.funs = list(~./1000)) %>% 
+  deflate.data(.,vars_to_deflate = "GDP") %>% 
+  deflate.data(.,vars_to_deflate = "GDP_per_Capita") %>% 
+  select(-GDP,-GDP_per_Capita )
+
+
+bis_data = import_bis_fin_cycle_df(filepath_list = list(
+                         Total_credit =
+                           paste0("C:\\Users\\Misha\\Documents\\Data\\",
+                                  "BIS\\temp_tot_credit_BIS.rds"),
+                         House =
+                           paste0("C:\\Users\\Misha\\Documents\\Data\\",
+                                  "BIS\\temp_house_bis.rds")),
+                         countries_vec = oecd_countries_vec) %>% 
+  group_by(Country, Date = format(Date, "%Y")) %>% 
+  summarise_all(.,.funs = mean, na.rm = TRUE) %>%
+  deflate.data(.,vars_to_deflate = "TotalCredit") %>% 
+  select(-TotalCredit)
+
+df = full_join(wdi_data, bis_data)
+
+df = df %>% 
+  filter(Date >=1978 & Date <= 2017) %>% 
+  group_by(Country) %>% 
+  mutate_at(.vars = c("GDP_per_Capita_real",
+                      "GDP_real", "TotalCredit_real",
+                           "HousePrice"),
+            .funs = list(ret = ~c(NA,diff(log(.))))) %>% 
+  mutate_at(.vars = c("TotalCredit_real","HousePrice"),
+            .funs = list(fin_cycle = ~ get.clean.cycle(.,filter = "cf"))) %>%
+  mutate(GDP_per_Capita_real_cycle = get.clean.cycle(
+    GDP_per_Capita_real,my_pl = 2,my_pu = 8)) %>%
+  mutate(Fin_ret = rowMeans(data.frame(TotalCredit_real_ret,
+                                      HousePrice_ret),na.rm = TRUE),
+         Fin_cycle = rowMeans(data.frame(TotalCredit_real_fin_cycle,
+                                      HousePrice_fin_cycle),na.rm = TRUE)) %>% 
+  select(Country, Date, Pop, GDP_per_Capita_real,GDP_real,GDP_real_ret,
+         GDP_per_Capita_real_ret,Fin_ret)
+
+rm(wdi_data, bis_data)
+
+```
+
+
+```{r Import_IMF_Data}
+
+export_df = lapply(list.files(paste0("C:\\Users\\Misha\\Documents\\Data",
+                                     "\\IMF\\Export-Import\\Export"),
+                              full.names = TRUE),
+                   import_imf_df,
+                   countries_vec = oecd_countries_vec) %>% 
+  bind_rows() %>% 
+  mutate(Exports = as.numeric(Exports)) %>% 
+  group_by(Date, CountryPair) %>% 
+  summarise(Exports = sum(Exports, na.rm = TRUE))
+
+
+import_df = lapply(list.files(paste0("C:\\Users\\Misha\\Documents\\Data",
+                                     "\\IMF\\Export-Import\\Import"),
+                              full.names = TRUE),
+                   import_imf_df,
+                   countries_vec = oecd_countries_vec) %>% 
+  bind_rows() %>% 
+  mutate(Imports = as.numeric(Imports)) %>%
+  group_by(Date, CountryPair) %>% 
+  summarise(Imports = sum(Imports, na.rm = TRUE))
+
+trade_df = full_join(export_df,import_df) %>% 
+  gather(.,key = Balance, value = Trade, -Date, - CountryPair) %>% 
+  deflate.data(.,vars_to_deflate = "Trade") %>% 
+  select(-Trade)
+
+
+trade_pop = trade_df %>%
+  ungroup() %>% 
+  normalize.imf.data(.,wdi_df = df[,c("Date","Country", "Pop")],
+                     norm_val = "Pop") %>%
+  group_by(Date, CountryPair) %>%
+  summarise(trade_pop = mean(log(Trade_real), na.rm = TRUE)) %>%
+  filter(!is.na(trade_pop)) %>% 
+  filter(is.finite(trade_pop))
+
+trade_gdp = trade_df %>%
+  ungroup() %>% 
+  normalize.imf.data(.,wdi_df = df[,c("Date","Country", "GDP_real")],
+                     norm_val = "GDP_real") %>%
+  group_by(Date, CountryPair) %>%
+  summarise(trade_gdp = mean(log(Trade_real), na.rm = TRUE)) %>%
+  filter(!is.na(trade_gdp)) %>% 
+  filter(is.finite(trade_gdp))
+
+trade_int = list(trade_pop = trade_pop, trade_gdp = trade_gdp)
+
+
+rm(export_df, import_df, trade_gdp, trade_pop, trade_df)
+
+
+
+```
+
+
+```{r Import_trilemma_data}
+
+df = left_join(df, import.trilemma.ind(),
+               by = c("Country","Date"))
+
+```
+
+
+```{r Import_macroprudata, eval=FALSE}
+
+df = left_join(df, import.macropru.ind(),
+               by = c("Country","Date"))
+
+
+
+```
+
+
+```{r Import_fin_development_data}
+
+df = left_join(df, import.fin.dev.ind(),
+               by = c("Country","Date"))
+
+
+
+```
+
+
+```{r calculate_bank_integration_measures, cache=TRUE}
+
+
+bank_balance = import_cross_border_balance(NULL,
+                                   countries_vec = oecd_countries_vec) %>%
+  deflate.data(.,vars_to_deflate = "Avg_Balance") %>%
+  select(-Avg_Balance)
+
+bank_gdp = bank_balance %>%
+  normalize.bis.data(.,wdi_df = df[,c("Date","Country", "GDP_real")],
+                     norm_val = "GDP_real") %>%
+  group_by(Date, CountryPair) %>%
+  summarise(bank_gdp = mean(log(Avg_Balance_real), na.rm = TRUE)) %>%
+  filter(!is.na(bank_gdp))
+
+bank_pop = bank_balance %>%
+  normalize.bis.data(.,wdi_df = df[,c("Date","Country", "Pop")],
+                     norm_val = "Pop") %>%
+  group_by(Date, CountryPair) %>%
+  summarise(bank_pop = mean(log(Avg_Balance_real), na.rm = TRUE)) %>%
+  filter(!is.na(bank_pop))
+
+
+bank_int = list(bank_pop = bank_pop, bank_gdp = bank_gdp)
+
+rm(bank_pop, bank_gdp)
 
 ```
 
 
 
-The gdp per capita file has `r nrow(gdp_wdi_per_capita)` rows.
+<!-- Business data process -->
+
+```{r make_gdp_reg_df, cache=TRUE, eval=FALSE}
+
+short_df = df %>% 
+  filter(Country %in% strong_countries) %>% 
+  filter(Date >=1978 & Date <= 2006)
+
+gdp_reg_df = make.sens.reg.df(df = short_df,bank_int = bank_int,
+                              trade_int = trade_int, win_len = 5)
+
+```
+
+
+```{r panel_regression_gdp, eval=FALSE}
+
+
+gdp_reg_df = pdata.frame(gdp_reg_df,index = c("CountryPair","Date"))
+
+between_reg = apply(expand.grid(paste0("Synch",c(1,2),"_ret"),
+                  paste0("bank_",c("pop","gdp"))), 1,
+      function(temp_row){
+        
+        plm(formula = formula(paste(temp_row[1],"~",temp_row[2])),
+            data = gdp_reg_df, model = "between")
+      })
+
+
+within_reg = apply(expand.grid(paste0("Synch",c(1,2),"_ret"),
+                  paste0("bank_",c("pop","gdp"))), 1,
+      function(temp_row){
+        
+        plm(formula = formula(paste(temp_row[1],"~",temp_row[2])),
+            data = gdp_reg_df, model = "within",effect = "twoways")
+      })
+
+```
+
+
+<!-- Replication of methodology on financial data -->
+
+```{r make_fin_reg_df_rep, cache=TRUE, eval=TRUE}
+
+fin_reg_df_rep = make.sens.reg.df(df = df %>% 
+  filter(Country %in% strong_countries) %>% 
+  filter(Date >=1978 & Date <= 2006),
+  bank_int = bank_int,
+  trade_int = trade_int, win_len = 5,
+  sector = "FIN")
+
+
+```
+
+
+```{r panel_regression_fin_rep}
+
+
+fin_reg_df_rep = pdata.frame(fin_reg_df_rep,index = c("CountryPair","Date"))
+
+between_reg_fin_rep = apply(expand.grid(paste0("Synch",c(1,2),"_ret"),
+                  paste0("bank_",c("pop","gdp"))), 1,
+      function(temp_row){
+        
+        plm(formula = formula(paste(temp_row[1],"~",temp_row[2])),
+            data = fin_reg_df_rep, model = "between")
+      })
+
+
+within_reg_fin_rep = apply(expand.grid(paste0("Synch",c(1,2),"_ret"),
+                  paste0("bank_",c("pop","gdp"))), 1,
+      function(temp_row){
+        
+        plm(formula = formula(paste(temp_row[1],"~",temp_row[2])),
+            data = fin_reg_df_rep, model = "within",effect = "twoways")
+      })
+
+```
+
+
+<!-- Financial data process -->
+
+```{r make_fin_oecd_reg_df}
+
+fin_reg_df = df %>%
+  filter(Country %in% oecd_countries_vec) %>% 
+  select(Date, Country,Fin_ret) %>% 
+  get.neg.abs.diff()
+
+
+fin_reg_df = list(fin_reg_df,
+                       bank_int$bank_gdp, trade_int$trade_gdp) %>% 
+  reduce(full_join, by = c("Date","CountryPair"))
+
+
+fin_reg_df = append.countrypair.dataframe(fin_reg_df,
+                                          df %>%
+                                            select(Date,Country,
+                                                   FD,
+                                                   FX_stab,
+                                                   MI_ind,
+                                                   FO_ind))
+
+fin_reg_df = fin_reg_df %>% 
+  rowwise() %>% 
+  mutate(FX_stab_avg = mean(c(FX_stab_A,FX_stab_B), na.rm = TRUE)) %>% 
+  mutate(FO_ind_tot = sum(c(FO_ind_A,FO_ind_B), na.rm = TRUE)) %>% 
+  mutate(MI_ind_tot = sum(c(MI_ind_A,MI_ind_B), na.rm = TRUE)) %>% 
+  mutate(FD_avg = mean(c(FD_A, FD_B), na.rm = TRUE)) %>% 
+  select(-ends_with("_A")) %>% 
+  select(-ends_with("_B")) %>% 
+  filter_all(all_vars(!is.infinite(.)))
+
+rm(bank_int, trade_int)
+
+```
+
+
+\section{Descriptive Statistics}
+
+```{r country_table_summary, results="asis"}
+
+table_list = list(df %>%
+                    ungroup() %>%
+                    select(GDP_per_Capita_real, FX_stab, FD, FI) %>% 
+                    as.data.frame(),
+                  df %>%
+                    ungroup() %>%
+                    filter(Country %in% strong_countries) %>%
+                    select(GDP_per_Capita_real, FX_stab, FD, FI) %>% 
+                    as.data.frame(),
+                  df %>%
+                    ungroup() %>%
+                    filter(Country %in% weak_countries) %>%
+                    select(GDP_per_Capita_real, FX_stab, FD, FI) %>% 
+                    as.data.frame())
+
+
+
+
+stargazer(table_list,
+          header =FALSE, summary = rep(TRUE,3),
+          title = c("All","Rich","Poor"),
+          summary.stat = c("max","min","mean","median","sd","n"))
+
+rm(table_list)
+
+```
+
+Table present the descriptive statistics of the two (Strong and Weak) samples.
+We can see that the Strong sample is characterized by higher (on average) GDP per capita and higher financial oppeness and development indicators.
+
+
+```{r countrypair_table_summary, results="asis"}
+
+table_list = list(fin_reg_df %>%
+                    ungroup() %>%
+                    select(bank_gdp,trade_gdp,FX_stab_avg,FO_ind_tot,
+                           FD_avg,MI_ind_tot) %>% 
+                    as.data.frame(),
+                  fin_reg_df %>%
+                    ungroup() %>%
+                    filter(CountryPair %in% strong_countries_pairs) %>%
+                    select(bank_gdp,trade_gdp,FX_stab_avg,FO_ind_tot,
+                           FD_avg,MI_ind_tot) %>% 
+                    as.data.frame(),
+                  fin_reg_df %>%
+                    ungroup() %>%
+                    filter(CountryPair %in% weak_countries_pairs) %>%
+                    select(bank_gdp,trade_gdp,FX_stab_avg,FO_ind_tot,
+                           FD_avg,MI_ind_tot) %>% 
+                    as.data.frame())
+
+
+
+
+stargazer(table_list,
+          header =FALSE, summary = rep(TRUE,3),
+          title = c("All","Rich","Poor"),
+          summary.stat = c("max","min","mean","median","sd","n"))
+
+rm(table_list)
+
+```
+
+The same characteristics are present at the country-pair level : the strong country pairs are more financialy developed.
+
+```{r plot_FX_Stab, eval=FALSE}
+
+plot_df = df %>%
+         filter(Country %in% oecd_countries_vec) %>%
+         select(Country, Date, FX_stab) %>% 
+         group_by(Country) %>% 
+         summarise(Avg_FX_Stab = mean(FX_stab, na.rm = TRUE)) %>% 
+         arrange(desc(Avg_FX_Stab))
+
+plot_title = paste0("Average Exchange rate stability index",
+                    "\n (",
+                    paste0(range(df$Date), collapse = "-"),")")
+
+ggplot(plot_df,
+       aes(x = reorder(Country, Avg_FX_Stab), y = Avg_FX_Stab,
+           fill = ifelse(Country %in% countries_vec, "Old","New"))) + 
+  geom_bar(stat = "identity") + 
+  coord_flip() + 
+  scale_fill_manual(values = c("magenta" , "gray")) + 
+  theme_bw() + 
+  labs(title = plot_title ,
+       x = "", y = "") + 
+  theme(legend.position = "bottom",
+        plot.title = element_text(hjust = 0.5),
+        legend.title = element_blank())
+
+
+rm(plot_df, plot_title)
+
+```
+
+
+```{r plot_FO_Ind, eval=FALSE}
+
+plot_df = df %>%
+         filter(Country %in% oecd_countries_vec) %>%
+         select(Country, Date, FO_ind) %>% 
+         group_by(Country) %>% 
+         summarise(Avg_FO_ind = mean(FO_ind, na.rm = TRUE)) %>% 
+         arrange(desc(Avg_FO_ind))
+
+plot_title = paste0("Average Financial Openess index",
+                    "\n (",
+                    paste0(range(df$Date), collapse = "-"),")")
+
+ggplot(plot_df,
+       aes(x = reorder(Country, Avg_FO_ind), y = Avg_FO_ind,
+           fill = ifelse(Country %in% countries_vec, "Old","New"))) + 
+  geom_bar(stat = "identity") + 
+  coord_flip() + 
+  scale_fill_manual(values = c("magenta" , "gray")) + 
+  theme_bw() + 
+  labs(title = plot_title ,
+       x = "", y = "") + 
+  theme(legend.position = "bottom",
+        plot.title = element_text(hjust = 0.5),
+        legend.title = element_blank())
+
+
+rm(plot_df, plot_title)
+
+```
+
+
+```{r plot_FD_avg, eval=FALSE}
+
+plot_df = df %>%
+         filter(Country %in% oecd_countries_vec) %>%
+         select(Country, Date, FD) %>% 
+         group_by(Country) %>% 
+         summarise(Avg_FD = mean(FD, na.rm = TRUE)) %>% 
+         arrange(desc(Avg_FD))
+
+plot_title = paste0("Average Financial Development index",
+                    "\n (",
+                    paste0(range(df$Date), collapse = "-"),")")
+
+ggplot(plot_df,
+       aes(x = reorder(Country, Avg_FD), y = Avg_FD,
+           fill = ifelse(Country %in% countries_vec, "Old","New"))) + 
+  geom_bar(stat = "identity") + 
+  coord_flip() + 
+  scale_fill_manual(values = c("magenta" , "gray")) + 
+  theme_bw() + 
+  labs(title = plot_title ,
+       x = "", y = "") + 
+  theme(legend.position = "bottom",
+        plot.title = element_text(hjust = 0.5),
+        legend.title = element_blank())
+
+
+rm(plot_df, plot_title)
+
+```
+
+
+\section{Financial cycle synchronization}
+
+This section deals with synchronization of Financial cycles across countries.
+
+```{r plot_between_model}
+
+ggplot(fin_reg_df %>% 
+         select(CountryPair, Fin_ret, bank_gdp) %>% 
+         group_by(CountryPair) %>% 
+         summarise_all(.,.funs = list(.~mean), na.rm = TRUE),
+       aes(x = bank_gdp, y = Fin_ret * 100,
+           color = ifelse(CountryPair %in% strong_countries_pairs,
+                         "Strong countrypairs","Other"))) + 
+  geom_point() + 
+  geom_smooth(method = "lm",se = FALSE) +
+  theme_bw() + 
+  labs(title = paste0("Average synchronization of financial growth rates",
+                      "\n (Between countrypairs)"),
+       y = "Growth rate negative difference (percent)",
+       x = "Cross border bank balance to gdp") + 
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position = "bottom",
+        legend.title = element_blank())
+
+
+```
+
+
+```{r plot_within_model}
+
+plot_countrypair = "Netherlands-Spain"
+
+ggplot(fin_reg_df %>% 
+         filter(CountryPair == plot_countrypair),
+       aes(x = bank_gdp, y = Fin_ret * 100)) + 
+  geom_point() + 
+  geom_smooth(method = "lm") +
+  theme_bw() + 
+  labs(title = paste0("Average synchronization of financial growth rates",
+                      "\n (Within ",plot_countrypair,")"),
+       y = "Growth rate negative difference (percent)",
+       x = "Cross border bank balance to gdp") + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+rm(plot_countrypair)
+
+```
+
+
+
+```{r fin_reg_calculate}
+
+fin_reg_list = lapply(list(NULL,
+                           strong_countries_pairs,
+                           weak_countries_pairs,
+                           cross_country_pairs,
+                           c(cross_country_pairs, weak_countries_pairs)),
+                      function(temp_vec){
+                        
+                        form = formula(Fin_ret ~ bank_gdp + trade_gdp +
+                                                FO_ind_tot + FX_stab_avg + 
+                                                FD_avg + MI_ind_tot)
+                        
+                        reg_df = fin_reg_df %>% 
+                          {if(!is.null(temp_vec)) filter(.,CountryPair %in%
+                                                           temp_vec) else .}
+
+                        temp_reg = plm(formula = form,
+                            model = "within",effect = "twoways",
+                            data = reg_df)
+                        
+                        return(temp_reg)
+                        
+                        })
+
+
+```
+
+
+```{r output_fin_reg, results="asis"}
+
+stargazer(fin_reg_list, header = FALSE, dep.var.labels = c("","","","",""),
+          column.labels = c("All","Strong","Weak","Cross","Cross and Weak"),
+          column.sep.width = "2pt",omit.stat = c("f","adj.rsq"))
+
+```
+
+
+\newpage
+
+\subsection{Credit direction test}
+
+```{r make_credit_dir_data, eval=FALSE}
+
+
+credit_flows_df = readRDS(paste0("C:\\Users\\Misha\\Documents\\Data\\BIS",
+                                          "\\temp_credit_flows.rds")) %>%
+  {if(!is.null(countries_vec)) filter(.,Country %in% oecd_countries_vec) else .} %>%
+  rename(Balance = Balance.sheet.position) %>%
+  # filter(Balance == "Total claims") %>% 
+  mutate(Date = format(Date,"%Y")) %>% 
+  group_by(Date, Country,Counter_Country,Balance) %>% 
+  summarise(Avg_Val = mean(Flow_Val, na.rm = TRUE)) %>% 
+  ungroup()
+
+
+real_credit_flows_df = credit_flows_df %>% 
+  deflate.data(.,vars_to_deflate = "Avg_Val") %>% 
+  unite(.,CountryPair,sep = "-", Country, Counter_Country) %>% 
+  select(-Avg_Val)
+
+norm_credit_data = real_credit_flows_df %>%
+  normalize.bis.data(.,wdi_df = df[,c("Date","Country", "GDP_real")],
+                     norm_val = "GDP_real") %>% 
+  group_by(Date, CountryPair) %>% 
+  summarise(Avg_Val_real = sum(Avg_Val_real, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  separate(.,col = CountryPair, into = c("Country_A","Country_B"),
+           sep = "-")
+  
+
+
+credit_dir_df = fin_reg_df %>% 
+  select(Date, CountryPair, Fin_ret) %>% 
+  separate(.,col = CountryPair, into = c("Country_A","Country_B"),
+           sep = "-") %>% 
+  left_join(.,norm_credit_data,
+                          by = c("Country_A" = "Country_A",
+                                 "Country_B" = "Country_B",
+                                 "Date" = "Date")) %>% 
+  left_join(.,norm_credit_data,
+                          by = c("Country_A" = "Country_B",
+                                 "Country_B" = "Country_A",
+                                 "Date" = "Date"), 
+            suffix = c("_in","_out")) %>% 
+  unite(.,CountryPair,sep = "-",Country_A, Country_B) %>% 
+  select(Date, CountryPair,Fin_ret,Avg_Val_real_in,Avg_Val_real_out)
+
+
+credit_dir_df = pdata.frame(credit_dir_df,index = c("CountryPair","Date"))
+
+
+```
+
+
+```{r output_credit_dir_reg, results="asis", eval=FALSE}
+
+stargazer(plm(formula = formula("Fin_ret~Avg_Val_real_in + Avg_Val_real_out"),
+            data = credit_dir_df,effect = "twoways",model = "within"),
+          header = FALSE,dep.var.labels = "")
+
+
+```
+
+\newpage
+
+\section{Financial and Business cycle Interaction}
+
+\section{Business cycle synchronization}
+
+This part mainly follows "Financial regulation..." in order to make sure that at least qualitative results are preserved. 
+
+
+```{r plot_synch_measures_gdp_cycle, cache=TRUE, eval=FALSE}
+
+ggplot(gdp_reg_df %>% 
+         select(Date, CountryPair, Synch1_ret, Synch2_ret) %>% 
+         gather(.,key = Indicator, value = Synch, -Date, -CountryPair) %>% 
+         group_by(Date, Indicator) %>% 
+         summarise(Avg_synch = mean(Synch, na.rm = TRUE)) %>% 
+         ungroup() %>% 
+         filter(complete.cases(.)),
+       aes(x = Date, y = Avg_synch, linetype = Indicator,
+           group = Indicator)) + 
+  geom_line() + 
+  theme_bw() + 
+  labs(title = "Average synchronization of business growth rates",
+       y = "", x = "") + 
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 45, vjust = 0.5),
+        plot.title = element_text(hjust = 0.5),
+        legend.title = element_blank())
+
+
+```
+
+
+```{r Output_panel_reg_gdp, results="asis", cache=TRUE, eval=FALSE}
+
+stargazer(between_reg,header = FALSE, omit.stat = "f",
+          column.labels = rep(c("Synch1","Synch2"),2),
+          dep.var.labels = "",
+          title = "Business cycles - Between model")
+
+stargazer(within_reg,header = FALSE, omit.stat = "f",
+          column.labels = rep(c("Synch1","Synch2"),2),
+          dep.var.labels = "",
+          title = "Business cycles - Within model")
+
+```
+
+
+The main result of this section is that cross section ("Between") model estimates \textbf{positive} association between GDP cycle synchronization and financial integration. The estimation of panel ("Within") model with time and country fixed effect provides \textbf{negative} association. This result is replicated only with respect to Synch1 measure and only with respect to coefficient sign.
+
+```{r Output_panel_sens_gdp, results="asis", cache=TRUE, eval=FALSE}
+
+gdp_sens_reg = get.sens.reg(gdp_reg_df)
+
+stargazer(gdp_sens_reg$Synch1_ret, gdp_sens_reg$Synch2_ret,
+          title = "Business cycles - Sensitivity regressions",
+          header = FALSE, dep.var.labels.include = FALSE,
+          omit.stat = "f",
+          column.labels = rep(c("Synch1","Synch2"), each = 2))
+
+
+
+```
+
+\newpage
+
+\subsection{Financial results analogy}
+
+
+```{r Output_panel_reg_fin_rep, results="asis", eval=FALSE}
+
+stargazer(between_reg_fin_rep,header = FALSE, omit.stat = "f",
+          column.labels = rep(c("Synch1","Synch2"),2),
+          dep.var.labels = "",
+          title = "Financial cycles - Between model")
+
+stargazer(within_reg_fin_rep,header = FALSE, omit.stat = "f",
+          column.labels = rep(c("Synch1","Synch2"),2),
+          dep.var.labels = "",
+          title = "Financial cycles - Within model")
+
+```
+
+
+```{r Output_panel_sens_fin_rep, results="asis", cache=TRUE, eval=FALSE}
+
+fin_sens_reg = get.sens.reg(fin_reg_df_rep)
+
+stargazer(gdp_sens_reg$Synch1_ret, gdp_sens_reg$Synch2_ret,
+          title = "Business cycles - Sensitivity regressions",
+          header = FALSE, dep.var.labels.include = FALSE,
+          omit.stat = "f",
+          column.labels = rep(c("Synch1","Synch2"), each = 2))
+
+
+
+```
+
+
+
+\newpage
+
+\section{Robustness check}
+
+Since the synch and bank_XXX measures both have credit component I use trade flows instead of bank 
+
+```{r, eval=FALSE}
+
+fin_trade_reg = plm(Fin_ret ~ trade_gdp + 
+                FX_stab_avg + FO_ind_tot + 
+                Pruc_tot + kaopen,
+                   data = fin_reg_full_df, model = "within",
+                   effect = "twoways")
+
+stargazer(fin_trade_reg,
+          title = "Robustness - trade instead of bank",
+          header = FALSE, dep.var.labels.include = FALSE,
+          omit.stat = "f",
+          column.labels = "Synch1")
+
+
+
+```
+
+
+
+\newpage
+
+\section{Appendix}
+
+\subsection{Business cycle synch - sensitivity}
+
+```{r output_sens_gdp, cache=TRUE, results="asis", eval=FALSE}
+
+
+stargazer(gdp_sens_reg$Synch1_ret, gdp_sens_reg$Synch1_cycle,
+          title = "Business cycles - Synch1",
+          header = FALSE, dep.var.labels.include = FALSE,
+          omit.stat = "f",
+          column.labels = rep(c("Ret","Cycle"), each = 2))
+
+stargazer(gdp_sens_reg$Synch2_ret, gdp_sens_reg$Synch2_cycle,
+          title = "Business cycles - Synch2",
+          header = FALSE, dep.var.labels.include = FALSE,
+          omit.stat = "f",
+          column.labels = rep(c("Ret","Cycle"), each = 2))
+
+stargazer(gdp_sens_reg$Synch3_ret, gdp_sens_reg$Synch3_cycle,
+          title = "Business cycles - Synch3",
+          header = FALSE, dep.var.labels.include = FALSE,
+          omit.stat = "f",
+          column.labels = rep(c("Ret","Cycle"), each = 2))
+
+```
+
+\newpage
+
+\subsection{Financial cycle synch - sensitivity}
+
+
+```{r incremental_regressions}
+
+form_list = list(formula(Fin_ret ~ bank_gdp + trade_gdp + FO_ind_tot),
+                 formula(Fin_ret ~ bank_gdp + trade_gdp + 
+                                  FO_ind_tot + FX_stab_avg),
+                 formula(Fin_ret ~ bank_gdp + trade_gdp + 
+                                  FO_ind_tot + FD_avg),
+                 formula(Fin_ret ~ bank_gdp + trade_gdp + 
+                                  FO_ind_tot + FX_stab_avg + FD_avg),
+                 formula(Fin_ret ~ bank_gdp + trade_gdp + 
+                                  FO_ind_tot + FX_stab_avg
+                         + FD_avg + MI_ind_tot))
+
+oecd_reg_list = lapply(form_list,
+                  function(temp_form){plm(formula = temp_form,
+                      data = fin_reg_df, model = "within",
+                     effect = "twoways",
+                     index = c("CountryPair","Date"))})
+
+strong_reg_list = lapply(form_list,
+                  function(temp_form){plm(formula = temp_form,
+                      data = fin_reg_df %>% 
+                        filter(CountryPair %in% strong_countries_pairs),
+                      model = "within",
+                     effect = "twoways",
+                     index = c("CountryPair","Date"))})
+
+weak_reg_list = lapply(form_list,
+                  function(temp_form){plm(formula = temp_form,
+                      data = fin_reg_df %>% 
+                        filter(CountryPair %in% weak_countries_pairs),
+                      model = "within",
+                     effect = "twoways",
+                     index = c("CountryPair","Date"))})
+
+```
+
+
+```{r Output_panel_reg_fin, results="asis"}
+
+stargazer(strong_reg_list,
+          header = FALSE, omit.stat = "f",
+          title = "Strong sample (18 countries)",
+          dep.var.labels = c("","","",""))
+
+
+
+```
+
+
+```{r Output_panel_oecd_reg_fin, results="asis"}
+
+
+stargazer(oecd_reg_list,
+          header = FALSE, omit.stat = "f",
+          title = "OEDC sample",
+          dep.var.labels = c("","","",""))
+
+
+
+```
+
+
+```{r Output_panel_weak_reg_fin, results="asis"}
+
+
+stargazer(weak_reg_list,
+          header = FALSE, omit.stat = "f",
+          title = "Weak sample (18 Countries)",
+          dep.var.labels = c("","","",""))
+
+
+
+```
+
+
+Financial cycle measures:
+
+\begin{itemize}
+  
+  \item 
+  Log returns
+  \item
+  Cycle gaps (CF filter)
+
+\end{itemize}
+
+Synchronization measures:
+
+\begin{itemize}
+  
+  \item 
+  Negative absolute difference
+  \item
+  Rolling correlation
+
+\end{itemize}
+
+
+```{r panel_reg_sens, results="asis", eval=FALSE}
+
+panel_reg_sens = list(synch_1_list$FinRet, synch_1_list$FinCycle, synch_3_list$FinRet, synch_3_list$FinCycle, bank_int$bank_pop, bank_int$bank_gdp) %>% 
+  purrr::reduce(full_join, by = c("Date","CountryPair"),
+                suffix = c("_synch1","_synch3"))
+
+panel_reg_sens = append.countrypair.dataframe(panel_reg_sens,df %>% 
+  select(Date, Country, GDP_per_Capita_real, Pop)) %>% 
+  mutate(LGDP = log(GDP_per_Capita_real_A) + log(GDP_per_Capita_real_B)) %>% 
+  mutate(LPop = log(Pop_A) * log(Pop_B)) %>% 
+  mutate(DGDP = log(GDP_per_Capita_real_A) - log(GDP_per_Capita_real_B)) %>% 
+  select(-ends_with("_A")) %>% 
+  select(-ends_with("_B"))
+
+dep_vars = paste0(rep(c("FinRet","FinCycle"), each = length(c("_synch1","_synch3"))), c("_synch1","_synch3"))
+
+x_vars = c(paste(c("bank_pop","LGDP","LPop"), collapse = "+"),
+           paste(c("bank_gdp","LGDP","LPop"), collapse = "+"))
+
+panel_reg_sens_res = lapply(apply(expand.grid(dep_vars, x_vars),
+                                  1,paste, collapse = "~"),
+       function(temp_form){plm(formula = formula(temp_form),
+                               data = panel_reg_sens,
+                               model = "within",
+                               effect = "twoways")})
+
+
+stargazer(panel_reg_sens_res, omit.stat = "f",
+          column.labels = rep(gsub("[_,Fin, synch]","",dep_vars),2),
+          header = FALSE)
+
+```
+
