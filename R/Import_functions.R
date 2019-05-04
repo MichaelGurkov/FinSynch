@@ -239,7 +239,6 @@ import_cross_border_balance = function(filepath = NULL,
                                 paste(Country, Counter_Country, sep = "-"),
                                 paste(Counter_Country,Country,
                                       sep = "-"))) %>%
-    select(Date,CountryPair,Balance,Avg_Balance) %>%
     ungroup()
 
 
@@ -256,6 +255,8 @@ import_cross_border_balance = function(filepath = NULL,
 #'
 #'  @import dplyr
 #'
+#'  @import stringi
+#'
 
 import.trilemma.ind = function(filepath = paste0(
   "C:\\Users\\Misha\\Documents\\Data",
@@ -271,7 +272,8 @@ import.trilemma.ind = function(filepath = paste0(
     rename(MI_ind = `Monetary Independence Index`) %>%
     rename(FO_ind = `Financial Openness Index`) %>%
     rename(Country = `Country Name`) %>%
-    mutate(Country = gsub("\\s","_", Country))
+    mutate(Country = gsub("\\s","_", Country)) %>%
+    mutate(Country = str_replace(Country,"Korea, Rep.","Korea"))
 
 
 
