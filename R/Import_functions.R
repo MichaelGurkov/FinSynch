@@ -218,7 +218,8 @@ import_bis_fin_cycle_df = function(filepath_list = NULL,
 
 
 import_cross_border_balance = function(filepath = NULL,
-                                countries_vec = NULL){
+                                countries_vec = NULL,
+                                annual_freq = TRUE){
 
   if(is.null(filepath)){
     filepath = paste0("C:\\Users\\Misha\\Documents\\Data\\BIS",
@@ -228,22 +229,24 @@ import_cross_border_balance = function(filepath = NULL,
 
   credit_flows_df = readRDS(filepath)
 
-  credit_flows_df = credit_flows_df %>%
-    {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec) else .} %>%
-    filter(Counter_Country %in% countries_vec) %>%
-    rename(Balance = Balance.sheet.position) %>%
-    mutate(Date = format(Date,"%Y")) %>%
-    group_by(Date, Country,Counter_Country,Balance) %>%
-    summarise(Avg_Balance = mean(Flow_Val, na.rm = TRUE)) %>%
-    ungroup() %>%
-    mutate(CountryPair = ifelse(Country < Counter_Country,
+  credit_balance_df = credit_flows_df %>%
+    {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec) %>%
+        filter(.,Counter_Country %in% countries_vec) else .} %>%
+    rename(Balance_Pos = Balance.sheet.position) %>%
+    {if(annual_freq) mutate(.,Date = format(Date,"%Y")) %>%
+        group_by(.,Date, Country,Counter_Country,Balance_Pos,Flow_Val) %>%
+        summarise(.,Balance = mean(Flow_Val, na.rm = TRUE)) %>%
+        select(.,-Flow_Val) %>%
+        ungroup(.) else rename(.,Balance = Flow_Val) %>%
+        mutate(.,Date = as.yearqtr(Date))} %>%
+    mutate(.,CountryPair = ifelse(Country < Counter_Country,
                                 paste(Country, Counter_Country, sep = "-"),
                                 paste(Counter_Country,Country,
                                       sep = "-"))) %>%
-    ungroup()
+    ungroup(.)
 
 
-  return(credit_flows_df)
+  return(credit_balance_df)
 
 
 
