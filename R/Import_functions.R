@@ -75,16 +75,18 @@ import.bis.cpi.data = function(filepath =
                                  paste0("C:\\Users\\Misha\\",
                                         "Documents\\Data\\BIS",
                                         "\\WEBSTATS_LONG_",
-                                        "CPI_DATAFLOW_csv_col.csv")){
+                                        "CPI_DATAFLOW_csv_col.csv"),
+                               my_freq = "Annual",
+                               my_regex = "^X\\d{4}$"){
 
   cpi = read.csv(filepath)
 
   cpi = cpi %>%
-    filter(Frequency == "Annual") %>%
+    filter(Frequency == my_freq) %>%
     filter(Unit.of.measure == "Index, 2010 = 100") %>%
     select(c("Reference.area",
              na.omit(str_extract(names(.),
-                                 pattern = "^X\\d{4}$")))) %>%
+                                 pattern = my_regex)))) %>%
     rename(Country = Reference.area) %>%
     gather(.,key = Date,value = US_CPI,-Country) %>%
     mutate(Country = gsub("\\s","_",Country)) %>%
@@ -213,7 +215,6 @@ import_bis_fin_cycle_df = function(filepath_list = NULL,
 #'
 #' @export
 #'
-
 
 
 import_cross_border_balance = function(filepath = NULL,
@@ -366,3 +367,163 @@ import.fin.dev.ind = function(filepath = paste0(
 
 
 }
+
+
+#' This function imports harmon data
+#'
+#'  @import dplyr
+#'
+#'  @import readxl
+#'
+#'  @import zoo
+
+import.harmon.data = function(filepath = paste0(
+  "C:\\Users\\Misha\\Documents\\Data\\",
+  "Kalemli_Ozcan_Papaionnou_Peydro\\harmon.xlsx"),
+  myrange = "B4:AF32",
+  codes_filepath = paste0("C:\\Users\\Misha\\Documents\\Data\\ISO\\",
+                          "iso_2digit_alpha_country_codes.csv"),
+  convert_country_names = TRUE){
+
+  harmon = read_xlsx(path = filepath,range = myrange)
+
+  temp_names = grep("[A-Z]{2}",names(harmon), value = TRUE)
+
+  temp = lapply(temp_names,
+                function(temp_name){
+                  temp_col = which(names(harmon) == temp_name)
+                  unite(harmon[,temp_col:(temp_col + 1)], !!temp_name,
+                        sep = "-")}) %>%
+    reduce(., cbind)
+
+  temp = cbind.data.frame(Directive = harmon$Directive[-1], temp[-1,])
+
+  if(convert_country_names){
+
+    names(temp)[names(temp) == "UK"] = "GB"
+
+    iso_names = read.csv(codes_filepath, stringsAsFactors = FALSE)
+
+    names(iso_names) = c("Code","Country")
+
+    source_names = colnames(temp)[-1]
+
+    target_names = inner_join(data.frame(Code = source_names,
+                                         stringsAsFactors = FALSE),
+                              iso_names,
+                              by = "Code") %>%
+      select(Country) %>%
+      unlist() %>%
+      setNames(.,NULL)
+
+    colnames(temp) = c(colnames(temp)[1],target_names)
+
+  }
+
+  temp = temp %>%
+    gather(key = Country, value = Date, - Directive) %>%
+    mutate(Date = str_replace(Date,
+                              pattern = "(^[0-9]{4})(Q[0-9])-NA$",
+                              replacement = "\\1-\\2")) %>%
+    mutate(Date = as.yearqtr(Date, format = "%Y-Q%q")) %>%
+    mutate(Directive = levels(Directive)[Directive])
+
+
+  return(temp)
+
+
+}
+
+
+
+#' This helper function imports (quarterly) GDP data from OECD data base
+#' The OECD database has data on quarterly rates of growth and annual balance of GDP
+#' In order to import the data quarterly balance are interpolated using growth rates
+#'
+#' @import dplyr
+#'
+#' @import zoo
+#'
+ import.oecd.gdp = function(rates_df_filepath =
+                              paste0("C:\\Users\\Misha\\Documents\\Data\\OECD",
+                                     "\\GDP_growth_rates.csv"),
+                            balance_df_filepath =
+                              paste0("C:\\Users\\Misha\\Documents\\Data\\OECD",
+                                     "\\GDP.csv"),
+                            iso_codes_filepath =
+                              paste0("C:\\Users\\Misha\\Documents\\Data\\ISO\\",
+                                     "iso_3digit_alpha_country_codes.csv"),
+                            countries_vec =
+                              c("Austria","Belgium","Germany","Denmark","Spain",
+                                "France","Finland","Greece","Ireland","Italy",
+                                "Luxembourg","Netherlands","Portugal",
+                                "Sweden","United_Kingdom")){
+
+
+   # Import data
+
+   iso_codes = read.csv(iso_codes_filepath) %>%
+     setNames(c("Code","Country"))
+
+   oecd_gdp_rates = read.csv(rates_df_filepath) %>%
+     setNames(c("Code","INDICATOR","SUBJECT","MEASURE","FREQUENCY",
+                "TIME","Value","Flag.Codes")) %>%
+     select(-Flag.Codes, -SUBJECT,-INDICATOR) %>%
+     filter(MEASURE == "PC_CHGPP") %>%
+     select(-MEASURE) %>%
+     filter(FREQUENCY == "Q") %>%
+     select(-FREQUENCY) %>%
+     mutate(Date = as.yearqtr(TIME, format = "%Y-Q%q")) %>%
+     select(-TIME) %>%
+     filter(Date >= as.yearqtr("1999 Q1") & Date <= as.yearqtr("2008 Q4")) %>%
+     left_join(.,iso_codes, by = "Code") %>%
+     select(-Code) %>%
+     mutate(Country = gsub("\\s","_",Country)) %>%
+     filter(Country %in% countries_vec) %>%
+     arrange(Country, Date)
+
+
+   oecd_gdp_balance = read.csv(balance_df_filepath) %>%
+     setNames(c("Code","INDICATOR","SUBJECT","MEASURE","FREQUENCY",
+                "TIME","Value","Flag.Codes")) %>%
+     select(-Flag.Codes, -SUBJECT,-INDICATOR,-FREQUENCY) %>%
+     filter(MEASURE == "MLN_USD") %>%
+     select(-MEASURE) %>%
+     rename(Year = TIME) %>%
+     filter(Year >= "1998" & Year <= "2008") %>%
+     left_join(.,iso_codes, by = "Code") %>%
+     select(-Code) %>%
+     mutate(Country = gsub("\\s","_",Country)) %>%
+     filter(Country %in% countries_vec)
+
+
+   # Interpolate quarterly GDP
+
+   res_df = oecd_gdp_rates
+
+   init_GDP = oecd_gdp_balance %>%
+     filter(Year == 1998) %>%
+     select(Country, Value)
+
+   gdp_list = lapply(init_GDP$Country, function(temp_country){
+
+     res = oecd_gdp_rates %>%
+       filter(Country == temp_country) %>%
+       mutate(Value = cumprod(c(init_GDP$Value[init_GDP$Country == temp_country],
+                              1 + 0.01 * Value))[-1])
+
+     return(res)
+
+
+   })
+
+
+   gdp_df = do.call(rbind.data.frame, gdp_list)
+
+
+   return(gdp_df)
+
+
+
+
+ }
