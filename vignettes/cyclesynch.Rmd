@@ -607,14 +607,49 @@ The Financial Services Action Plan (FSAP) took place amoung EU15 countries durin
 
 ```{r harmon_index, eval=FALSE}
 
+fsap_countries = c("Austria","Belgium","Germany","Denmark","Spain",
+                   "France","Finland","Greece","Ireland","Italy",
+                   "Luxembourg","Netherlands","Portugal",
+                   "Sweden","United Kingdom")
+
+cpi_quarter = import.bis.cpi.data(my_freq = "Monthly",
+                          my_regex = "^X\\d{4}\\.\\d{2}$") %>% 
+  mutate(Date = as.Date(paste(sub("\\.","-",Date),"01",sep = "-"))) %>% 
+  mutate(Date = as.yearqtr(Date)) %>% 
+  group_by(Date) %>% 
+  summarise(US_CPI = mean(US_CPI, na.rm = TRUE))
+
+
+oecd_gdp_real = import.oecd.gdp() %>% 
+  rename(GDP = Value) %>% 
+  deflate.data(.,vars_to_deflate = "GDP",cpi = cpi_quarter)
+
+bank_cross_gdp_quarter = import_cross_border_balance(NULL,
+                                   countries_vec = fsap_countries,
+                                   annual_freq = FALSE) %>% 
+  deflate.data(.,cpi = cpi_quarter,vars_to_deflate = "Balance") %>%
+  select(Date, CountryPair,Balance_Pos, Balance_real) %>%
+  normalize.bis.data(.,norm_df = oecd_gdp_real[,c("Date","Country", "GDP_real")],
+                     norm_val = "GDP_real") %>% 
+  group_by(Date, CountryPair) %>%
+  summarise(bank_gdp = mean(log(Balance_real), na.rm = TRUE)) %>%
+  filter(!is.na(bank_gdp))
+
+
 harmon_index = import.harmon.data() %>% 
-  construct_countrypair_harmon_index() %>%  
-  mutate(Date = format(Date,"%Y")) %>% 
-  group_by(CountryPair, Date, Directive) %>% 
-  summarise(Transposed = max(Transposed, na.rm = TRUE)) %>% 
-  mutate(Transposed = ifelse(is.infinite(Transposed), NA,Transposed)) %>% 
+  construct_countrypair_harmon_index() %>% 
   group_by(CountryPair, Date) %>% 
   summarise(Harmon_Index = log(sum(Transposed + 1, na.rm = TRUE)))
+
+
+first_stage_reg = plm(formula(bank_gdp ~ Harmon_Index),
+                      data = inner_join(bank_cross_gdp_quarter,
+                                        harmon_index,
+                                        by = c("CountryPair","Date")) %>% 
+                        ungroup() %>% 
+                        mutate(Date = as.Date(Date)),
+                      model = "within", effect = "twoways",
+                      index = c("CountryPair","Date"))
 
 
 iv_df = full_join(fin_reg_df, harmon_index, by = c("CountryPair","Date"))
