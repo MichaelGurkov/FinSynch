@@ -8,21 +8,27 @@
 #' @export
 
 
-deflate.data = function(df, vars_to_deflate,cpi = NULL,
+deflate.data = function(df, vars_to_deflate,
+                        cpi = NULL,
                         remove_cpi_col = TRUE){
 
   if(is.null(cpi)){cpi = import.bis.cpi.data()}
 
-  vars_to_deflate_name = paste(vars_to_deflate, "real", sep = "_")
-
-  vars_to_deflate = quo(!!sym(vars_to_deflate))
 
   df = left_join(df, cpi, by = "Date")
 
-  df = df %>%
-    mutate(!!vars_to_deflate_name := !!vars_to_deflate / US_CPI)
+  for(temp_var in vars_to_deflate){
 
-  if(remove_cpi_col){df %>% select(-US_CPI)}
+    temp_var_name = paste(temp_var, "real", sep = "_")
+
+    temp_var = quo(!!sym(temp_var))
+
+    df = df %>%
+      mutate(!!temp_var_name := !!temp_var / US_CPI)
+
+  }
+
+  if(remove_cpi_col){df = df %>% select(-US_CPI)}
 
   return(df)
 
