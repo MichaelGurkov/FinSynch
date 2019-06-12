@@ -1,3 +1,44 @@
+#' This helper function deflates bis data by US CPI
+#'
+#'
+#' @import dplyr
+#'
+#' @import rlang
+#'
+#' @export
+
+
+deflate.data = function(df, vars_to_deflate,
+                        cpi = NULL,
+                        remove_cpi_col = TRUE){
+
+  if(is.null(cpi)){cpi = import.bis.cpi.data()}
+
+
+  df = left_join(df, cpi, by = "Date")
+
+  for(temp_var in vars_to_deflate){
+
+    temp_var_name = paste(temp_var, "real", sep = "_")
+
+    temp_var = quo(!!sym(temp_var))
+
+    df = df %>%
+      mutate(!!temp_var_name := !!temp_var / US_CPI * 100)
+
+  }
+
+  if(remove_cpi_col){df = df %>% select(-US_CPI)}
+
+  return(df)
+
+
+}
+
+
+
+
+
 #' This function appends to (Date, CountryPair) format data frame
 #' data from (Date, Country) format
 #'
@@ -16,10 +57,10 @@ append.countrypair.dataframe = function(countrypair_df, country_df){
     separate(.,col = CountryPair, into = c("Country_A", "Country_B"),
              sep = "-", remove = FALSE)
 
-  temp_df = left_join(temp_df, country_df,
+  temp_df = full_join(temp_df, country_df,
                       by = c("Date" = "Date","Country_A" = "Country"))
 
-  temp_df = left_join(temp_df, country_df,
+  temp_df = full_join(temp_df, country_df,
                       by = c("Date" = "Date","Country_B" = "Country"),
                       suffix = c("_A","_B"))
 
@@ -313,31 +354,40 @@ make.params.list = function(){
 #' This function collapses (calculates sum, difference and min)
 
 
-collapse_pair_controls = function(fin_reg_df, control_vars){
+collapse_pair_controls = function(fin_reg_df, control_vars,
+                                  collapse_funcs = c("sum","diff","min")){
 
 
  for(temp_var in control_vars){
 
-   fin_reg_df[paste0(temp_var,"_tot")] = fin_reg_df %>%
-     select(!!paste0(temp_var[1],c("_A","_B"))) %>%
-     apply(.,1,sum, na.rm = TRUE)
+   if("sum" %in% collapse_funcs){
 
-   fin_reg_df[paste0(temp_var,"_diff")] = fin_reg_df %>%
-     select(!!paste0(temp_var[1],c("_A","_B"))) %>%
-     apply(.,1,function(temp_row){temp_row[1] - temp_row[2]})
+     fin_reg_df[paste0(temp_var,"_tot")] = fin_reg_df %>%
+       select(!!paste0(temp_var[1],c("_A","_B"))) %>%
+       apply(.,1,sum, na.rm = TRUE)
+   }
 
-   fin_reg_df[paste0(temp_var,"_min")] = fin_reg_df %>%
-     select(!!paste0(temp_var[1],c("_A","_B"))) %>%
-     apply(.,1,min, na.rm = TRUE)
+   if("diff" %in% collapse_funcs){
 
+     fin_reg_df[paste0(temp_var,"_diff")] = fin_reg_df %>%
+       select(!!paste0(temp_var[1],c("_A","_B"))) %>%
+       apply(.,1,function(temp_row){temp_row[1] - temp_row[2]})
 
+   }
+
+   if("min" %in% collapse_funcs){
+
+     fin_reg_df[paste0(temp_var,"_min")] = fin_reg_df %>%
+       select(!!paste0(temp_var[1],c("_A","_B"))) %>%
+       apply(.,1,min, na.rm = TRUE)
+
+   }
 
  }
 
   fin_reg_df = fin_reg_df %>%
     select(-ends_with("_A")) %>%
     select(-ends_with("_B")) %>%
-    filter_all(all_vars(!is.infinite(.))) %>%
     ungroup()
 
 
@@ -352,19 +402,17 @@ collapse_pair_controls = function(fin_reg_df, control_vars){
 #'
 #'
 
-construct_fin_reg = function(df, control_vars = c("FD",
-                                              "FX_stab",
-                                              "MI_ind",
-                                              "FO_ind")){
+construct_fin_reg = function(df,countries_vec = NULL,
+                             control_vars = c("FD","FX_stab","MI_ind",
+                                              "FO_ind","PruC","PruC2",
+                                              "FD","FI"),
+                             collaps_funcs = c("sum","diff","min")){
 
   fin_reg_df = df %>%
-    filter(Country %in% oecd_countries_vec) %>%
+  {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec) else .} %>%
     select(Date, Country,Fin_ret) %>%
-    get.neg.abs.diff()
-
-
-  fin_reg_df = list(fin_reg_df,bank_gdp, trade_gdp) %>%
-    reduce(full_join, by = c("Date","CountryPair"))
+    get.neg.abs.diff() %>%
+    rename(Fin_synch = Fin_ret)
 
 
   fin_reg_df = append.countrypair.dataframe(fin_reg_df,
@@ -372,20 +420,23 @@ construct_fin_reg = function(df, control_vars = c("FD",
                                               select(Date,Country,
                                                      !!control_vars))
 
-  fin_reg_df = collapse_pair_controls(fin_reg_df, control_vars)
+  fin_reg_df = collapse_pair_controls(fin_reg_df, control_vars,
+                                      collapse_funcs = collaps_funcs)
+
 
   return(fin_reg_df)
 
 }
 
 
-#' This function constracts country pair harmon index
+#' This function constructs country pair harmon index
 #'
 #'  @import dplyr
 #'
 #'
 
-construct_countrypair_harmon_index = function(df){
+construct_countrypair_harmon_index = function(df, dates_vec = NULL,
+                                              index_status = "both"){
 
 
   country_pairs_list = combn(unique(df$Country),2) %>%
@@ -395,9 +446,15 @@ construct_countrypair_harmon_index = function(df){
     unique() %>%
     as.list()
 
-  dates_vec = unique(df$Date) %>%
-    na.omit() %>%
-    .[order(.)]
+  # Default dates vec
+
+  if(is.null(dates_vec)){
+
+    dates_vec = unique(df$Date) %>%
+      na.omit() %>%
+      .[order(.)]
+
+  }
 
   res = lapply(country_pairs_list,
                function(country_pair, dates_vec){
@@ -410,14 +467,30 @@ construct_countrypair_harmon_index = function(df){
                             function(temp_reg, countryA, countryB,
                                      dates_vec){
 
-                              date = max(df$Date[df$Directive == temp_reg &
+                              date_max = max(df$Date[df$Directive == temp_reg &
                                                    df$Country == countryA],
                                          df$Date[df$Directive == temp_reg &
                                                    df$Country == countryB])
 
-                              date = ifelse(date == -Inf, NA, date)
+                              date_min = min(df$Date[df$Directive == temp_reg &
+                                                       df$Country == countryA],
+                                             df$Date[df$Directive == temp_reg &
+                                                       df$Country == countryB])
 
-                              temp_vec = as.numeric(dates_vec >= date)
+                              if(is.na(date_min)){
+                                return(rep(0, length(dates_vec)))
+                                }
+
+                              if(index_status == "both"){
+
+                                temp_vec = as.numeric(dates_vec >= date_max)
+
+                              } else {
+
+                                temp_vec = as.numeric(dates_vec >= date_min &
+                                                        dates_vec <= date_max)
+
+                              }
 
                               return(temp_vec)
 
@@ -460,6 +533,58 @@ construct_countrypair_harmon_index = function(df){
 
   return(res)
 
+
+
+}
+
+
+#'This function runs panel regression with fixed effect
+#' for each strata separately
+#'
+
+make_fin_reg_list = function(countries_list,reg_df,reg_formula){
+
+  criteria_list = list(NULL,
+                       countries_list$strong_countries_pairs,
+                       countries_list$weak_countries_pairs,
+                       countries_list$cross_country_pairs,
+                       c(countries_list$cross_country_pairs,
+                         countries_list$weak_countries_pairs))
+
+  fin_reg__list = lapply(criteria_list, function(temp_vec){
+    temp_reg_df = reg_df %>%
+      {if(!is.null(temp_vec)) filter(.,CountryPair %in% temp_vec) else .}
+
+    temp_reg =plm(formula = reg_formula,
+                  model = "within",effect = "twoways",
+                  data = temp_reg_df, index = c("CountryPair","Date"))
+
+    return(temp_reg)})
+
+  return(fin_reg__list)
+
+}
+
+#' This function classifies for given country the crises dates
+#'
+
+classify_crises_dates = function(Target_Country, dates_vec, crises_df){
+
+  temp_crises_df = crises_df %>%
+    filter(Country == Target_Country)
+
+  if(nrow(temp_crises_df) == 0){return(rep(0,length(dates_vec)))}
+
+   crises_dates = apply(temp_crises_df,1,
+                        function(temp_row){
+                          as.numeric(dates_vec >= temp_row[2] &
+                                       dates_vec <= temp_row[3])})
+
+   if(ncol(crises_dates) > 1){
+
+     return(apply(crises_dates,1, sum))
+
+     } else {return(as.vector(crises_dates))}
 
 
 }
