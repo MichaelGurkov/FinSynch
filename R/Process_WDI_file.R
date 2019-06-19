@@ -14,7 +14,7 @@
 
 process.wdi.file = function(temp_file, var_name){
 
-  names(temp_file)[grepl("Country\\.Name$",names(temp_file))] == "Country"
+  names(temp_file)[grepl("Country\\.Name$",names(temp_file))] = "Country"
 
   temp_file = temp_file %>%
   select(c(Country, grep("^X", names(.),value = TRUE)))

@@ -406,13 +406,22 @@ construct_fin_reg = function(df,countries_vec = NULL,
                              control_vars = c("FD","FX_stab","MI_ind",
                                               "FO_ind","PruC","PruC2",
                                               "FD","FI"),
-                             collaps_funcs = c("sum","diff","min")){
+                             collapse_funcs = c("sum","diff","min")){
 
-  fin_reg_df = df %>%
+  temp_df_1 = df %>%
   {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec) else .} %>%
     select(Date, Country,Fin_ret) %>%
     get.neg.abs.diff() %>%
-    rename(Fin_synch = Fin_ret)
+    rename(Fin_synch_1 = Fin_ret)
+
+
+  temp_df_2 = df %>%
+  {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec) else .} %>%
+    select(Date, Country,Fin_ret_resid) %>%
+    get.neg.abs.diff() %>%
+    rename(Fin_synch_2 = Fin_ret_resid)
+
+  fin_reg_df = full_join(temp_df_1, temp_df_2)
 
 
   fin_reg_df = append.countrypair.dataframe(fin_reg_df,
@@ -421,7 +430,7 @@ construct_fin_reg = function(df,countries_vec = NULL,
                                                      !!control_vars))
 
   fin_reg_df = collapse_pair_controls(fin_reg_df, control_vars,
-                                      collapse_funcs = collaps_funcs)
+                                      collapse_funcs = collapse_funcs)
 
 
   return(fin_reg_df)
@@ -538,11 +547,12 @@ construct_countrypair_harmon_index = function(df, dates_vec = NULL,
 }
 
 
-#'This function runs panel regression with fixed effect
-#' for each strata separately
+#'This function runs panel regression for each strata separately
 #'
 
-make_fin_reg_list = function(countries_list,reg_df,reg_formula){
+make_strata_reg_list = function(countries_list,reg_df,reg_formula,
+                             my_effect = "twoways",
+                             my_model = "within"){
 
   criteria_list = list(NULL,
                        countries_list$strong_countries_pairs,
@@ -556,14 +566,17 @@ make_fin_reg_list = function(countries_list,reg_df,reg_formula){
       {if(!is.null(temp_vec)) filter(.,CountryPair %in% temp_vec) else .}
 
     temp_reg =plm(formula = reg_formula,
-                  model = "within",effect = "twoways",
+                  model = my_model,effect = my_effect,
                   data = temp_reg_df, index = c("CountryPair","Date"))
 
     return(temp_reg)})
 
+  names(fin_reg__list) = c("All","Strong","Weak","Cross","Cross_Weak")
+
   return(fin_reg__list)
 
 }
+
 
 #' This function classifies for given country the crises dates
 #'

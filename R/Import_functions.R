@@ -76,8 +76,24 @@ import.bis.cpi.data = function(filepath =
                                         "Documents\\Data\\BIS",
                                         "\\WEBSTATS_LONG_",
                                         "CPI_DATAFLOW_csv_col.csv"),
-                               my_freq = "Annual",
-                               my_regex = "^X\\d{4}$"){
+                               annual_freq = TRUE){
+
+  if(annual_freq){
+
+    my_freq = "Annual"
+
+    my_regex = "^X\\d{4}$"
+
+  } else {
+
+
+    my_freq = "Monthly"
+
+    my_regex = "^X\\d{4}\\.\\d{2}$"
+
+
+  }
+
 
   cpi = read.csv(filepath)
 
@@ -135,6 +151,11 @@ import_wdi_df = function(filepath_list = NULL,
 
     res = read.csv(filepath_list[[temp_name]]) %>%
              process.wdi.file(.,var_name = temp_name)
+
+    # Replace country names
+
+    res = res %>%
+      mutate(Country = str_replace(Country,"Korea, Rep.","Korea"))
 
     if(!is.null(countries_vec)){
 
@@ -234,9 +255,8 @@ import_cross_border_balance = function(filepath = NULL,
         filter(.,Counter_Country %in% countries_vec) else .} %>%
     rename(Balance_Pos = Balance.sheet.position) %>%
     {if(annual_freq) mutate(.,Date = format(Date,"%Y")) %>%
-        group_by(.,Date, Country,Counter_Country,Balance_Pos,Flow_Val) %>%
+        group_by(.,Date, Country,Counter_Country,Balance_Pos) %>%
         summarise(.,Balance = mean(Flow_Val, na.rm = TRUE)) %>%
-        select(.,-Flow_Val) %>%
         ungroup(.) else rename(.,Balance = Flow_Val) %>%
         mutate(.,Date = as.yearqtr(Date))} %>%
     mutate(.,CountryPair = ifelse(Country < Counter_Country,
@@ -429,7 +449,8 @@ import.harmon.data = function(filepath = paste0(
                               pattern = "(^[0-9]{4})(Q[0-9])-NA$",
                               replacement = "\\1-\\2")) %>%
     mutate(Date = as.yearqtr(Date, format = "%Y-Q%q")) %>%
-    mutate(Directive = levels(Directive)[Directive])
+    mutate(Directive = levels(Directive)[Directive]) %>%
+    mutate(Country = str_replace(Country,"\\s","_"))
 
 
   return(temp)
@@ -456,11 +477,7 @@ import.harmon.data = function(filepath = paste0(
                             iso_codes_filepath =
                               paste0("C:\\Users\\Misha\\Documents\\Data\\ISO\\",
                                      "iso_3digit_alpha_country_codes.csv"),
-                            countries_vec =
-                              c("Austria","Belgium","Germany","Denmark","Spain",
-                                "France","Finland","Greece","Ireland","Italy",
-                                "Luxembourg","Netherlands","Portugal",
-                                "Sweden","United_Kingdom")){
+                            countries_vec = NULL){
 
 
    # Import data
@@ -478,11 +495,13 @@ import.harmon.data = function(filepath = paste0(
      select(-FREQUENCY) %>%
      mutate(Date = as.yearqtr(TIME, format = "%Y-Q%q")) %>%
      select(-TIME) %>%
-     filter(Date >= as.yearqtr("1999 Q1") & Date <= as.yearqtr("2008 Q4")) %>%
      left_join(.,iso_codes, by = "Code") %>%
      select(-Code) %>%
      mutate(Country = gsub("\\s","_",Country)) %>%
-     filter(Country %in% countries_vec) %>%
+     mutate(Country = str_replace(Country,"Korea,_Republic_of","Korea")) %>%
+     mutate(Country = str_replace(Country,"Czechia","Czech_Republic")) %>%
+     mutate(Country = str_replace(Country,"Slovakia","Slovak_Republic")) %>%
+     {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec) else .} %>%
      arrange(Country, Date)
 
 
@@ -493,35 +512,46 @@ import.harmon.data = function(filepath = paste0(
      filter(MEASURE == "MLN_USD") %>%
      select(-MEASURE) %>%
      rename(Year = TIME) %>%
-     filter(Year >= "1998" & Year <= "2008") %>%
      left_join(.,iso_codes, by = "Code") %>%
      select(-Code) %>%
      mutate(Country = gsub("\\s","_",Country)) %>%
-     filter(Country %in% countries_vec)
+     mutate(Country = str_replace(Country,"Korea,_Republic_of","Korea")) %>%
+     mutate(Country = str_replace(Country,"Czechia","Czech_Republic")) %>%
+     mutate(Country = str_replace(Country,"Slovakia","Slovak_Republic")) %>%
+     {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec) else .}
 
 
    # Interpolate quarterly GDP
 
    res_df = oecd_gdp_rates
 
-   init_GDP = oecd_gdp_balance %>%
-     filter(Year == 1998) %>%
-     select(Country, Value)
-
-   gdp_list = lapply(init_GDP$Country, function(temp_country){
-
-     res = oecd_gdp_rates %>%
-       filter(Country == temp_country) %>%
-       mutate(Value = cumprod(c(init_GDP$Value[init_GDP$Country == temp_country],
-                              1 + 0.01 * Value))[-1])
-
-     return(res)
+   gdp_balance = oecd_gdp_balance %>%
+     group_by(Country) %>%
+     arrange(desc(Year)) %>%
+     slice(1) %>%
+     ungroup() %>%
+     filter(complete.cases(.))
 
 
-   })
+   gdp_df_list = lapply(split(gdp_balance, gdp_balance$Country),
+                        function(temp_gdp_balance){
+
+                          temp_growth_rates = oecd_gdp_rates %>%
+                            filter(Country == temp_gdp_balance$Country)
 
 
-   gdp_df = do.call(rbind.data.frame, gdp_list)
+                          return(tryCatch(
+                            calculate.gdp.df(temp_growth_rates,
+                                             gdp_balance = temp_gdp_balance),
+                            error = function(e){return(NA)}))
+
+
+                        })
+
+
+   gdp_df = do.call(rbind.data.frame, gdp_df_list)
+
+   rownames(gdp_df) = NULL
 
 
    return(gdp_df)
@@ -530,3 +560,266 @@ import.harmon.data = function(filepath = paste0(
 
 
  }
+
+
+#' This function calculates absolute GDP values given growth rates
+#' The growth rates are at quarterly frequency and the gdp balance is at
+
+calculate.gdp.df = function(growth_rates, gdp_balance){
+
+  before_ind = growth_rates$Date <= as.yearqtr(paste(gdp_balance$Year, "Q4"))
+
+  after_ind = growth_rates$Date > as.yearqtr(paste(gdp_balance$Year, "Q4"))
+
+  gdp_balance_before_vec = rev(cumprod(c(gdp_balance$Value,
+                                         rev((1 + 0.01 * growth_rates$Value[
+                                           before_ind]) ^ -1))))
+
+  dates_before_vec = growth_rates$Date[before_ind]
+
+  dates_before_vec = c(as.yearqtr(dates_before_vec[1]-0.25),dates_before_vec)
+
+  gdp_balance_after_vec = cumprod(c(gdp_balance$Value,
+                                    1 + 0.01 * growth_rates$Value[after_ind]))
+
+  dates_after_vec = growth_rates$Date[after_ind]
+
+  gdp_df = data.frame(Date = c(dates_before_vec, dates_after_vec),
+                      GDP = c(gdp_balance_before_vec, gdp_balance_after_vec[-1])) %>%
+                        mutate(Country = gdp_balance$Country)
+
+}
+
+
+#' This function imports BIS LBS from scratch
+#'
+#' @import dplyr
+#'
+#' @import readr
+
+
+import.bis.lbs.data = function(filepath = paste0(
+  "C:\\Users\\Misha\\Documents\\Data\\BIS\\",
+  "WEBSTATS_LBS_D_PUB_DATAFLOW_csv_col.csv"),
+                               my_instruments = "All instruments",
+                               my_measure = "Amounts outstanding / Stocks",
+                               my_currency = "All currencies",
+                               my_report_currency = "All currencies (=D+F+U)",
+                               my_lending_position = "Cross-border",
+                               my_reporting_institutions = paste0(
+                                 "All reporting"," banks/institutions ",
+                                 "(domestic, foreign, consortium and ",
+                                 "unclassified)"),
+                               my_counter_sector = "All sectors",
+                               countries_vec = NULL){
+
+  raw_df = read_csv(filepath, col_types = cols(), progress = FALSE)
+
+
+  temp_df = raw_df %>%
+    select(-c(grep("^([A-Z]*_*)+$",names(.), value = TRUE),
+              "Time Period", "Frequency"))
+
+
+  # Filter for default values
+
+  filtered_df = temp_df %>%
+    filter(`Type of instruments` %in% my_instruments) %>%
+    filter(Measure %in% my_measure) %>%
+    filter(`Currency denomination` %in% my_currency) %>%
+    filter(`Currency type of reporting country` %in% my_report_currency) %>%
+    filter(`Position type` %in% my_lending_position) %>%
+    filter(`Type of reporting institutions` %in% my_reporting_institutions) %>%
+    filter(`Counterparty sector` %in% my_counter_sector)
+
+  # Subsitute spaces in country names and filter for countries
+
+  filtered_df = filtered_df %>%
+    rename(Country = `Reporting country`,
+           Counter_Country = `Counterparty country`) %>%
+    mutate(Country = gsub("\\s","_",Country)) %>%
+    mutate(Counter_Country = gsub("\\s","_",Counter_Country)) %>%
+    {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec) %>%
+        filter(.,Counter_Country %in% countries_vec) else .} %>%
+    mutate(CountryPair = ifelse(Country < Counter_Country,
+                                paste(Country, Counter_Country, sep = "-"),
+                                paste(Counter_Country,Country, sep = "-"))) %>%
+    select(-Country,-Counter_Country) %>%
+    rename(Balance_Pos = `Balance sheet position`)
+
+
+  selected_df = filtered_df %>%
+    select(-c("Type of instruments","Measure","Currency denomination",
+             "Currency type of reporting country","Position type",
+             "Type of reporting institutions","Counterparty sector",
+             "Parent country"))
+
+  long_df = gather(selected_df,key = Date,value = Balance,
+                   -c(Balance_Pos,CountryPair))
+
+  return(long_df)
+
+}
+
+
+#' This function imports BIS total credit data from scratch
+#'
+#' @import dplyr
+#'
+#' @import readr
+
+
+import.bis.tot.credit.data = function(filepath = paste0(
+  "C:\\Users\\Misha\\Documents\\Data\\BIS\\",
+  "WEBSTATS_TOTAL_CREDIT_DATAFLOW_csv_col.csv"),
+  my_lending_sector = "All sectors",
+  my_unit_type = "US Dollar",
+  my_valuation = "Market value",
+  my_adjustment = "Adjusted for breaks",
+  my_sector = "Private non-financial sector",
+  countries_vec = NULL){
+
+  raw_df = read_csv(filepath, col_types = cols(), progress = FALSE)
+
+
+  temp_df = raw_df %>%
+    select(-c(grep("^([A-Z]*_*)+$",names(.), value = TRUE),
+              "Time Period", "Frequency"))
+
+
+  # Filter for default values
+
+  filtered_df = temp_df %>%
+    filter(`Lending sector` %in% my_lending_sector) %>%
+    filter(`Unit type` %in% my_unit_type) %>%
+    filter(Valuation %in% my_valuation) %>%
+    filter(`Type of adjustment` %in% my_adjustment) %>%
+    filter(`Borrowing sector` %in% my_sector)
+
+  # Subsitute spaces in country names and filter for countries
+
+  filtered_df = filtered_df %>%
+    rename(Country = `Borrowers' country`) %>%
+    mutate(Country = gsub("\\s","_",Country)) %>%
+    {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec)}
+
+
+  selected_df = filtered_df %>%
+    select(-c("Lending sector","Valuation","Unit type",
+              "Type of adjustment","Borrowing sector"))
+
+  long_df = gather(selected_df,key = Date,value = Total_Credit,-Country)
+
+  return(long_df)
+
+}
+
+
+#' This function imports BIS house price data from scratch
+#'
+#' @import dplyr
+#'
+#' @import readr
+
+
+import.bis.property.price.data = function(filepath = paste0(
+  "C:\\Users\\Misha\\Documents\\Data\\BIS\\",
+  "WEBSTATS_SELECTED_PP_DATAFLOW_csv_col.csv"),
+  my_value = "Real",
+  my_measure = "Index, 2010 = 100",
+  countries_vec = NULL){
+
+  raw_df = read_csv(filepath, col_types = cols(), progress = FALSE)
+
+
+  temp_df = raw_df %>%
+    select(-c(grep("^([A-Z]*_*)+$",names(.), value = TRUE),
+              "Time Period", "Frequency"))
+
+
+  # Filter for default values
+
+  filtered_df = temp_df %>%
+    filter(Value %in% my_value) %>%
+    filter(`Unit of measure` %in% my_measure)
+
+  # Subsitute spaces in country names and filter for countries
+
+  filtered_df = filtered_df %>%
+    rename(Country = `Reference area`) %>%
+    mutate(Country = gsub("\\s","_",Country)) %>%
+    {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec)}
+
+
+  selected_df = filtered_df %>%
+    select(-c("Value","Unit of measure"))
+
+  long_df = gather(selected_df,key = Date,value = HousePrice,-Country)
+
+  return(long_df)
+
+}
+
+
+#' This helper function imports Worldwide Governance Indicators data
+#'
+#' @import readr
+#'
+#'  @import dplyr
+#'
+
+import.wgi.ind = function(filepath = paste0(
+  "C:\\Users\\Misha\\Documents\\Data\\World Bank\\WGIData.csv"),
+  countries_vec = NULL){
+
+  temp_df = read_csv(filepath, col_types = NULL)
+
+  df = temp_df %>%
+    select(-`Country Code`,-`Indicator Code`) %>%
+    rename(Country = `Country Name`, Indicator = `Indicator Name`) %>%
+    mutate(Country = gsub("\\s","_", Country)) %>%
+    {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec) else .} %>%
+    select(-X24) %>%
+    gather(.,key = Date,value = Val, -Country,-Indicator)
+
+
+  return(df)
+
+
+}
+
+
+#' This helper function imports banking crises dates data
+#'
+#' @import readxl
+#'
+#'  @import dplyr
+#'
+
+import.crises.dates.df = function(filepath = paste0(
+  "C:\\Users\\Misha\\Documents\\Data\\LavaenValencia\\SYSTEMIC BANKING ",
+  "CRISES DATABASE_2018.xlsx"),
+  countries_vec = NULL){
+
+  temp = read_xlsx(filepath,
+                   sheet = "Crisis Resolution and Outcomes",
+                   range = "A1:K152")
+
+
+  df = temp %>%
+    setNames(gsub(pattern = "[0-9/\r\n]","", names(.))) %>%
+    mutate(End = gsub(pattern = "[0-9]{1}/$","", End)) %>%
+    mutate(End = gsub("\\s","",End)) %>%
+    mutate(Country = gsub("\\s","_",Country)) %>%
+    {if(!is.null(countries_vec)) filter(., Country %in% countries_vec) else .} %>%
+    mutate_at(.vars = vars(-Country, -Start, -End),
+              .funs = list(~round(as.numeric(.),2))) %>%
+    mutate_at(.vars = vars(Start, End),
+              .funs = list(~as.character(.)))
+
+
+  return(df)
+
+
+}
+
