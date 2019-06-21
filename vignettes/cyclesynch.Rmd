@@ -90,35 +90,26 @@ countries_list$cross_country_pairs = countries_list$oecd_countries_pairs[!countr
 
 reg_list = list()
 
+
+
+```
+
+
+```{r formula_setup}
+
 control_vars = c("trade_gdp","FX_stab_tot","MI_ind_tot","FO_ind_tot",
                  "FD_tot","WGI_tot","Time_trend")
 
-formula_vars = control_vars[!grepl(pattern = "FD_tot",control_vars)]
-
-cont_formula = paste("Fin_synch~ bank_gdp * Crises",
-                     "bank_gdp * FD_tot",
-                     "lag(Fin_synch, 1)",
-                     paste(control_vars[!grepl(pattern = "Time_trend",
-                                               control_vars)],
-                           collapse = "+"),sep = "+")
-
-cont_formula_lag = paste(cont_formula,"|. -bank_gdp + lag(bank_gdp, 1)")
-
-cont_formula_delta = paste("Fin_synch_delta~ bank_gdp_delta * Crises",
-                     "bank_gdp_delta * FD_tot",
-                     "lag(Fin_synch_delta, 1)",
-                     paste(control_vars[!grepl(pattern = "Time_trend",
-                                               control_vars)],
-                           collapse = "+"),sep = "+")
-
-
+formula_vars = control_vars[!control_vars %in% c("Time_trend",
+                                                 "FD_tot",
+                                                 "MI_ind_tot")]
 
 table_names = c("bank_gdp","Crises",
                 "bank_gdp:Crises","FD_tot",
                 "bank_gdp:FD_tot",
                 "lag(Fin_synch, 1)",
-                "trade_gdp","FX_stab_tot","MI_ind_tot",
-                "FO_ind_tot","WGI_tot")
+                formula_vars)
+
 
 cov_labels = c("Banking linkages",
                "Crises indicator",
@@ -128,9 +119,24 @@ cov_labels = c("Banking linkages",
                "Fin cycle synch lag",
                "Trading linkages",
                "FX stability",
-               "Monetary Independence",
                "Financial openness",
                "Governance")
+
+cont_formula = paste("Fin_synch~ bank_gdp * Crises",
+                     "bank_gdp * FD_tot",
+                     "lag(Fin_synch, 1)",
+                     paste(formula_vars,collapse = "+"),sep = "+")
+
+cont_formula_delta = cont_formula %>% 
+  gsub("bank_gdp","bank_gdp_delta",.) %>% 
+  gsub("Fin_synch","Fin_synch_delta",.)
+
+cont_formula_lag = paste(cont_formula %>% 
+  gsub("bank_gdp","bank_gdp_detrended",.) %>% 
+  gsub("Fin_synch","Fin_synch_detrended",.),
+  "|. -bank_gdp + lag(bank_gdp, 1)")
+
+
 
 ```
 
@@ -156,7 +162,8 @@ raw_data$cpi_quarter = import.bis.cpi.data(annual_freq = FALSE) %>%
 
 # raw_data$OECD_quarter = import.oecd.gdp(countries_vec = countries_list$oecd_countries)
 
-raw_data$bis_lbs = import.bis.lbs.data(countries_vec = countries_list$oecd_countries) %>% 
+raw_data$bis_lbs = import.bis.lbs.data(
+  countries_vec = countries_list$oecd_countries) %>% 
   mutate(Date = as.yearqtr(Date, format = "%Y-Q%q"))
 
 raw_data$Harmon_both_quarter = import.harmon.data() %>% 
@@ -171,6 +178,10 @@ raw_data$Harmon_one_quarter = import.harmon.data() %>%
     from = as.Date(min(raw_data$bis_lbs$Date)),
     to = as.Date(max(raw_data$bis_lbs$Date)),
     by = "quarter") %>% as.yearqtr(),index_status = "one")
+
+raw_data$codes = read.csv(paste0("C:\\Users\\Misha\\Documents\\Data\\ISO\\",
+                          "iso_2digit_alpha_country_codes.csv")) %>% 
+  setNames(c("Code","Country"))
   
 
 ```
@@ -365,8 +376,7 @@ fin_reg_df_annual = construct_fin_reg(
            Pop = log(Pop)),
   countries_vec = countries_list$oecd_countries,
   control_vars = names(df)[!names(df) %in% c("Country","Date","Fin_ret")],
-  collapse_funcs = c("sum")) %>% 
-  rename(Fin_synch = Fin_synch_1)
+  collapse_funcs = c("sum"))
 
 fin_reg_df_annual = fin_reg_df_annual %>% 
   full_join(.,country_pair_df, by = c("Date","CountryPair"))
@@ -385,16 +395,6 @@ temp_lm_resid = function(x,Time){
   return(residuals(lm(x ~ Time)))
   
 }
-
-# fin_reg_df_annual = fin_reg_df_annual %>% 
-#   group_by(CountryPair) %>% 
-#   mutate(Time_trend = seq.int(from = 1,to = length(Date))) %>% 
-#   mutate(bank_gdp_delta = c(NA, diff(bank_gdp))) %>% 
-#   mutate(Fin_synch_delta = c(NA, diff(Fin_synch))) %>% 
-#   mutate(bank_gdp_detrended = residuals(lm(bank_gdp ~ Time_trend))) %>% 
-#   mutate(Fin_synch_detrended = residuals(lm(Fin_synch ~ Time_trend))) %>% 
-#   mutate(Harmon_both_detrended = residuals(lm(Harmon_both_Index ~ Time_trend))) %>% 
-#   ungroup()
 
 
 fin_reg_df_annual = fin_reg_df_annual %>% 
@@ -451,6 +451,36 @@ bank_flows_df = import.bis.lbs.data(my_measure =
 ```
 
 
+<!-- Network construction -->
+
+```{r plot_network, eval=FALSE}
+
+library(igraph)
+
+links_df = import.bis.lbs.data(countries_vec = countries_list$oecd_countries,
+                               collapse_countrypair = FALSE) %>% 
+  group_by(Country,Counter_Country) %>% 
+  summarise(Weight = log(mean(Balance,na.rm = TRUE)))
+
+
+nodes_df = rbind(data.frame(Country = links_df$Country,
+                            Type = "Source"),
+                 data.frame(Country = links_df$Counter_Country,
+                            Type = "Target")) %>% 
+  distinct()
+  
+net = graph_from_data_frame(d = links_df)
+
+E(net)$weight = links_df$Weight
+
+# net = delete_edges(net, E(net)[weight<mean(weight)])
+
+plot(net, vertex.size = sqrt(degree(net, mode = "out")) * 1.5,
+     edge.arrow.size = 0)
+
+```
+
+
 
 <!-- Regression analysis -->
 
@@ -489,15 +519,13 @@ cont_df = fin_reg_df_annual %>%
              "bank_gdp","Crises",control_vars,"Time_trend")) %>% 
     filter(complete.cases(.))
 
-
-
-
-
-reg_list$twoways_controls = make_strata_reg_list(
-  countries_list = countries_list,
-  reg_df = cont_df,
-  reg_formula = formula(cont_formula))
-
+# 
+# 
+# reg_list$twoways_controls = make_strata_reg_list(
+#   countries_list = countries_list,
+#   reg_df = cont_df,
+#   reg_formula = formula(cont_formula))
+# 
 
 reg_list$twoways_lin_trend_controls = make_strata_reg_list(
   countries_list = countries_list,
@@ -520,12 +548,12 @@ cont_df_2007 = fin_reg_df_annual %>%
   filter(complete.cases(.)) %>% 
   filter(!Date %in% c(2007,2008,2009))
   
-
-reg_list$twoways_controls_2007 = make_strata_reg_list(
-  countries_list = countries_list,
-  reg_df = cont_df_2007,
-  reg_formula = formula(cont_formula))
-
+# 
+# reg_list$twoways_controls_2007 = make_strata_reg_list(
+#   countries_list = countries_list,
+#   reg_df = cont_df_2007,
+#   reg_formula = formula(cont_formula))
+# 
 
 reg_list$twoways_lin_trend_controls_2007 = make_strata_reg_list(
   countries_list = countries_list,
@@ -565,7 +593,7 @@ rm(cont_df_delta)
 ```
 
 
-```{r lag_estimation_bank_gdp, eval=FALSE}
+```{r IV_estimation_bank_gdp, eval=FALSE}
 
 reg_list$individual_trend_lag = make_strata_reg_list(
   countries_list = countries_list,
@@ -596,19 +624,20 @@ reg_list$twoways_trend_lag = make_strata_reg_list(
 ```
 
 
-```{r lag_estimation_bank_gdp_controls}
+```{r IV_estimation_bank_gdp_controls}
 
 cont_df_lag = fin_reg_df_annual %>% 
     select(c("Date", "CountryPair","Fin_synch",
-             "bank_gdp","Crises",control_vars,"Time_trend")) %>% 
+             "bank_gdp","Crises",control_vars,"Time_trend",
+             "Fin_synch_detrended","bank_gdp_detrended")) %>% 
     filter(complete.cases(.))
 
-
-reg_list$twoways_controls_lag = make_strata_reg_list(
-  countries_list = countries_list,
-  reg_df = cont_df_lag,
-  reg_formula = formula(cont_formula_lag))
-
+# 
+# reg_list$twoways_controls_lag = make_strata_reg_list(
+#   countries_list = countries_list,
+#   reg_df = cont_df_lag,
+#   reg_formula = formula(cont_formula_lag))
+# 
 
 reg_list$twoways_lin_trend_controls_lag = make_strata_reg_list(
   countries_list = countries_list,
@@ -861,7 +890,7 @@ Figure \ref{plot_Fin_synch} shows the average synchronization (measured as the d
 
 I use data on bilateral cross-border bank positions gathered from the Bank for International Settlements’ (BIS) databank on the residence-based locational banking statistics (LBS). The LBS detail at the country level the geographical composition of banks’ balance sheets and capture outstanding claims and liabilities of banking offices located in the BIS reporting countries, including intragroup positions, and exclude local claims of foreign branches and subsidiaries. 
 
-The BIS statistics have by far the most extensive time coverage from all similar database on cross-border investment holdings (as a comparison to the IMF CPIS database that reports bilateral cross-border financial flows and stocks after 1999). The main limitation of the dataset is that it reports the aggregate international exposure only of the banking system. Yet, cross-border banking activities have been by far the largest component of cross-border investment in the 1980s and the 1990s, and even nowadays it consists of the bulk of international finance. As long as there is a high correlation between international banking and other forms of portfolio investment (equity flows, FDI, and debt flows), my estimates will not be systematically biased. The BIS data are expressed originally in current U.S. dollars.We convert the data into constant U.S. dollars by deflating the series with the U.S. consumer price index (CPI). Following previous work, I use the total stock of external assets and liabilities and construct a quantity-based measures of financial integration. My measure (BANKINT2) is the average of (the logs of) real bilateral asset and liability holdings as a share of the two countries’ GDP.
+The BIS statistics have by far the most extensive time coverage from all similar database on cross-border investment holdings (as a comparison to the IMF CPIS database that reports bilateral cross-border financial flows and stocks after 1999). The main limitation of the dataset is that it reports the aggregate international exposure only of the banking system. Yet, cross-border banking activities have been by far the largest component of cross-border investment in the 1980s and the 1990s, and even nowadays it consists of the bulk of international finance. As long as there is a high correlation between international banking and other forms of portfolio investment (equity flows, FDI, and debt flows), my estimates will not be systematically biased. The BIS data are expressed originally in current U.S. dollars.I convert the data into constant U.S. dollars by deflating the series with the U.S. consumer price index (CPI). Following previous work, I use the total stock of external assets and liabilities and construct a quantity-based measures of financial integration. My measure is the average of (the logs of) real bilateral asset and liability holdings as a share of the two countries’ GDP.
 My panel data set consists of annual bilateral (country-pair) data from and to 18 rich economies over the `r paste(range(fin_reg_df_annual$Date), collapse = "-")` period. These countries are: Australia, Austria, Belgium, Canada, Switzerland, Germany, Denmark, Spain, Finland, France, the United Kingdom, Ireland, Italy, Japan, Netherlands, Portugal, Sweden, and the United States.
 
 \section{Descriptive Statistics}
@@ -936,7 +965,7 @@ The basic specification  (following along the lines of [@Kalemli-Ozcan2013JF]) i
 
 $FinSynch_{i,j,i} = \alpha_{i,j} + \delta_{t} + \beta BankLinkages_{i,j,t} + Controls_{i,j,t} + \varepsilon_{i,j,t}$
 
-This specificaiton includes time and country-pair fixed effect in order to control for unobservable time and country-pair specific factors (such as cultural difference or turmoil years). The year fixed effects account for the effect of global shocks and other common time-varying factors that affect both financial cycle patterns and banking integration. The country-pair effects account for hard-to-measure factors such as cultural ties and similarities, informational frictions, and other time-invariant unobservable factors that have an effect on both financial integration and financial cycle patterns.To account for the upward trend and the nonstationary nature of banking integration (see Figure \ref{plot_bank_gdp}), I add country-pair specific linear time trend. 
+This specificaiton includes time and country-pair fixed effect in order to control for unobservable time and country-pair specific factors (such as cultural difference or turmoil years). The year fixed effects account for the effect of global shocks and other common time-varying factors that affect both financial cycle patterns and banking integration. The country-pair effects account for hard-to-measure factors such as cultural ties and similarities, informational frictions, and other time-invariant unobservable factors that have an effect on both financial integration and financial cycle patterns.To account for the upward trend and the nonstationary nature of banking integration (see Figure \ref{plot_bank_gdp}), I add country-pair specific linear time trend \footnote{I choose linear trend for reasons of simplicity and comparatability with [@Kalemli-Ozcan2013JF], see [@Bouvatier2015] for discussion of trends in banking integration measures}. 
 
 The estimation results can be subject to endogeneity problem. In order to address this issue I take several steps : first, I augment the specified regression with a set of variables in order to control for another economic factors that can effect both financial cycle synchronization and banking integration. [@Chinn2010] suggest that the most important factors for monetary policy are foreign exchange stability, monetary independence and financial openness. The authors construct indexes of the relevant measures and I include them in the controling variables.I also inculed trading linkages, financial development and governance measures. All the variables are explained in the Appendix. Second, I run different specification (adding lags of dependend and explanatory variables) that should attenuate the endogeneity problem.
 
@@ -944,6 +973,8 @@ The estimation results can be subject to endogeneity problem. In order to addres
 Several papers (see [@Kalemli-Ozcan2013],[@Aysun2019]) find that during crises times the effect of global ("push") factors in cross border bank lending increases and lending becomes more synchronized. In order to account for those findings I  introduce an indicator variable for banking crises periods. The data comes from an updates version of [@Laeven2013] and includes the start and end year of banking crises in the OECD countries for the entire sample period. I expect that the effect of banking integration will be different in crises vs normal times and in order to capture this difference I add an interaction variable between banking linkages and crisis indicator to the estimation equation.
 
 \subsubsection{Financial development}
+
+[@Mendoza2009] study the relationship between financial development and global imbalances. The authors show that financial development varies widely even among industrial countries and that financial integration can have different effects (even resulting in global financial imbalances) when countries differ in financial markets development. Countries with deeper financial markets react to financial integration by borrowing from abroad and investing in high-return foreign risky assets while countries that are less financial developed accumulate positions in safer assets. To account for the fact that the effect of financial integration depends on the level of domestic financial development I include an index of financial development and an interaction term between financial development and banking integration.
 
 
 ```{r output_panel_reg_controls, results="asis"}
@@ -981,7 +1012,7 @@ stargazer(temp_reg_list, header = FALSE,
                            c("Country-pair linear trend",
                              rep("Yes", length(temp_reg_list)))))
 
-rm(temp_se_list, temp_reg_list, temp_ind, var_names)
+# rm(temp_se_list, temp_reg_list, temp_ind, var_names)
 
 
 
@@ -1064,7 +1095,9 @@ temp_reg_list = temp_reg_list[!names(temp_reg_list) == "Weak"]
 
 var_names = names(temp_reg_list$Strong$coefficients)
 
-temp_ind = unlist(sapply(table_names,function(temp_name){
+temp_ind = unlist(sapply(table_names %>% 
+  gsub("bank_gdp","bank_gdp_detrended",.) %>% 
+  gsub("Fin_synch","Fin_synch_detrended",.),function(temp_name){
                     which(var_names == temp_name)}))
 
 temp_se_list = lapply(temp_reg_list,function(temp_plm){
@@ -1190,6 +1223,37 @@ rm(temp_se_list, temp_reg_list, temp_ind, var_names)
 
 ```
 
+
+\subsection{Replication}
+
+```{r eval=FALSE}
+
+gdp_df = df %>% 
+  select(Date, Country, GDP_real) %>% 
+  filter(Country %in% countries_list$strong_countries) %>% 
+  group_by(Country) %>% 
+  mutate(GDP_ret = c(NA, diff(log(GDP_real)))) %>% 
+  ungroup() %>% 
+  select(Date, Country, GDP_ret) %>% 
+  filter(complete.cases(.)) %>% 
+  get.neg.abs.diff() %>% 
+  rename(GDP_synch = GDP_ret)
+  
+
+rep_df = fin_reg_df_annual %>% 
+  select(Date, CountryPair, bank_gdp) %>% 
+  full_join(.,gdp_df)
+
+rep_reg = plm(formula = formula(paste0("GDP_synch ~ bank_gdp + ",
+                                       "bank_gdp: as.integer(Date)")),
+              data = rep_df,model = "within", effect = "twoways",
+              index = c("CountryPair","Date"))
+
+summary(plm(formula = formula(paste0("GDP_synch ~ bank_gdp")),
+              data = rep_df,model = "within", effect = "twoways",
+              index = c("CountryPair","Date")))
+
+```
 
 
 
