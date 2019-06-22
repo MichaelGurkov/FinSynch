@@ -42,10 +42,14 @@ library(lmtest)
 
 library(purrr)
 
+library(igraph)
+
 ```
 
 
 ```{r params_setup}
+
+output_status = FALSE
 
 countries_list = list(
   oecd_countries = c("Australia","Austria","Belgium","Canada","Chile",
@@ -102,6 +106,7 @@ control_vars = c("trade_gdp","FX_stab_tot","MI_ind_tot","FO_ind_tot",
 
 formula_vars = control_vars[!control_vars %in% c("Time_trend",
                                                  "FD_tot",
+                                                 "WGI_tot",
                                                  "MI_ind_tot")]
 
 table_names = c("bank_gdp","Crises",
@@ -119,8 +124,7 @@ cov_labels = c("Banking linkages",
                "Fin cycle synch lag",
                "Trading linkages",
                "FX stability",
-               "Financial openness",
-               "Governance")
+               "Financial openness")
 
 cont_formula = paste("Fin_synch~ bank_gdp * Crises",
                      "bank_gdp * FD_tot",
@@ -131,10 +135,9 @@ cont_formula_delta = cont_formula %>%
   gsub("bank_gdp","bank_gdp_delta",.) %>% 
   gsub("Fin_synch","Fin_synch_delta",.)
 
-cont_formula_lag = paste(cont_formula %>% 
-  gsub("bank_gdp","bank_gdp_detrended",.) %>% 
-  gsub("Fin_synch","Fin_synch_detrended",.),
-  "|. -bank_gdp + lag(bank_gdp, 1)")
+cont_formula_lag = paste(cont_formula,
+                         "+ CountryPair:Time_trend",
+                         "|. -bank_gdp + lag(bank_gdp, 1)")
 
 
 
@@ -455,12 +458,12 @@ bank_flows_df = import.bis.lbs.data(my_measure =
 
 ```{r plot_network, eval=FALSE}
 
-library(igraph)
 
 links_df = import.bis.lbs.data(countries_vec = countries_list$oecd_countries,
-                               collapse_countrypair = FALSE) %>% 
-  group_by(Country,Counter_Country) %>% 
-  summarise(Weight = log(mean(Balance,na.rm = TRUE)))
+                               collapse_countrypair = FALSE)  %>% 
+  group_by(Country, Counter_Country) %>% 
+  summarise(Weight = mean(Balance, na.rm = TRUE)) %>% 
+  ungroup()
 
 
 nodes_df = rbind(data.frame(Country = links_df$Country,
@@ -475,11 +478,10 @@ E(net)$weight = links_df$Weight
 
 # net = delete_edges(net, E(net)[weight<mean(weight)])
 
-plot(net, vertex.size = sqrt(degree(net, mode = "out")) * 1.5,
+plot(net, vertex.size = sqrt(degree(net)),
      edge.arrow.size = 0)
 
 ```
-
 
 
 <!-- Regression analysis -->
@@ -642,9 +644,7 @@ cont_df_lag = fin_reg_df_annual %>%
 reg_list$twoways_lin_trend_controls_lag = make_strata_reg_list(
   countries_list = countries_list,
   reg_df = cont_df_lag,
-  reg_formula = formula(paste(cont_formula_lag,"CountryPair:Time_trend",
-                              sep = "+")))
-
+  reg_formula = formula(cont_formula_lag))
 
 rm(cont_df_lag)
 
@@ -810,8 +810,7 @@ ggplot() +
 
 ```
 
-Figure \ref{plot_bank_gdp} shows the average cross border (bilateral) banking linkages 
-of the countries in my sample. We can see that financial integration had increased since 1980s until 2007-2008 (the global financial crises)  and the trend had been reversed since. The shaded area in the figure refer to dates of banking crises in the sample countries and it seems that those are associated with a decrease in financial integration.
+Figure \ref{plot_bank_gdp} shows the average cross border (bilateral) banking linkages of the countries in my sample. We can see that financial integration had increased since 1980s until 2007-2008 (the global financial crises)  and the trend had been reversed since. The shaded area in the figure refer to dates of banking crises in the sample countries and it seems that those are associated with a decrease in financial integration.
 
 
 ```{r plot_bank_gdp_strata,fig.cap="\\label{plot_bank_gdp_strata}"}
@@ -872,8 +871,7 @@ ggplot(fin_reg_df_annual %>%
 ```
 
 
-
-Figure \ref{plot_Fin_synch} shows the average synchronization (measured as the difference between credit and house price growth rates for each country-pair). The synchronization seems to be quite volatile with no specific trend until 2007-2008 (the global financial crises) and the synchronization has increases since.
+Figure \ref{plot_Fin_synch} shows the average synchronization (measured as the difference between credit and house price growth rates for each country-pair). The synchronization seems to be quite volatile with no specific trend until 2007-2008 (the global financial crises) and the synchronization has increases since. 
 
 \newpage
 
@@ -890,7 +888,10 @@ Figure \ref{plot_Fin_synch} shows the average synchronization (measured as the d
 
 I use data on bilateral cross-border bank positions gathered from the Bank for International Settlements’ (BIS) databank on the residence-based locational banking statistics (LBS). The LBS detail at the country level the geographical composition of banks’ balance sheets and capture outstanding claims and liabilities of banking offices located in the BIS reporting countries, including intragroup positions, and exclude local claims of foreign branches and subsidiaries. 
 
-The BIS statistics have by far the most extensive time coverage from all similar database on cross-border investment holdings (as a comparison to the IMF CPIS database that reports bilateral cross-border financial flows and stocks after 1999). The main limitation of the dataset is that it reports the aggregate international exposure only of the banking system. Yet, cross-border banking activities have been by far the largest component of cross-border investment in the 1980s and the 1990s, and even nowadays it consists of the bulk of international finance. As long as there is a high correlation between international banking and other forms of portfolio investment (equity flows, FDI, and debt flows), my estimates will not be systematically biased. The BIS data are expressed originally in current U.S. dollars.I convert the data into constant U.S. dollars by deflating the series with the U.S. consumer price index (CPI). Following previous work, I use the total stock of external assets and liabilities and construct a quantity-based measures of financial integration. My measure is the average of (the logs of) real bilateral asset and liability holdings as a share of the two countries’ GDP.
+The BIS statistics have by far the most extensive time coverage from all similar database on cross-border investment holdings (as a comparison to the IMF CPIS database that reports bilateral cross-border financial flows and stocks after 1999). The main limitation of the dataset is that it reports the aggregate international exposure only of the banking system. Yet, cross-border banking activities have been by far the largest component of cross-border investment in the 1980s and the 1990s, and even nowadays it consists of the bulk of international finance. As long as there is a high correlation between international banking and other forms of portfolio investment (equity flows, FDI, and debt flows), my estimates will not be systematically biased. The BIS data are expressed originally in current U.S. dollars.I convert the data into constant U.S. dollars by deflating the series with the U.S. consumer price index (CPI). Following previous work, I use the total stock
+\footnote {Stocks seem to be beter measurments than flows for financial integration,see [@Prasad2003]} of external assets and liabilities and construct a quantity-based measures of financial integration. 
+
+My measure is the average of (the logs of) real bilateral asset and liability holdings as a share of the two countries’ GDP.
 My panel data set consists of annual bilateral (country-pair) data from and to 18 rich economies over the `r paste(range(fin_reg_df_annual$Date), collapse = "-")` period. These countries are: Australia, Austria, Belgium, Canada, Switzerland, Germany, Denmark, Spain, Finland, France, the United Kingdom, Ireland, Italy, Japan, Netherlands, Portugal, Sweden, and the United States.
 
 \section{Descriptive Statistics}
@@ -909,56 +910,9 @@ stargazer(fin_reg_df_annual %>%
 
 ```
 
+Figure \ref{plot_bank_gdp_strata} shows the time trajectory of banking linkages (normalized by GDP) broken into Hi income and Low income countries groups. The plot shows that each group is characterized by it own trend : while Hi income countries exhibit upward trend, Low income countries show dramatic drop (probably as a result of Global Finacial Crises). The Cross groups sample (being the "average" of the previous groups) doesn't show as significant trend as the other groups. In the regression analysis I use country-pair specific trend for the purpose of detrending  this different (non stationary) behaviour.
 
-\section{Financial cycle synchronization}
-
-[@Kalemli-Ozcan2013JF] find \textbf{positive} association between business cycle synchronization and financial integration in cross section ("Between") model estimates. However estimation of panel ("Within") model with time and country fixed effect provides \textbf{negative} association. Figures \ref{plot_between}  and \ref{plot_within} illustrate that this is also the cases for financial cycles and financial integration relationship. This results suggest that accounting for common global time-varying shocks and hard-to-account-for country-pair characteristics is very important in this case.
-
-```{r plot_between_model, fig.cap="\\label{plot_between}"}
-
-ggplot(fin_reg_df_annual %>% 
-         filter(CountryPair_Category == "Strong") %>% 
-         select(CountryPair, Fin_synch, bank_gdp) %>% 
-         group_by(CountryPair) %>% 
-         summarise_all(.,.funs = list(.~mean), na.rm = TRUE),
-       aes(x = bank_gdp, y = Fin_synch * 100)) + 
-  geom_point() + 
-  geom_smooth(method = "lm",se = FALSE) +
-  theme_bw() + 
-  labs(title = paste0("Average synchronization of financial growth rates",
-                      "\n (Between countrypairs)"),
-       y = "Growth rate negative difference (percent)",
-       x = "Cross border bank balance to gdp") + 
-  theme(plot.title = element_text(hjust = 0.5),
-        legend.position = "bottom",
-        legend.title = element_blank())
-
-
-```
-
-
-```{r plot_within_model, fig.cap="\\label{plot_within}"}
-
-plot_countrypair = "Canada-Netherlands"
-
-ggplot(fin_reg_df_annual %>% 
-         filter(CountryPair == plot_countrypair),
-       aes(x = bank_gdp, y = Fin_synch * 100)) + 
-  geom_point() + 
-  geom_smooth(method = "lm") +
-  theme_bw() + 
-  labs(title = paste0("Average synchronization of financial growth rates",
-                      "\n (Within ",plot_countrypair,")"),
-       y = "Growth rate negative difference (percent)",
-       x = "Cross border bank balance to gdp") + 
-  theme(plot.title = element_text(hjust = 0.5))
-
-rm(plot_countrypair)
-
-```
-
-
-\section{Regression analysis}
+\section{Hypothesys formulation and estimation results}
 
 
 The basic specification  (following along the lines of [@Kalemli-Ozcan2013JF]) is
@@ -974,10 +928,36 @@ Several papers (see [@Kalemli-Ozcan2013],[@Aysun2019]) find that during crises t
 
 \subsubsection{Financial development}
 
-[@Mendoza2009] study the relationship between financial development and global imbalances. The authors show that financial development varies widely even among industrial countries and that financial integration can have different effects (even resulting in global financial imbalances) when countries differ in financial markets development. Countries with deeper financial markets react to financial integration by borrowing from abroad and investing in high-return foreign risky assets while countries that are less financial developed accumulate positions in safer assets. To account for the fact that the effect of financial integration depends on the level of domestic financial development I include an index of financial development and an interaction term between financial development and banking integration.
+[@Mendoza2009] study the relationship between financial development and global imbalances. The authors show that financial development varies widely even among industrial countries and that financial integration can have different effects (even resulting in global financial imbalances) when countries differ in financial markets development. Countries with deeper financial markets react to financial integration by borrowing from abroad and investing in high-return foreign risky assets while countries that are less financial developed accumulate positions in safer assets.
+
+[@Masten2008] analyze the effects of financial development on economic growth. Deeper financial markets reduce transaction and information costs and help diversify risk.
+They find that the effect is non linear. They also adress the issue of interaction between financial development and financial integration arguing that financial integration has a positive effect only after the development of national financial market reaches certain threshold. 
+
+To account for the fact that the effect of financial integration depends on the level of domestic financial development I include an index of financial development and an interaction term between financial development and banking integration.
 
 
-```{r output_panel_reg_controls, results="asis"}
+Full specification is 
+
+$FinSynch_{i,j,i} = \alpha_{i,j} + \delta_{t} + \beta BankLinkages_{i,j,t} + \gamma_{1} Crises + \gamma_{2} BankLinkages_{i,j,t} * Crises + \theta_{1} FD + \theta_{2} BankLinkages_{i,j,t} * FD  + Controls_{i,j,t} + \varepsilon_{i,j,t}$
+
+
+The hypothesis are:
+
+\textbf{H1 - Banking integration effect} 
+\newline
+Theory gives ambiguos prediction about the relationship between financial cycles synchronization and banking integration. Financial integration can be "shock absorber" and in that case the sign should be negative. On the other hand integration can be a "shock propagator" and then the sigh should be positive. The bottom line is that we don't have a clear prediction regarding the sign of banking integration coefficient.
+
+\textbf{H2 - Crisis effect} 
+\newline
+During crisis times common (global) shocks are prevalent and that should induce more synchronized financial cycles. That means that the crisis effect should be positive and the "shock propagator" role of banking integration should increase during crisis times. Thus the hypothesis is that $\gamma_{1} > 0, \gamma_{2} > 0$.
+
+\textbf{H3 - Financial development effect} 
+\newline
+Deeper financial markets enable diversification and risk sharing, this should reduce the synchronization of finanacial cycles so the hypothesis is that $\theta_{1} > 0, \theta_{2} > 0$.
+
+
+
+```{r output_panel_reg_controls, results="asis", eval=output_status}
 
 temp_reg_list = reg_list$twoways_lin_trend_controls
 
@@ -1020,74 +1000,13 @@ stargazer(temp_reg_list, header = FALSE,
 ```
 
 
-Table \ref{panel_reg_controls} presents specification that includes crises indicator variables (as well as interaction terms between banking linkages and crises indicators) and a set of control variables. The banking linkages negative association remains stable (and statisticly significant) across the subsamples. Looking at crises indicators presents an interesting picture: only simultaneous crisis (in both countries) is associated greater financial cycle synchronization. The interaction between banking linkages and crises indicators reveals that banking linkages 
+Estimation results are shown in table \ref{panel_reg_controls}. Banking linkages are associated with more synchronized cycles in total sample (column 1). Breaking the sample to Hi and Low income countries reveals that there is no significant association in the Hi income countries sample. Financial cycles are more synchronized during banking crisis and banking integration's "shock propagating" feature is amplified during these periods. Financial development levels are inversely associated with synchronization but there is no significant interaction between banking integration and financial development effect
 
+\section{Robustness}
 
-\subsection{Instrument variable estimation}
+I ran a regression with lagged banking linkages as an instrumental variable. Arguably 
 
-The Financial Services Action Plan (FSAP) took place amoung EU15 countries during 1998-2008. The purpose of this major policy initiative was to remove regulatory and legislative barriers in financial intermediation across European countries.
-
-
-```{r Output_first_stage_reg, results="asis", eval=FALSE}
-
-stargazer(iv_reg_results$first_step_reg_annual,header = FALSE,
-          dep.var.labels = "", dep.var.caption = "Banking linkages",
-          covariate.labels = "Harmonization index",
-          title = "First stage regression",
-          se = sqrt(diag(vcovHC(iv_reg_results$first_step_reg_annual,
-                                type = "HC0"))))
-
-```
-
-
-```{r output_iv_annual, results="asis", eval=FALSE}
-
-stargazer(iv_reg_results$iv_reg_annual,header = FALSE,
-          dep.var.labels = "",title = "IV estimation",
-          covariate.labels = cov_labs[1:2],
-          omit.stat = c("f","adj.rsq"))
-
-```
-
-
-
-\subsection{Credit direction test}
-
-In this subsection I test the hypothesis that the mechanism that results in credit cycle divergence is the movement of funds from "bad" to "good" country. I calculate the net credit balance between two countries, larger net balance should be associated with lower synchronization.
-
-
-\newpage
-
-\section{Appendix}
-
-\subsection{Descriptive stats}
-
-\subsection{Robustness check}
-
-Since the synch and bank_XXX measures both have credit component I use trade flows instead of bank 
-
-```{r, eval=FALSE}
-
-fin_trade_reg = plm(Fin_synch ~ trade_gdp + 
-                FX_stab_tot + FO_ind_tot + 
-                Pruc_tot + kaopen,
-                   data = fin_reg_full_df, model = "within",
-                   effect = "twoways")
-
-stargazer(fin_trade_reg,
-          title = "Robustness - trade instead of bank",
-          header = FALSE, dep.var.labels.include = FALSE,
-          omit.stat = "f",
-          column.labels = "Synch1")
-
-
-
-```
-
-\subsubsection{Lagged estimation}
-
-
-```{r output_panel_reg_lag, results="asis"}
+```{r output_panel_reg_lag, results="asis", eval=output_status}
 
 temp_reg_list = reg_list$twoways_lin_trend_controls_lag
 
@@ -1132,10 +1051,72 @@ rm(temp_se_list, temp_reg_list, temp_ind, var_names)
 ```
 
 
+
+\subsection{Instrument variable estimation}
+
+The Financial Services Action Plan (FSAP) took place amoung EU15 countries during 1998-2008. The purpose of this major policy initiative was to remove regulatory and legislative barriers in financial intermediation across European countries.
+
+
+```{r Output_first_stage_reg, results="asis", eval=FALSE}
+
+stargazer(iv_reg_results$first_step_reg_annual,header = FALSE,
+          dep.var.labels = "", dep.var.caption = "Banking linkages",
+          covariate.labels = "Harmonization index",
+          title = "First stage regression",
+          se = sqrt(diag(vcovHC(iv_reg_results$first_step_reg_annual,
+                                type = "HC0"))))
+
+```
+
+
+```{r output_iv_annual, results="asis", eval=FALSE}
+
+stargazer(iv_reg_results$iv_reg_annual,header = FALSE,
+          dep.var.labels = "",title = "IV estimation",
+          covariate.labels = cov_labs[1:2],
+          omit.stat = c("f","adj.rsq"))
+
+```
+
+
+
+\subsection{Credit direction test}
+
+In this subsection I test the hypothesis that the mechanism that results in credit cycle divergence is the movement of funds from "bad" to "good" country. I calculate the net credit balance between two countries, larger net balance should be associated with lower synchronization.
+
+
+\newpage
+
+\section{Appendix}
+
+
+\subsection{Robustness check}
+
+Since the synch and bank_XXX measures both have credit component I use trade flows instead of bank 
+
+```{r, eval=FALSE}
+
+fin_trade_reg = plm(Fin_synch ~ trade_gdp + 
+                FX_stab_tot + FO_ind_tot + 
+                Pruc_tot + kaopen,
+                   data = fin_reg_full_df, model = "within",
+                   effect = "twoways")
+
+stargazer(fin_trade_reg,
+          title = "Robustness - trade instead of bank",
+          header = FALSE, dep.var.labels.include = FALSE,
+          omit.stat = "f",
+          column.labels = "Synch1")
+
+
+
+```
+
+
 \subsection{Global crisis effect}
 
 
-```{r output_panel_reg_controls_2007, results="asis"}
+```{r output_panel_reg_controls_2007, results="asis", eval=output_status}
 
 temp_reg_list = reg_list$twoways_lin_trend_controls_2007
 
@@ -1178,7 +1159,7 @@ rm(temp_se_list, temp_reg_list, temp_ind, var_names)
 \subsection{Delta estimation}
 
 
-```{r output_panel_reg_delta, results="asis"}
+```{r output_panel_reg_delta, results="asis", eval=output_status}
 
 temp_reg_list = reg_list$twoways_lin_trend_delta
 
@@ -1276,98 +1257,6 @@ This index is simple, not sensitive to filtering techniques critique and quite u
 \textbf{Trading linkages} indicate of bilateral trade intensity. The measure is the log of bilateral real (deflated with the U.S. price deflator) exports and imports as a share of the two countries’ GDP. Source: IMF Direction of Trade Database (2008).
 
 \textbf{Monetary Independence},\textbf{Financial openness} and \textbf{FX stability} indices are based on the work of [@Chinn2010].
-
-
-Monetary Independence (\textbf{MI})
-The extent of monetary independence is measured as the reciprocal of the annual correlation between the monthly interest rates of the home country and the base country. 
-
-The index for the extent of monetary independence is defined as:
-
-$MI = 1 - \frac{corr(i_{i},i_{j}) - 1}{1 - (-1)}$
-
-where i refers to home countries and j to the base country. The base country is defined as the country that a home country’s monetary policy is most closely linked with as in Shambaugh (2004). The base countries are for OECD sample are Australia, Belgium, France, Germany, the United Kingdom, and the United States. For the countries and years for which Shambaugh’s data are available, the base countries from his work are used, and for the others, the base countries are assigned based on the International Monetary
-Fund’s Annual Report on Exchange Arrangements and Exchange Restrictions (AREAER) and
-Central Intelligence Agency Factbook.
-
-This is a normalized index that takes values in the range of [0,1]. Higher values of the index mean more monetary policy independence.
-
-
-\begin{tabular}{|c|c|}
-	\hline 
-	Australia & U.S. Dollar \\ 
-	\hline 
-	Austria &  German DM\\ 
-	\hline 
-	Belgium &  German DM \\ 
-	\hline 
-	Canada &  U.S. Dollar \\ 
-	\hline 
-	Chile &  \\ 
-	\hline 
-	Czech Republic &  \\ 
-	\hline 
-	Denmark &  German DM\\ 
-	\hline 
-	Estonia &  \\ 
-	\hline 
-	Finland &  German DM\\ 
-	\hline 
-	France	&  German DM \\ 
-	\hline 
-	Germany	&  U.S. Dollar \\ 
-	\hline 
-	Greece &  \$ (74-80) / DM (81-00)  \\ 
-	\hline 
-	Hungary	&  \$ (88-91) / DM (92-99)\\ 
-	\hline 
-	Iceland &  \$ (87-90) / DM (91-00) \\ 
-	\hline 
-	Ireland	&  Pound(73-8) /DM(79-00) \\ 
-	\hline 
-	Israel	&  U.S. Dollar\\ 
-	\hline 
-	Italy &  German DM\\ 
-	\hline 
-	Japan &  U.S. Dollar \\ 
-	\hline 
-	Korea &  U.S. Dollar\\ 
-	\hline 
-	Latvia &  \\ 
-	\hline 
-	Lithuania &  \\ 
-	\hline 
-	Luxembourg &  Belgian Franc\\ 
-	\hline 
-	Mexico &  U.S. Dollar\\ 
-	\hline 
-	Netherlands &  German DM\\ 
-	\hline 
-	New Zealand &  Australian Dollar \\ 
-	\hline 
-	Norway &  German DM\\ 
-	\hline 
-	Poland &  German DM \\ 
-	\hline 
-	Portugal & German DM \\ 
-	\hline 
-	Slovak Republic &  \\ 
-	\hline 
-	Slovenia &  \\ 
-	\hline 
-	Spain &  German DM \\ 
-	\hline 
-	Sweden 	& German DM  \\ 
-	\hline 
-	Switzerland & German DM \\ 
-	\hline 
-	Turkey & U.S. Dollar  \\ 
-	\hline 
-	United Kingdom &  German DM \\ 
-	\hline 
-	United States &  \\ 
-	\hline 
-\end{tabular} 
-
 
 
 Exchange Rate Stability (\textbf(FX stab))
