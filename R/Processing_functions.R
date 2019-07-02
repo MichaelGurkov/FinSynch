@@ -364,14 +364,18 @@ collapse_pair_controls = function(fin_reg_df, control_vars,
 
      fin_reg_df[paste0(temp_var,"_tot")] = fin_reg_df %>%
        select(!!paste0(temp_var[1],c("_A","_B"))) %>%
-       apply(.,1,sum, na.rm = TRUE)
+       apply(.,1,function(temp_row){
+         ifelse(sum(is.na(temp_row)) == length(temp_row),
+                NA,sum(temp_row, na.rm = TRUE))})
    }
 
    if("diff" %in% collapse_funcs){
 
      fin_reg_df[paste0(temp_var,"_diff")] = fin_reg_df %>%
        select(!!paste0(temp_var[1],c("_A","_B"))) %>%
-       apply(.,1,function(temp_row){temp_row[1] - temp_row[2]})
+       apply(.,1,function(temp_row){
+         ifelse(sum(is.na(temp_row)) == length(temp_row),
+                NA,temp_row[1] - temp_row[2])})
 
    }
 
@@ -379,7 +383,9 @@ collapse_pair_controls = function(fin_reg_df, control_vars,
 
      fin_reg_df[paste0(temp_var,"_min")] = fin_reg_df %>%
        select(!!paste0(temp_var[1],c("_A","_B"))) %>%
-       apply(.,1,min, na.rm = TRUE)
+       apply(.,1,function(temp_row){
+         ifelse(sum(is.na(temp_row)) == length(temp_row),
+                NA,min(temp_row, na.rm = TRUE))})
 
    }
 
@@ -406,31 +412,33 @@ construct_fin_reg = function(df,countries_vec = NULL,
                              control_vars = c("FD","FX_stab","MI_ind",
                                               "FO_ind","PruC","PruC2",
                                               "FD","FI"),
-                             collapse_funcs = c("sum","diff","min")){
+                             collapse_funcs = c("sum","diff","min"),
+                             construct_func = "get.neg.abs.diff"){
 
-  temp_df_1 = df %>%
+  temp_function = match.fun(construct_func, descend = FALSE)
+
+  fin_reg_df = df %>%
   {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec) else .} %>%
     select(Date, Country,Fin_ret) %>%
-    get.neg.abs.diff() %>%
-    rename(Fin_synch_1 = Fin_ret)
+    temp_function() %>%
+    rename(Fin_synch = Fin_ret)
+
+  if(!is.null(control_vars)){
+
+    fin_reg_df = append.countrypair.dataframe(fin_reg_df,
+                                              df %>%
+                                                select(Date,Country,
+                                                       !!control_vars))
 
 
-  temp_df_2 = df %>%
-  {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec) else .} %>%
-    select(Date, Country,Fin_ret_resid) %>%
-    get.neg.abs.diff() %>%
-    rename(Fin_synch_2 = Fin_ret_resid)
+  }
 
-  fin_reg_df = full_join(temp_df_1, temp_df_2)
+  if(!is.null(collapse_funcs)){
 
+    fin_reg_df = collapse_pair_controls(fin_reg_df, control_vars,
+                                        collapse_funcs = collapse_funcs)
 
-  fin_reg_df = append.countrypair.dataframe(fin_reg_df,
-                                            df %>%
-                                              select(Date,Country,
-                                                     !!control_vars))
-
-  fin_reg_df = collapse_pair_controls(fin_reg_df, control_vars,
-                                      collapse_funcs = collapse_funcs)
+  }
 
 
   return(fin_reg_df)
@@ -546,6 +554,85 @@ construct_countrypair_harmon_index = function(df, dates_vec = NULL,
 
 }
 
+#' This function constructs country pair harmon index
+#'
+#'  @import dplyr
+#'
+#'
+
+construct_countrypair_EU_index = function(df, dates_vec = NULL,
+                                              index_status = "both"){
+
+
+  country_pairs_list = combn(unique(df$Country),2) %>%
+    apply(.,2,as.list)
+
+  # Default dates vec
+
+  if(is.null(dates_vec)){
+
+    dates_vec = unique(df$Date) %>%
+      na.omit() %>%
+      .[order(.)]
+
+  }
+
+  res = lapply(country_pairs_list,
+               function(country_pair, dates_vec){
+
+                 countryA = country_pair[[1]]
+
+                 countryB = country_pair[[2]]
+
+                 date_max = max(df$Date[df$Country == countryA],
+                                df$Date[df$Country == countryB])
+
+                 date_min = min(df$Date[df$Country == countryA],
+                                df$Date[df$Country == countryB])
+
+                 if(is.na(date_min)){
+                   return(rep(0, length(dates_vec)))
+                 }
+
+                 if(index_status == "both"){
+
+                   temp_vec = as.numeric(dates_vec >= date_max)
+
+                 } else {
+
+                   temp_vec = as.numeric(dates_vec >= date_min &
+                                           dates_vec <= date_max)
+
+                 }
+
+                 return(temp_vec)
+
+
+               },
+               dates_vec = dates_vec)
+
+  names(res) = sapply(country_pairs_list,
+                      function(temp_row){ifelse(temp_row[[1]]< temp_row[[2]],
+                                                paste(temp_row[[1]],
+                                                      temp_row[[2]],
+                                                      sep = "-"),
+                                                paste(temp_row[[2]],
+                                                      temp_row[[1]],
+                                                      sep = "-"))})
+
+  df_list = lapply(names(res),
+               function(name){
+
+                 res[[name]] = data.frame(Status = res[[name]]) %>%
+                   mutate(CountryPair = name) %>%
+                   mutate(Date = dates_vec)})
+
+  res = do.call(rbind.data.frame,df_list)
+
+  return(res)
+
+}
+
 
 #'This function runs panel regression for each strata separately
 #'
@@ -565,13 +652,15 @@ make_strata_reg_list = function(countries_list,reg_df,reg_formula,
     temp_reg_df = reg_df %>%
       {if(!is.null(temp_vec)) filter(.,CountryPair %in% temp_vec) else .}
 
-    temp_reg =plm(formula = reg_formula,
-                  model = my_model,effect = my_effect,
-                  data = temp_reg_df, index = c("CountryPair","Date"))
+    temp_reg = tryCatch(plm(formula = reg_formula,
+                            model = my_model,effect = my_effect,
+                            data = temp_reg_df, index = c("CountryPair","Date")),
+                        error = function(e){return(NA)})
 
     return(temp_reg)})
 
-  names(fin_reg__list) = c("All","Strong","Weak","Cross","Cross_Weak")
+  names(fin_reg__list) = c("All","Hi Income","Low Income",
+                           "Cross(Hi-Low)","Cross and Low")
 
   return(fin_reg__list)
 
@@ -599,5 +688,422 @@ classify_crises_dates = function(Target_Country, dates_vec, crises_df){
 
      } else {return(as.vector(crises_dates))}
 
+
+}
+
+
+#' This function extracts significant coefficient names from lm model
+#'
+
+get_significant_names = function(temp_lm){
+
+  names = names(coefficients(temp_lm))
+
+  names = names[summary(temp_lm)$coefficients[,4] <= 0.1]
+
+  names = names[!grepl("Time_trend$", names)]
+
+  return(names)
+}
+
+
+#' This function imports all data
+#'
+import.all.data= function(countries_list =NULL){
+
+  if(is.null(countries_list)){
+
+    countries_list = list(
+      oecd_countries = c("Australia","Austria","Belgium","Canada","Chile",
+                         "Czech_Republic","Denmark","Estonia","Finland","France",
+                         "Germany","Greece","Hungary", "Iceland","Ireland",
+                         "Israel","Italy","Japan","Korea","Latvia",
+                         "Lithuania","Luxembourg","Mexico","Netherlands",
+                         "New_Zealand","Norway","Poland","Portugal",
+                         "Slovak_Republic","Slovenia","Spain","Sweden",
+                         "Switzerland","Turkey","United_Kingdom"
+                         ,"United_States"),
+      strong_countries = c("Australia","Austria","Belgium","Canada",
+                           "Switzerland","Germany","Denmark","Spain",
+                           "Finland","France","United_Kingdom","Ireland",
+                           "Italy","Japan","Netherlands","Portugal",
+                           "Sweden","United_States"),
+      fsap_countries = c("Austria","Belgium","Germany","Denmark","Spain",
+                         "France","Finland","Greece","Ireland","Italy",
+                         "Luxembourg","Netherlands","Portugal",
+                         "Sweden","United_Kingdom"))
+
+    countries_list$weak_countries = countries_list$oecd_countries[!countries_list$oecd_countries %in% countries_list$strong_countries]
+
+
+    pairs_list = lapply(names(countries_list),
+                        function(temp_name){
+                          apply(combn(countries_list[[temp_name]],2), 2,
+                                function(temp_col){
+                                  ifelse(temp_col[1]<temp_col[2],
+                                         paste(temp_col[1],temp_col[2],sep = "-"),
+                                         paste(temp_col[2],temp_col[1],sep = "-"))})
+
+                        })
+
+    names(pairs_list) = paste(names(countries_list), "pairs", sep = "_")
+
+    countries_list = c(countries_list, pairs_list)
+
+    rm(pairs_list)
+
+    countries_list$cross_country_pairs = countries_list$oecd_countries_pairs[!countries_list$oecd_countries_pairs %in% countries_list$strong_countries_pairs & !countries_list$oecd_countries_pairs %in% countries_list$weak_countries_pairs]
+
+
+
+  }
+
+  raw_data = list()
+
+  raw_data$HousePrice = import.bis.property.price.data(
+    countries_vec = countries_list$oecd_countries) %>%
+    mutate(Date = as.yearqtr(Date, format = "%Y-Q%q"))
+
+  raw_data$TotalCredit = import.bis.tot.credit.data(
+    countries_vec = countries_list$oecd_countries) %>%
+    mutate(Date = as.yearqtr(Date, format = "%Y-Q%q"))
+
+  raw_data$WDI_annual = import_wdi_df(
+    countries_vec = countries_list$oecd_countries)
+
+
+  raw_data$bis_lbs = import.bis.lbs.data(
+    countries_vec = countries_list$oecd_countries) %>%
+    mutate(Date = as.yearqtr(Date, format = "%Y-Q%q"))
+
+  raw_data$Harmon_both_quarter = import.harmon.data() %>%
+    construct_countrypair_harmon_index(.,dates_vec = seq.Date(
+      from = as.Date(min(raw_data$bis_lbs$Date)),
+      to = as.Date(max(raw_data$bis_lbs$Date)),
+      by = "quarter") %>% as.yearqtr())
+
+  raw_data$Harmon_one_quarter = import.harmon.data() %>%
+    construct_countrypair_harmon_index(.,dates_vec = seq.Date(
+      from = as.Date(min(raw_data$bis_lbs$Date)),
+      to = as.Date(max(raw_data$bis_lbs$Date)),
+      by = "quarter") %>% as.yearqtr(),index_status = "one")
+
+  raw_data$codes = read.csv(paste0("C:\\Users\\Misha\\Documents",
+                                   "\\Data\\ISO\\",
+                                   "iso_2digit_alpha_country",
+                                   "_codes.csv")) %>%
+    setNames(c("Code","Country"))
+
+  # Import EU membership
+  #---------------------------------------------------------
+
+   eu_df = read.csv(paste0("C:\\Users\\Misha\\Documents\\",
+                          "Data\\Misc\\EU_membership.csv"),
+                   stringsAsFactors = FALSE) %>%
+    setNames(c("Country","Euro_area","EU"))
+
+
+  eu_dates_vec = seq.Date(
+    from = as.Date(min(raw_data$bis_lbs$Date)),
+    to = as.Date(max(raw_data$bis_lbs$Date)),
+    by = "year") %>%
+    format(.,"%Y")
+
+  raw_data$EU_both = construct_countrypair_EU_index(
+    df = eu_df %>%
+      select(Country, EU) %>%
+      rename(Date = EU),dates_vec = eu_dates_vec) %>%
+    rename(EU_both = Status) %>%
+    mutate(Date = as.character(Date))
+
+  raw_data$EU_one = construct_countrypair_EU_index(
+    df = eu_df %>%
+      select(Country, EU) %>%
+      rename(Date = EU),dates_vec = eu_dates_vec,
+    index_status = "one") %>%
+    rename(EU_one = Status) %>%
+    mutate(Date = as.character(Date))
+
+
+  raw_data$Euro_both = construct_countrypair_EU_index(
+    df = eu_df %>%
+      select(Country, Euro_area) %>%
+      rename(Date = Euro_area),dates_vec = eu_dates_vec) %>%
+    rename(Euro_both = Status) %>%
+    mutate(Date = as.character(Date))
+
+  raw_data$Euro_one = construct_countrypair_EU_index(
+    df = eu_df %>%
+      select(Country, Euro_area) %>%
+      rename(Date = Euro_area),dates_vec = eu_dates_vec,
+    index_status = "one") %>%
+    rename(Euro_one = Status) %>%
+    mutate(Date = as.character(Date))
+
+  rm(eu_df, eu_dates_vec)
+
+
+  # Import_raw_data_crises_dates
+
+  raw_data$crises_df =  import.crises.dates.df(
+    countries_vec = countries_list$oecd_countries)
+
+
+ # make_annual_df
+#------------------------------------------------
+
+  df_list = list(raw_data$TotalCredit %>%
+                   filter(quarters(Date) == "Q4") %>%
+                   mutate(Date = format(Date, "%Y")) %>%
+                   deflate.data(.,vars_to_deflate = "Total_Credit") %>%
+                   select(-Total_Credit),
+                 raw_data$HousePrice %>%
+                   filter(quarters(Date) == "Q4") %>%
+                   mutate(Date = format(Date, "%Y")),
+                 raw_data$WDI_annual %>%
+                   rename(Date = Year) %>%
+                   deflate.data(.,vars_to_deflate = c("GDP","GDP_per_Capita"),
+                                cpi = raw_data$CPI) %>%
+                   select(-GDP, -GDP_per_Capita))
+
+
+  df = df_list %>%
+    reduce(right_join, by = c("Date", "Country")) %>%
+    group_by(Country) %>%
+    mutate_at(.vars = c("Total_Credit_real","HousePrice"),
+              .funs = list(ret = ~c(NA,diff(log(.))))) %>%
+    mutate(Fin_ret = rowMeans(data.frame(Total_Credit_real_ret,
+                                         HousePrice_ret),na.rm = TRUE)) %>%
+    ungroup() %>%
+    filter(is.finite(Fin_ret)) %>%
+    filter(Date >=1978)
+
+  rm(df_list)
+
+
+
+
+  # make_bank_list
+  #---------------------------------------------------
+
+  bank_list = list()
+
+  bank_balance_real = raw_data$bis_lbs %>%
+    filter(quarters(Date) == "Q4") %>%
+    mutate(Date = format(Date, "%Y")) %>%
+    mutate(Balance = Balance * 10 ^ 6) %>%
+    deflate.data(.,vars_to_deflate = "Balance") %>%
+    select(Date, CountryPair,Balance_Pos, Balance_real)
+
+
+  bank_list$bank_gdp = bank_balance_real  %>%
+    normalize.bis.data(.,norm_df = df[,c("Date","Country", "GDP_real")],
+                       norm_val = "GDP_real") %>%
+    group_by(Date, CountryPair) %>%
+    summarise(bank_gdp = mean(log(Balance_real), na.rm = TRUE)) %>%
+    filter(!is.na(bank_gdp))
+
+  # bank_pop = bank_balance_real  %>%
+  #   normalize.bis.data(.,norm_df = df[,c("Date","Country", "Pop")],
+  #                      norm_val = "Pop") %>%
+  #   group_by(Date, CountryPair) %>%
+  #   summarise(bank_pop = mean(log(Balance_real), na.rm = TRUE)) %>%
+  #   filter(!is.na(bank_pop))
+
+  rm(bank_balance_real)
+
+
+  # make_indicators_list
+
+  ind_list = list()
+
+  ind_list$Harmon_both =  raw_data$Harmon_both_quarter %>%
+    mutate(Date = format(Date, "%Y")) %>%
+    group_by(CountryPair, Date, Directive) %>%
+    summarise(Transposed = max(Transposed)) %>%
+    group_by(Date,CountryPair) %>%
+    summarise(Harmon_both_Index = log(
+      sum(Transposed + 1,na.rm = TRUE)))
+
+  ind_list$Harmon_one = raw_data$Harmon_one_quarter %>%
+    mutate(Date = format(Date, "%Y")) %>%
+    group_by(CountryPair, Date, Directive) %>%
+    summarise(Transposed = max(Transposed)) %>%
+    group_by(Date,CountryPair) %>%
+    summarise(Harmon_one_Index = log(
+      sum(Transposed + 1,na.rm = TRUE)))
+
+  ind_list$EU_both = raw_data$EU_both
+
+  ind_list$EU_one =  raw_data$EU_one
+
+  ind_list$Euro_both =  raw_data$Euro_both
+
+  ind_list$Euro_one = raw_data$Euro_one
+
+
+  # Import_IMF_Data
+
+  trade_list = list()
+
+  export_df = lapply(list.files(paste0("C:\\Users\\Misha\\Documents\\Data",
+                                       "\\IMF\\Export-Import\\Export"),
+                                full.names = TRUE),
+                     import_imf_df,
+                     countries_vec = countries_list$oecd_countries) %>%
+    bind_rows() %>%
+    mutate(Exports = as.numeric(Exports)) %>%
+    group_by(Date, CountryPair) %>%
+    summarise(Exports = sum(Exports, na.rm = TRUE))
+
+
+  import_df = lapply(list.files(paste0("C:\\Users\\Misha\\Documents\\Data",
+                                       "\\IMF\\Export-Import\\Import"),
+                                full.names = TRUE),
+                     import_imf_df,
+                     countries_vec = countries_list$oecd_countries) %>%
+    bind_rows() %>%
+    mutate(Imports = as.numeric(Imports)) %>%
+    group_by(Date, CountryPair) %>%
+    summarise(Imports = sum(Imports, na.rm = TRUE))
+
+  trade_df = full_join(export_df,import_df) %>%
+    gather(.,key = Balance_Pos, value = Trade, -Date, - CountryPair) %>%
+    deflate.data(.,vars_to_deflate = "Trade") %>%
+    select(-Trade)
+
+
+  trade_list$trade_gdp = trade_df %>%
+    ungroup() %>%
+    normalize.imf.data(.,wdi_df = df[,c("Date","Country", "GDP_real")],
+                       norm_val = "GDP_real") %>%
+    group_by(Date, CountryPair) %>%
+    summarise(trade_gdp = mean(log(Trade_real), na.rm = TRUE)) %>%
+    filter(!is.na(trade_gdp)) %>%
+    filter(is.finite(trade_gdp))
+
+  rm(export_df, import_df, trade_df)
+
+
+
+  # make_countrypair_df
+
+
+  country_pair_df = unlist(list(bank_list, trade_list, ind_list),
+                           recursive = FALSE) %>%
+    reduce(left_join, by = c("Date","CountryPair"))
+
+
+  country_pair_df = country_pair_df %>%
+    mutate_at(.vars = vars(c("EU_both","EU_one","Euro_both","Euro_one")),
+              .funs = ~(ifelse(is.na(.),0,.)))
+
+
+
+  # Import_trilemma_data
+
+  df = left_join(df, import.trilemma.ind(),
+                 by = c("Country","Date"))
+
+
+
+  # Import_fin_development_data
+
+  df = left_join(df, import.fin.dev.ind(),
+                 by = c("Country","Date"))
+
+
+
+  # Import_WGI_data
+
+  df = left_join(df, import.wgi.ind(
+    countries_vec = countries_list$oecd_countries) %>%
+      filter(grepl("Estimate$", Indicator)) %>%
+      group_by(Country, Date) %>%
+      summarise(WGI = mean(Val, na.rm = TRUE)),
+    by = c("Country","Date"))
+
+
+  #  Dataset construction
+
+  # make_fin_reg_df
+
+  fin_reg_df_annual = construct_fin_reg(
+    df = df %>%
+      mutate(GDP_real = log(GDP_real),
+             Pop = log(Pop)),
+    countries_vec = countries_list$oecd_countries,
+    control_vars = names(df)[!names(df) %in% c("Country","Date","Fin_ret")],
+    collapse_funcs = c("sum"))
+
+  fin_reg_df_annual = fin_reg_df_annual %>%
+    full_join(.,country_pair_df, by = c("Date","CountryPair"))
+
+  fin_reg_df_annual = fin_reg_df_annual %>%
+    filter(!is.na(CountryPair)) %>%
+    filter(!is.na(Fin_synch)) %>%
+    filter(!is.na(bank_gdp)) %>%
+    filter(!is.na(Date))
+
+
+  temp_lm_resid = function(x,Time){
+
+    if(sum(!is.na(x)) < 2){return(rep(NA, length(x)))}
+
+    return(residuals(lm(x ~ Time)))
+
+  }
+
+
+  fin_reg_df_annual = fin_reg_df_annual %>%
+    group_by(CountryPair) %>%
+    mutate(Time_trend = seq.int(from = 1,to = length(Date))) %>%
+    mutate(bank_gdp_delta = c(NA, diff(bank_gdp))) %>%
+    mutate(Fin_synch_delta = c(NA, diff(Fin_synch))) %>%
+    mutate(bank_gdp_detrended = temp_lm_resid(bank_gdp, Time_trend)) %>%
+    mutate(Fin_synch_detrended = temp_lm_resid(Fin_synch, Time_trend)) %>%
+    mutate(Harmon_both_detrended = temp_lm_resid(Harmon_both_Index,
+                                                 Time_trend)) %>%
+    ungroup()
+
+  fin_reg_df_annual$CountryPair_Category[
+    fin_reg_df_annual$CountryPair %in%
+      countries_list$strong_countries_pairs] = "Strong"
+
+  fin_reg_df_annual$CountryPair_Category[
+    fin_reg_df_annual$CountryPair %in%
+      countries_list$cross_country_pairs] = "Cross"
+
+  fin_reg_df_annual$CountryPair_Category[
+    fin_reg_df_annual$CountryPair %in%
+      countries_list$weak_countries_pairs] = "Weak"
+
+
+  # fin_reg_df_add_crises_indicator
+
+  fin_reg_df_annual = fin_reg_df_annual %>%
+    separate(col = CountryPair,into = c("Country_A","Country_B"),
+             sep = "-", remove = FALSE) %>%
+    group_by(Country_A) %>%
+    mutate(Country_A_crises = classify_crises_dates(
+      Target_Country = Country_A[1],
+      dates_vec = Date,
+      crises_df = raw_data$crises_df[,1:3])) %>%
+    group_by(Country_B) %>%
+    mutate(Country_B_crises = classify_crises_dates(
+      Target_Country = Country_B[1],
+      dates_vec = Date,
+      crises_df = raw_data$crises_df[,1:3])) %>%
+    ungroup() %>%
+    rowwise() %>%
+    mutate(Crises_tot = sum(Country_A_crises, Country_B_crises)) %>%
+    mutate(Crises_one = as.numeric(Crises_tot ==1)) %>%
+    mutate(Crises_both = as.numeric(Crises_tot ==2)) %>%
+    mutate(Crises = min(Crises_tot,1)) %>%
+    ungroup() %>%
+    select(-Country_A,-Country_B)
+
+
+  return(fin_reg_df_annual)
 
 }
