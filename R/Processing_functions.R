@@ -637,16 +637,23 @@ construct_countrypair_EU_index = function(df, dates_vec = NULL,
 #'This function runs panel regression for each strata separately
 #'
 
+
 make_strata_reg_list = function(countries_list,reg_df,reg_formula,
                              my_effect = "twoways",
-                             my_model = "within"){
+                             my_model = "within",
+                             criteria_list = NULL){
 
-  criteria_list = list(NULL,
-                       countries_list$strong_countries_pairs,
-                       countries_list$weak_countries_pairs,
-                       countries_list$cross_country_pairs,
-                       c(countries_list$cross_country_pairs,
-                         countries_list$weak_countries_pairs))
+  if(is.null(criteria_list)){
+
+    criteria_list = list(NULL,
+                         countries_list$strong_countries_pairs,
+                         countries_list$weak_countries_pairs,
+                         countries_list$cross_country_pairs)
+
+    names(criteria_list) = c("OECD","KPP","Complement","Cross")
+
+
+  }
 
   fin_reg__list = lapply(criteria_list, function(temp_vec){
     temp_reg_df = reg_df %>%
@@ -659,8 +666,7 @@ make_strata_reg_list = function(countries_list,reg_df,reg_formula,
 
     return(temp_reg)})
 
-  names(fin_reg__list) = c("All","Hi Income","Low Income",
-                           "Cross(Hi-Low)","Cross and Low")
+  names(fin_reg__list) = names(criteria_list)
 
   return(fin_reg__list)
 
