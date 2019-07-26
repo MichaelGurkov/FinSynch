@@ -560,12 +560,13 @@ construct_countrypair_harmon_index = function(df, dates_vec = NULL,
 #'
 #'
 
-construct_countrypair_EU_index = function(df, dates_vec = NULL,
-                                              index_status = "both"){
 
+construct_countrypair_EU_index = function(eu_df, dates_vec = NULL,
+                                          countries = NULL,
+                                          index_status = "both"){
 
-  country_pairs_list = combn(unique(df$Country),2) %>%
-    apply(.,2,as.list)
+  # Set parameters
+  #----------------------------------------------------------------------------
 
   # Default dates vec
 
@@ -577,59 +578,137 @@ construct_countrypair_EU_index = function(df, dates_vec = NULL,
 
   }
 
-  res = lapply(country_pairs_list,
-               function(country_pair, dates_vec){
+  # Default countrypairs
 
-                 countryA = country_pair[[1]]
+  if(is.null(countries)){
 
-                 countryB = country_pair[[2]]
+    countries = unique(eu_df$Country)
+  }
 
-                 date_max = max(df$Date[df$Country == countryA],
-                                df$Date[df$Country == countryB])
+  eu_countries = unique(eu_df$Country)
 
-                 date_min = min(df$Date[df$Country == countryA],
-                                df$Date[df$Country == countryB])
+  # Construct countrypair df (indicate non EU/cross/both EU countries)
+  #----------------------------------------------------------------------------
 
-                 if(is.na(date_min)){
-                   return(rep(0, length(dates_vec)))
-                 }
-
-                 if(index_status == "both"){
-
-                   temp_vec = as.numeric(dates_vec >= date_max)
-
-                 } else {
-
-                   temp_vec = as.numeric(dates_vec >= date_min &
-                                           dates_vec <= date_max)
-
-                 }
-
-                 return(temp_vec)
+  countrypairs_df = combn(countries,2) %>%
+    t() %>%
+    as.data.frame() %>%
+    setNames(c("Country","Counter_Country")) %>%
+    mutate_all(list(~as.character(.))) %>%
+    mutate(CountryPair = ifelse(Country < Counter_Country,
+                                paste(Country,Counter_Country, sep = "-"),
+                                paste(Counter_Country,Country, sep = "-")))
 
 
-               },
-               dates_vec = dates_vec)
+  countrypairs_df = countrypairs_df %>%
+    rowwise() %>%
+    mutate(EU_Status = sum(Country %in% eu_countries,
+                           Counter_Country %in% eu_countries))
 
-  names(res) = sapply(country_pairs_list,
-                      function(temp_row){ifelse(temp_row[[1]]< temp_row[[2]],
-                                                paste(temp_row[[1]],
-                                                      temp_row[[2]],
-                                                      sep = "-"),
-                                                paste(temp_row[[2]],
-                                                      temp_row[[1]],
-                                                      sep = "-"))})
+  # Construct output df
+  #----------------------------------------------------------------------------
 
-  df_list = lapply(names(res),
-               function(name){
+  if(index_status == "both"){
 
-                 res[[name]] = data.frame(Status = res[[name]]) %>%
-                   mutate(CountryPair = name) %>%
-                   mutate(Date = dates_vec)})
+  # None EU countrypairs
 
-  res = do.call(rbind.data.frame,df_list)
+  non_eu_countrypairs = countrypairs_df %>%
+    filter(EU_Status == 0) %>%
+    select(CountryPair) %>%
+    ungroup() %>%
+    expand(Date = dates_vec, CountryPair) %>%
+    mutate(Status = 0)
 
-  return(res)
+  # Cross EU countrypairs
+
+  cross_country_pairs = countrypairs_df %>%
+    filter(EU_Status == 1) %>%
+    select(-EU_Status) %>%
+    left_join(eu_df, by = c("Country" = "Country")) %>%
+    left_join(eu_df, by = c("Counter_Country" = "Country")) %>%
+    select(-Country,-Counter_Country) %>%
+    gather(key = Indicator, value = Val, -CountryPair) %>%
+    group_by(CountryPair) %>%
+    summarise(Date = sum(as.numeric(Val), na.rm = TRUE)) %>%
+    apply(1,function(temp_row){
+
+    return(data.frame(Date = dates_vec,
+                      CountryPair = temp_row[[1]],
+                      Status = as.numeric(dates_vec >= temp_row[[2]])) %>%
+             mutate(CountryPair = as.character(CountryPair)))
+
+  }) %>%
+    bind_rows()
+
+
+  # EU countrypairs
+
+  eu_country_pairs = countrypairs_df %>%
+    filter(EU_Status == 2) %>%
+    select(-EU_Status) %>%
+    left_join(eu_df, by = c("Country" = "Country")) %>%
+    left_join(eu_df, by = c("Counter_Country" = "Country")) %>%
+    select(-Country,-Counter_Country) %>%
+    gather(key = Indicator, value = Val, -CountryPair) %>%
+    group_by(CountryPair) %>%
+    summarise(Date = max(as.numeric(Val), na.rm = TRUE)) %>%
+    apply(1,function(temp_row){
+
+      return(data.frame(Date = dates_vec,
+                        CountryPair = temp_row[[1]],
+                        Status = as.numeric(dates_vec >= temp_row[[2]])) %>%
+               mutate(CountryPair = as.character(CountryPair)))
+
+    }) %>%
+    bind_rows()
+
+
+  # Bind all
+
+  df_names = c("non_eu_countrypairs","cross_country_pairs",
+               "eu_country_pairs")
+
+  return(bind_rows(mget(df_names[df_names %in% ls()])))
+
+  } else if (index_status == "one"){
+
+    # None and cross EU countrypairs
+
+    non_cross_eu_countrypairs = countrypairs_df %>%
+      filter(EU_Status %in% c(0,1)) %>%
+      select(CountryPair) %>%
+      ungroup() %>%
+      expand(Date = dates_vec, CountryPair) %>%
+      mutate(Status = 0)
+
+    # EU countrypairs
+
+    eu_country_pairs = countrypairs_df %>%
+      filter(EU_Status == 2) %>%
+      select(-EU_Status) %>%
+      left_join(eu_df, by = c("Country" = "Country")) %>%
+      left_join(eu_df, by = c("Counter_Country" = "Country")) %>%
+      select(-Country,-Counter_Country) %>%
+      gather(key = Indicator, value = Val, -CountryPair) %>%
+      group_by(CountryPair) %>%
+      summarise(Date = min(as.numeric(Val), na.rm = TRUE)) %>%
+      apply(1,function(temp_row){
+
+        return(data.frame(Date = dates_vec,
+                          CountryPair = temp_row[[1]],
+                          Status = as.numeric(dates_vec >= temp_row[[2]])) %>%
+                 mutate(CountryPair = as.character(CountryPair)))
+
+      }) %>%
+      bind_rows()
+
+
+    df_names = c("non_cross_eu_countrypairs",
+                 "eu_country_pairs")
+
+    return(bind_rows(mget(df_names[df_names %in% ls()])))
+
+  }
 
 }
 
@@ -638,12 +717,54 @@ construct_countrypair_EU_index = function(df, dates_vec = NULL,
 #'
 
 
-make_strata_reg_list = function(countries_list,reg_df,reg_formula,
+make_strata_reg_list = function(reg_df,reg_formula,
                              my_effect = "twoways",
                              my_model = "within",
                              criteria_list = NULL){
 
   if(is.null(criteria_list)){
+
+    countries_list = list(
+      oecd_countries = c("Australia","Austria","Belgium","Canada","Chile",
+                         "Czech_Republic","Denmark","Estonia","Finland","France",
+                         "Germany","Greece","Hungary", "Iceland","Ireland",
+                         "Israel","Italy","Japan","Korea","Latvia",
+                         "Lithuania","Luxembourg","Mexico","Netherlands",
+                         "New_Zealand","Norway","Poland","Portugal",
+                         "Slovak_Republic","Slovenia","Spain","Sweden",
+                         "Switzerland","Turkey","United_Kingdom"
+                         ,"United_States"),
+      strong_countries = c("Australia","Austria","Belgium","Canada",
+                           "Switzerland","Germany","Denmark","Spain",
+                           "Finland","France","United_Kingdom","Ireland",
+                           "Italy","Japan","Netherlands","Portugal",
+                           "Sweden","United_States"),
+      fsap_countries = c("Austria","Belgium","Germany","Denmark","Spain",
+                         "France","Finland","Greece","Ireland","Italy",
+                         "Luxembourg","Netherlands","Portugal",
+                         "Sweden","United_Kingdom"))
+
+    countries_list$weak_countries = countries_list$oecd_countries[!countries_list$oecd_countries %in% countries_list$strong_countries]
+
+
+    pairs_list = lapply(names(countries_list),
+                        function(temp_name){
+                          apply(combn(countries_list[[temp_name]],2), 2,
+                                function(temp_col){
+                                  ifelse(temp_col[1]<temp_col[2],
+                                         paste(temp_col[1],temp_col[2],sep = "-"),
+                                         paste(temp_col[2],temp_col[1],sep = "-"))})
+
+                        })
+
+    names(pairs_list) = paste(names(countries_list), "pairs", sep = "_")
+
+    countries_list = c(countries_list, pairs_list)
+
+    rm(pairs_list)
+
+    countries_list$cross_country_pairs = countries_list$oecd_countries_pairs[!countries_list$oecd_countries_pairs %in% countries_list$strong_countries_pairs & !countries_list$oecd_countries_pairs %in% countries_list$weak_countries_pairs]
+
 
     criteria_list = list(NULL,
                          countries_list$strong_countries_pairs,
