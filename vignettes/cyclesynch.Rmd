@@ -31,7 +31,7 @@ knitr::opts_chunk$set(
 
 devtools::load_all()
 
-library(car)
+# library(car)
 
 library(tidyverse)
 
@@ -39,17 +39,17 @@ library(plm)
 
 library(stargazer)
  
-library(sandwich)
-
-library(clubSandwich)
-
-library(lmtest)
+# library(sandwich)
+# 
+# library(clubSandwich)
+# 
+# library(lmtest)
 
 library(purrr)
 
-library(igraph)
+# library(igraph)
 
-library(DescTools)
+# library(DescTools)
 
 ```
 
@@ -118,13 +118,54 @@ hyp_test_list = list()
 control_vars = c("trade_gdp","FX_stab_tot","FO_ind_tot","MI_ind_tot",
                  "GDP_real_tot")
 
-criteria_list = list(countries_list$oecd_countries_pairs,
-                     countries_list$strong_countries_pairs,
-                     countries_list$oecd_countries_pairs[!
-                       countries_list$oecd_countries_pairs %in%
-                         countries_list$strong_countries_pairs])
 
-names(criteria_list) = c("OECD","KPP","Complement")
+reg_formula = paste("Fin_synch ~ lag(bank_gdp,1) * Crises",
+                    "lag(bank_gdp,1) * FD_tot",
+                    # "lag(bank_gdp,1) * EU_both",
+                    # "lag(bank_gdp,1) * Euro_both",
+                    "lag(bank_gdp,1) * Common_Lang",
+                         paste(control_vars,
+                               collapse = "+"),
+                        "CountryPair:Time_Trend",
+                     sep = "+")
+
+
+
+temp_names = c("lag\\(bank_gdp, 1\\)",
+               "Crises",
+               "FD_tot",
+               # "EU_both",
+               # "Euro_both",
+               "lag\\(bank_gdp, 1\\):Crises",
+               "lag\\(bank_gdp, 1\\):FD_tot",
+               # "lag\\(bank_gdp, 1\\):EU_both",
+               # "lag\\(bank_gdp, 1\\):Euro_both",
+               "lag\\(bank_gdp, 1\\):Common_Lang")
+
+temp_names_lag = c("lag\\(bank_gdp, 1\\)",
+               "lag\\(Crises, 1\\)",
+               "lag\\(FD_tot, 1\\)",
+               # "lag\\(EU_both, 1\\)",
+               # "lag\\(Euro_both, 1\\)",
+               "lag\\(bank_gdp, 1\\):lag\\(Crises, 1\\)",
+               "lag\\(bank_gdp, 1\\):lag\\(FD_tot, 1\\)",
+               # "lag\\(bank_gdp, 1\\):lag\\(EU_both, 1\\)",
+               # "lag\\(bank_gdp, 1\\):lag\\(Euro_both, 1\\)",
+               "lag\\(bank_gdp, 1\\):lag\\(Common_Lang, 1\\)")
+
+
+temp_labels = c("Bank linkages (lag)",
+                "Crises",
+                "FD",
+                # "EU both",
+                # "Euro both",
+                "Bank linkages (lag) * Crises",
+                "Bank linkages (lag) * FD",
+                # "Bank linkages (lag) * EU both",
+                # "Bank linkages (lag) * Euro both",
+                "Bank linkages (lag) * Commong Lang")
+
+
 
 ```
 
@@ -143,24 +184,24 @@ raw_data$TotalCredit = import.bis.tot.credit.data(
 
 raw_data$WDI_annual = import_wdi_df(
   countries_vec = countries_list$oecd_countries) %>% 
-  mutate(GDP = GDP * 10 ^ (-6))
+  mutate(GDP = GDP * 10 ^ (-6)) # Convert to millions USD
 
 
 raw_data$bis_lbs = import.bis.lbs.data(
   countries_vec = countries_list$oecd_countries) %>% 
   mutate(Date = as.yearqtr(Date, format = "%Y-Q%q"))
 
-raw_data$Harmon_both_quarter = import.harmon.data() %>% 
-  construct_countrypair_harmon_index(.,dates_vec = seq.Date(
-    from = as.Date(min(raw_data$bis_lbs$Date)),
-    to = as.Date(max(raw_data$bis_lbs$Date)),
-    by = "quarter") %>% as.yearqtr())
-
-raw_data$Harmon_one_quarter = import.harmon.data() %>% 
-  construct_countrypair_harmon_index(.,dates_vec = seq.Date(
-    from = as.Date(min(raw_data$bis_lbs$Date)),
-    to = as.Date(max(raw_data$bis_lbs$Date)),
-    by = "quarter") %>% as.yearqtr(),index_status = "one")
+# raw_data$Harmon_both_quarter = import.harmon.data() %>% 
+#   construct_countrypair_harmon_index(.,dates_vec = seq.Date(
+#     from = as.Date(min(raw_data$bis_lbs$Date)),
+#     to = as.Date(max(raw_data$bis_lbs$Date)),
+#     by = "quarter") %>% as.yearqtr())
+# 
+# raw_data$Harmon_one_quarter = import.harmon.data() %>% 
+#   construct_countrypair_harmon_index(.,dates_vec = seq.Date(
+#     from = as.Date(min(raw_data$bis_lbs$Date)),
+#     to = as.Date(max(raw_data$bis_lbs$Date)),
+#     by = "quarter") %>% as.yearqtr(),index_status = "one")
 
 raw_data$codes = read.csv(paste0("C:\\Users\\Misha\\Documents",
                                  "\\Data\\ISO\\",
@@ -182,7 +223,8 @@ eu_df = read.csv(paste0("C:\\Users\\Misha\\Documents\\",
                  stringsAsFactors = FALSE) %>% 
   setNames(c("Country","Euro_area","EU")) %>% 
   mutate(Country = gsub("\\s","_",Country)) %>% 
-  mutate(Country = sub("The_Netherlands","Netherlands", Country,fixed = TRUE)) %>% 
+  mutate(Country = sub("The_Netherlands","Netherlands",
+                       Country,fixed = TRUE)) %>% 
   mutate(Country = sub("Slovakia","Slovak_Republic", Country,fixed = TRUE))
 
 
@@ -215,7 +257,8 @@ raw_data$EU_one = construct_countrypair_EU_index(
 raw_data$Euro_both = construct_countrypair_EU_index(
   eu_df = eu_df %>% 
     select(Country, Euro_area) %>% 
-    rename(Date = Euro_area),
+    rename(Date = Euro_area) %>% 
+    filter(!Date == "Not a member"),
   dates_vec = eu_dates_vec,
   countries = countries_list$oecd_countries) %>% 
   rename(Euro_both = Status) %>% 
@@ -257,7 +300,7 @@ raw_data$crises_df =  import.crises.dates.df(countries_vec = countries_list$oecd
 ```
 
 
-```{r make_annual_df}
+```{r make_country_df}
 
 df_list = list(raw_data$TotalCredit %>%
   filter(quarters(Date) == "Q4") %>%
@@ -275,11 +318,14 @@ df_list = list(raw_data$TotalCredit %>%
   select(-GDP))
 
 
-df = df_list %>% 
+country_df = df_list %>% 
   reduce(right_join, by = c("Date", "Country")) %>% 
   group_by(Country) %>% 
+  arrange(Date) %>% 
   mutate_at(.vars = c("Total_Credit_real","HousePrice"),
-            .funs = list(ret = ~c(NA,diff(log(.))))) %>%
+            .funs = list(ret = ~ . / dplyr::lag(., order_by = Date) - 1)) %>%
+  # mutate_at(.vars = c("Total_Credit_real","HousePrice"),
+  #           .funs = list(ret = ~c(NA,diff(log(.))))) %>%
   mutate_at(.vars = vars("Total_Credit_real","HousePrice"),
             .funs = list(cycle = ~cffilter(., pl = 2 * 4,
                                            pu = 8* 4 )[["cycle"]] / .)) %>%
@@ -298,6 +344,24 @@ rm(df_list)
 ```
 
 
+```{r Import_trilemma_data}
+
+country_df = left_join(country_df, import.trilemma.ind(),
+               by = c("Country","Date"))
+
+```
+
+
+```{r Import_fin_development_data}
+
+country_df = left_join(country_df, import.fin.dev.ind(),
+               by = c("Country","Date"))
+
+
+
+```
+
+
 ```{r make_bank_list}
 
 bank_list = list()
@@ -305,12 +369,10 @@ bank_list = list()
 raw_data$bank_balance_real_norm = raw_data$bis_lbs %>%
   filter(quarters(Date) == "Q4") %>%
   mutate(Date = format(Date, "%Y")) %>%
-  # mutate(Balance = Balance * 10 ^ 6) %>% 
   deflate.data(.,vars_to_deflate = "Balance") %>%
   select(Date, CountryPair,Balance_Pos, Balance_real) %>%
-  normalize.bis.data(.,norm_df = df[,c("Date","Country", "GDP_real")],
+  normalize.bis.data(.,norm_df = country_df[,c("Date","Country", "GDP_real")],
                      norm_val = "GDP_real")
-
 
 bank_list$bank_gdp = raw_data$bank_balance_real_norm   %>% 
   group_by(Date, CountryPair) %>%
@@ -323,38 +385,6 @@ bank_list$bank_gdp = raw_data$bank_balance_real_norm   %>%
 #   group_by(Date, CountryPair) %>%
 #   summarise(bank_pop = mean(log(Balance_real), na.rm = TRUE)) %>%
 #   filter(!is.na(bank_pop))
-
-
-```
-
-
-```{r make_indicators_list}
-
-ind_list = list()
-  
-ind_list$Harmon_both = raw_data$Harmon_both_quarter %>% 
-                       mutate(Date = format(Date, "%Y")) %>% 
-                       group_by(CountryPair, Date, Directive) %>% 
-                       summarise(Transposed = max(Transposed)) %>% 
-                       group_by(Date,CountryPair) %>% 
-                       summarise(Harmon_both_Index = log(
-                         sum(Transposed + 1,na.rm = TRUE)))
-
- ind_list$Harmon_one = raw_data$Harmon_one_quarter %>% 
-                       mutate(Date = format(Date, "%Y")) %>% 
-                       group_by(CountryPair, Date, Directive) %>% 
-                       summarise(Transposed = max(Transposed)) %>% 
-                       group_by(Date,CountryPair) %>% 
-                       summarise(Harmon_one_Index = log(
-                         sum(Transposed + 1,na.rm = TRUE)))
-   
-   ind_list$EU_both = raw_data$EU_both
-
-   ind_list$EU_one =  raw_data$EU_one
-
-   ind_list$Euro_both =  raw_data$Euro_both
-
-   ind_list$Euro_one = raw_data$Euro_one
 
 
 ```
@@ -385,7 +415,7 @@ import_df = lapply(list.files(paste0("C:\\Users\\Misha\\Documents\\Data",
   group_by(Date, CountryPair) %>% 
   summarise(Imports = sum(Imports, na.rm = TRUE))
 
-trade_df = full_join(export_df,import_df) %>% 
+trade_df = full_join(export_df,import_df, by = c("Date", "CountryPair")) %>% 
   gather(.,key = Balance_Pos, value = Trade, -Date, - CountryPair) %>% 
   deflate.data(.,vars_to_deflate = "Trade") %>% 
   select(-Trade)
@@ -393,7 +423,7 @@ trade_df = full_join(export_df,import_df) %>%
 
 trade_list$trade_gdp = trade_df %>%
   ungroup() %>% 
-  normalize.imf.data(.,wdi_df = df[,c("Date","Country", "GDP_real")],
+  normalize.imf.data(.,wdi_df = country_df[,c("Date","Country", "GDP_real")],
                      norm_val = "GDP_real") %>%
   group_by(Date, CountryPair) %>%
   summarise(trade_gdp = mean(log(Trade_real), na.rm = TRUE)) %>%
@@ -402,6 +432,38 @@ trade_list$trade_gdp = trade_df %>%
 
 rm(export_df, import_df, trade_df)
 
+
+
+```
+
+
+```{r make_indicators_list}
+
+ind_list = list()
+  
+# ind_list$Harmon_both = raw_data$Harmon_both_quarter %>% 
+#                        mutate(Date = format(Date, "%Y")) %>% 
+#                        group_by(CountryPair, Date, Directive) %>% 
+#                        summarise(Transposed = max(Transposed)) %>% 
+#                        group_by(Date,CountryPair) %>% 
+#                        summarise(Harmon_both_Index = log(
+#                          sum(Transposed + 1,na.rm = TRUE)))
+# 
+#  ind_list$Harmon_one = raw_data$Harmon_one_quarter %>% 
+#                        mutate(Date = format(Date, "%Y")) %>% 
+#                        group_by(CountryPair, Date, Directive) %>% 
+#                        summarise(Transposed = max(Transposed)) %>% 
+#                        group_by(Date,CountryPair) %>% 
+#                        summarise(Harmon_one_Index = log(
+#                          sum(Transposed + 1,na.rm = TRUE)))
+   
+   ind_list$EU_both = raw_data$EU_both
+
+   ind_list$EU_one =  raw_data$EU_one
+
+   ind_list$Euro_both =  raw_data$Euro_both
+
+   ind_list$Euro_one = raw_data$Euro_one
 
 
 ```
@@ -419,87 +481,9 @@ country_pair_df = unlist(list(bank_list, trade_list, ind_list),
 ```
 
 
-```{r Import_trilemma_data}
+```{r country_pair_df_add_crises_indicator}
 
-df = left_join(df, import.trilemma.ind(),
-               by = c("Country","Date"))
-
-```
-
-
-```{r Import_fin_development_data}
-
-df = left_join(df, import.fin.dev.ind(),
-               by = c("Country","Date"))
-
-
-
-```
-
-
-<!-- Dataset construction -->
-
-```{r make_fin_reg_df}
-
-fin_reg_df_annual = construct_fin_reg(
-  df = df %>% 
-    select(c("FX_stab","MI_ind","FO_ind","FD","GDP_real","Pop",
-             "Country","Date","Fin_ret")) %>% 
-    mutate(GDP_real = log(GDP_real),
-           Pop = log(Pop)),
-  countries_vec = countries_list$oecd_countries,
-  control_vars = c("FX_stab","MI_ind","FO_ind","FD","GDP_real","Pop"),
-  collapse_funcs = c("sum"))
-
-fin_reg_df_annual = fin_reg_df_annual %>% 
-  full_join(.,get.roll.cor(df %>% select(Date, Country,Fin_cycle),win_len = 5) %>% 
-              rename(Fin_cycle_corr = Fin_cycle),
-            by = c("Date","CountryPair"))
-
-fin_reg_df_annual = fin_reg_df_annual %>% 
-  full_join(.,country_pair_df, by = c("Date","CountryPair"))
-
-fin_reg_df_annual = fin_reg_df_annual %>% 
-  filter(!is.na(CountryPair)) %>% 
-  filter(!is.na(Fin_synch)) %>% 
-  filter(!is.na(bank_gdp)) %>% 
-  filter(!is.na(Date))
-
-
-temp_lm_resid = function(x,Time){
-  
-  if(sum(!is.na(x)) < 2){return(rep(NA, length(x)))}
-  
-  return(residuals(lm(x ~ Time)))
-  
-}
-
-
-fin_reg_df_annual = fin_reg_df_annual %>% 
-  group_by(CountryPair) %>% 
-  mutate(Time_trend = seq.int(from = 1,to = length(Date))) %>% 
-  # mutate(bank_gdp_delta = c(NA, diff(bank_gdp))) %>% 
-  # mutate(Fin_synch_delta = c(NA, diff(Fin_synch))) %>% 
-  # mutate(bank_gdp_detrended = temp_lm_resid(bank_gdp, Time_trend)) %>% 
-  # mutate(Fin_synch_detrended = temp_lm_resid(Fin_synch, Time_trend)) %>% 
-  # mutate(Harmon_both_detrended = temp_lm_resid(Harmon_both_Index,
-  #                                              Time_trend)) %>% 
-  ungroup()
-
-fin_reg_df_annual$CountryPair_Category[fin_reg_df_annual$CountryPair %in% countries_list$strong_countries_pairs] = "KPP"
-
-fin_reg_df_annual$CountryPair_Category[fin_reg_df_annual$CountryPair %in% c(countries_list$weak_countries_pairs, countries_list$cross_country_pairs)] = "Complement"
-
-
-# saveRDS(fin_reg_df_annual, "C:\\Users\\Misha\\Desktop\\temp_df.rds")
-
-
-```
-
-
-```{r fin_reg_df_add_crises_indicator}
-
-fin_reg_df_annual = fin_reg_df_annual %>% 
+country_pair_df = country_pair_df %>% 
   separate(col = CountryPair,into = c("Country_A","Country_B"),
            sep = "-", remove = FALSE) %>% 
   group_by(Country_A) %>% 
@@ -524,21 +508,140 @@ fin_reg_df_annual = fin_reg_df_annual %>%
 ```
 
 
-```{r fin_reg_df_add_geodist}
+```{r country_pair_df_add_geodist}
 
-fin_reg_df_annual = fin_reg_df_annual %>% 
+country_pair_df = country_pair_df %>% 
   left_join(.,raw_data$geodist %>% 
               select(CountryPair, comlang_ethno) %>% 
               rename(Common_Lang = comlang_ethno) %>% 
-              distinct())
+              distinct(), by = "CountryPair")
+```
+
+
+```{r country_pair_df_add_controls}
+
+controls =  c("FX_stab","MI_ind","FO_ind","FD","GDP_real","Pop")
+
+country_pair_df = append.countrypair.dataframe(
+  country_pair_df,
+  country_df %>%
+    select(Date,Country,controls) %>% 
+    mutate(GDP_real = log(GDP_real))) %>% 
+  collapse_pair_controls(controls,collapse_funcs = "sum")
+ 
+rm(controls)
+
+
+```
+
+
+<!-- Dataset construction -->
+
+```{r make_fin_reg_df_old, eval=FALSE}
+
+fin_reg_df = construct_fin_reg(
+  df = df %>% 
+    select(c("FX_stab","MI_ind","FO_ind","FD","GDP_real","Pop",
+             "Country","Date","Fin_ret")) %>% 
+    mutate(GDP_real = log(GDP_real),
+           Pop = log(Pop)),
+  countries_vec = countries_list$oecd_countries,
+  control_vars = c("FX_stab","MI_ind","FO_ind","FD","GDP_real","Pop"),
+  collapse_funcs = c("sum"))
+
+fin_reg_df = fin_reg_df %>% 
+  full_join(.,get.roll.cor(df %>% select(Date, Country,Fin_cycle),win_len = 5) %>% 
+              rename(Fin_cycle_corr = Fin_cycle),
+            by = c("Date","CountryPair"))
+
+fin_reg_df = fin_reg_df %>% 
+  full_join(.,country_pair_df, by = c("Date","CountryPair"))
+
+fin_reg_df = fin_reg_df %>% 
+  filter(!is.na(CountryPair)) %>% 
+  filter(!is.na(Fin_synch)) %>% 
+  filter(!is.na(bank_gdp)) %>% 
+  filter(!is.na(Date))
+
+
+temp_lm_resid = function(x,Time){
+  
+  if(sum(!is.na(x)) < 2){return(rep(NA, length(x)))}
+  
+  return(residuals(lm(x ~ Time)))
+  
+}
+
+
+fin_reg_df = fin_reg_df %>% 
+  group_by(CountryPair) %>% 
+  mutate(Time_trend = seq.int(from = 1,to = length(Date))) %>% 
+  # mutate(bank_gdp_delta = c(NA, diff(bank_gdp))) %>% 
+  # mutate(Fin_synch_delta = c(NA, diff(Fin_synch))) %>% 
+  # mutate(bank_gdp_detrended = temp_lm_resid(bank_gdp, Time_trend)) %>% 
+  # mutate(Fin_synch_detrended = temp_lm_resid(Fin_synch, Time_trend)) %>% 
+  # mutate(Harmon_both_detrended = temp_lm_resid(Harmon_both_Index,
+  #                                              Time_trend)) %>% 
+  ungroup()
+
+fin_reg_df$CountryPair_Category[fin_reg_df$CountryPair %in% countries_list$strong_countries_pairs] = "KPP"
+
+fin_reg_df$CountryPair_Category[fin_reg_df$CountryPair %in% c(countries_list$weak_countries_pairs, countries_list$cross_country_pairs)] = "Complement"
+
+
+# saveRDS(fin_reg_df, "C:\\Users\\Misha\\Desktop\\temp_df.rds")
+
+
+```
+
+
+```{r make_dep_df}
+
+fin_synch = get.neg.abs.diff(country_df[,c("Date","Country","Fin_ret")]) %>% 
+  rename(Fin_synch = Fin_ret)
+
+credit_synch = get.neg.abs.diff(country_df[,c("Date","Country",
+                                              "Total_Credit_real_ret")]) %>% 
+  rename(Credit_synch = Total_Credit_real_ret)
+
+house_synch = get.neg.abs.diff(country_df[,c("Date","Country",
+                                             "HousePrice_ret")]) %>% 
+  rename(House_synch = HousePrice_ret)
+
+
+
+```
+
+
+```{r make_fin_df}
+
+fin_reg_df = list(country_pair_df, fin_synch, credit_synch, house_synch) %>%
+  reduce(left_join, by = c("CountryPair","Date")) %>% 
+  group_by(CountryPair) %>% 
+  mutate(Time_Trend = seq_along(Date)) %>% 
+  ungroup() %>% 
+  mutate(Fin_synch = 100 * Fin_synch) %>% 
+  mutate(Credit_synch = 100 * Credit_synch) %>% 
+  mutate(House_synch = 100 * House_synch)
+
+# fin_reg_df$CountryPair_Category[fin_reg_df$CountryPair %in% countries_list$strong_countries_pairs] = "KPP"
 # 
-# fin_reg_df_annual = fin_reg_df_annual %>% 
-#   left_join(., raw_data$Euro_both) %>% 
-#   mutate(Euro_both = replace_na(Euro_both,0))
-# 
-# fin_reg_df_annual = fin_reg_df_annual %>% 
-#   left_join(.,raw_data$EU_both) %>% 
-#   mutate(EU_both = replace_na(EU_both,0))
+# fin_reg_df$CountryPair_Category[fin_reg_df$CountryPair %in% c(countries_list$weak_countries_pairs, countries_list$cross_country_pairs)] = "Complement"
+
+```
+
+
+```{r filter_outliers}
+
+country_pairs_table = table(fin_reg_df$CountryPair)
+
+fin_reg_df = fin_reg_df %>%
+  filter(CountryPair %in% names(country_pairs_table)[
+    country_pairs_table > 10])
+
+# fin_reg_df = fin_reg_df %>% 
+#   filter(bank_gdp >= quantile(bank_gdp,0.025) &
+#          bank_gdp <= quantile(bank_gdp,0.975))
 
 ```
 
@@ -549,51 +652,12 @@ write_rds(x = raw_data,
         path = paste0("C:\\Users\\Misha\\Documents\\Data\\TempData",
                       "\\temp_raw_data.rds"))
 
-write_rds(x = df,
-        path = "C:\\Users\\Misha\\Documents\\Data\\TempData\\temp_df.rds")
+write_rds(x = country_df,
+        path = "C:\\Users\\Misha\\Documents\\Data\\TempData\\temp_country_df.rds")
 
 
-write_rds(x = fin_reg_df_annual,
-        path = "C:\\Users\\Misha\\Documents\\Data\\TempData\\temp_fin_df.rds")
-
-```
-
-
-<!-- Network construction -->
-
-```{r plot_network, eval=FALSE}
-
-
-links_df = import.bis.lbs.data(countries_vec = countries_list$oecd_countries,
-                               collapse_countrypair = FALSE)  %>% 
-  group_by(Country, Counter_Country) %>% 
-  summarise(Weight = mean(Balance, na.rm = TRUE)) %>% 
-  ungroup()
-
-
-nodes_df = rbind(data.frame(Country = links_df$Country,
-                            Type = "Source"),
-                 data.frame(Country = links_df$Counter_Country,
-                            Type = "Target")) %>% 
-  distinct()
-  
-net = graph_from_data_frame(d = links_df)
-
-E(net)$weight = links_df$Weight
-
-# net = delete_edges(net, E(net)[weight<mean(weight)])
-
-plot(net, vertex.size = log(graph.strength(net) / 10),
-     edge.arrow.size = 0, xlim = c(-0.8,0.8), ylim = c(-0.5,0.8),
-     asp = 0,
-     layout = layout.gem(net))
-
-plot(net, vertex.size = log(graph.strength(net) / 10),
-     edge.arrow.size = 0,layout = layout.gem(net))
-
-plot(net, vertex.size = log(graph.strength(net)) * 1.5,
-     edge.arrow.size = 0,layout = layout.lgl(net))
-
+write_rds(x = fin_reg_df,
+        path = "C:\\Users\\Misha\\Documents\\Data\\TempData\\temp_fin_df_new.rds")
 
 ```
 
@@ -603,16 +667,48 @@ plot(net, vertex.size = log(graph.strength(net)) * 1.5,
 
 ```{r estimation}
 
-reg_formula = paste("Fin_synch ~ lag(bank_gdp,1) * Crises",
-                    "lag(bank_gdp,1) * FD_tot",
-                    # "lag(bank_gdp,1) * EU_both",
-                    "lag(bank_gdp,1) * Euro_both",
-                    "lag(bank_gdp,1) * Common_Lang",
-                         paste(control_vars, collapse = "+"),
-                        "CountryPair:Time_trend",
-                     sep = "+")
 
-reg = plm(formula = formula(reg_formula),data = fin_reg_df_annual,
+reg_list$baseline = plm(formula = formula(reg_formula),data = fin_reg_df,
+          model = "within",effect = "twoways",
+          index = c("CountryPair","Date"))
+
+
+coef_vec = coefficients(reg_list$baseline)
+
+coef_vec = coef_vec[names(coef_vec) %in% c("lag(bank_gdp, 1)",
+                                           "lag(bank_gdp, 1):Crises",
+                                           "lag(bank_gdp, 1):FD_tot")]
+
+```
+
+
+```{r robustness}
+
+reg_list$credit = plm(formula = formula(sub("Fin_synch","Credit_synch",
+                                           reg_formula, fixed = TRUE)),
+                      data = fin_reg_df,
+                      model = "within",effect = "twoways",
+                      index = c("CountryPair","Date"))
+
+
+reg_list$house = plm(formula = formula(sub("Fin_synch","House_synch",
+                                           reg_formula, fixed = TRUE)),
+                     data = fin_reg_df,
+                     model = "within",effect = "twoways",
+                     index = c("CountryPair","Date"))
+
+
+
+reg_list$lag = plm(
+  formula = formula(paste("Fin_synch ~ lag(bank_gdp,1) * lag(Crises,1)",
+                                  "lag(bank_gdp,1) * lag(FD_tot,1)",
+                                  "lag(bank_gdp,1) * lag(EU_both,1)",
+                                  # "lag(bank_gdp,1) * lag(Euro_both,1)",
+                                  "lag(bank_gdp,1) * lag(Common_Lang,1)",
+                                  paste(paste0("lag(",control_vars,",1)"),
+                                        collapse = "+"),
+                                  "CountryPair:Time_Trend",
+                                  sep = "+")),data = fin_reg_df,
           model = "within",effect = "twoways",
           index = c("CountryPair","Date"))
 
@@ -620,23 +716,23 @@ reg = plm(formula = formula(reg_formula),data = fin_reg_df_annual,
 ```
 
 
+
 <!-- Regression analysis 1978-2006 period-->
 
 
-```{r estimation_crisis_fd_2007, eval=FALSE}
+```{r estimation_crisis_fd_2007}
 
-crisis_fd_formula = paste("Fin_synch ~ lag(bank_gdp,1) * Crises",
-                         "lag(bank_gdp,1) *FD_tot",
-                         paste(control_vars, collapse = "+"),
-                        "CountryPair:Time_trend",
-                     sep = "+")
+reg_list$before_2007 = plm(formula = formula(reg_formula),
+          data = fin_reg_df %>% filter(Date <= 2006),
+          model = "within",effect = "twoways",
+          index = c("CountryPair","Date"))
 
+coef_vec_before_2007 = coefficients(reg_list$before_2007)
 
-reg_list$crisis_fd_2007 = make_strata_reg_list(
-  criteria_list = criteria_list$OECD,
-  reg_df = fin_reg_df_annual %>% 
-    filter(Date < 2007),
-  reg_formula = formula(crisis_fd_formula))
+coef_vec_before_2007 = coef_vec_before_2007[names(coef_vec_before_2007) %in%
+                                              c("lag(bank_gdp, 1)",
+                                                "lag(bank_gdp, 1):Crises",
+                                                "lag(bank_gdp, 1):FD_tot")]
 
 
 ```
@@ -645,27 +741,27 @@ reg_list$crisis_fd_2007 = make_strata_reg_list(
 <!-- Regression analysis no trend-->
 
 
-```{r estimation_crisis_fd_no_trend, eval=FALSE}
+```{r estimation_no_trend}
 
-crisis_fd_no_trend_formula = paste("Fin_synch ~ lag(bank_gdp,1) * Crises",
-                         "lag(bank_gdp,1) *FD_tot",
-                         paste(control_vars, collapse = "+"),
-                     sep = "+")
+reg_no_trend_formula = paste("Fin_synch ~ lag(bank_gdp,1) * Crises",
+                             "lag(bank_gdp,1) * FD_tot",
+                             # "lag(bank_gdp,1) * EU_both",
+                             "lag(bank_gdp,1) * Euro_both",
+                             "lag(bank_gdp,1) * Common_Lang",
+                             paste(control_vars, collapse = "+"),
+                             sep = "+")
 
 
-reg_list$crisis_fd_no_trend = make_strata_reg_list(
-  criteria_list = criteria_list$OECD,
-  reg_df = fin_reg_df_annual,
-  reg_formula = formula(crisis_fd_no_trend_formula))
+reg_list$no_trend = plm(formula = formula(reg_no_trend_formula),
+                   data = fin_reg_df,
+                   model = "within",effect = "twoways",
+                   index = c("CountryPair","Date"))
 
 
 ```
 
 
-
 <!-- Instrumental variable regression -->
-
-
 
 ```{r save_temp_reg, eval=FALSE}
 
@@ -680,17 +776,17 @@ write_rds(x = reg_list,
 
 <!-- What do you do -->
 
-This work studies the relationship between financial cycles synchronization and financial integration. A recent line of research studies the relationship between output synchronization and financial integration. For example, @Kalemli-Ozcan2013JF find that output synchronization is negatively affected by financial integration. The authors explain the connection as follows: if a country is hit with a negative productivity shock global banks will reduce credit to that country and increase credit to another country thus exacerbating negative output effect in the former country and facilitating positive output effect in the latter. In this paper, I test whether the same mechanism applies to financial synchronization.
+This work studies the relationship between financial cycles synchronization and financial integration. A recent line of research studies the relationship between business synchronization and financial integration. For example, @Kalemli-Ozcan2013JF find that output synchronization is negatively affected by financial integration. The authors explain the connection as follows: if a country is hit with a negative productivity shock, global banks will reduce credit to that country and increase credit to another country, thus, exacerbating negative output effect in the former country and facilitating positive output effect in the latter. In this paper, I test whether the same mechanism applies to financial synchronization.
 
 <!-- Why is it important -->
-The theory provides ambiguous predictions regarding the effect of financial integration on financial cycles synchronization. On the one hand, financial integration can help diversify risk, redirect capital to more profitable investment opportunities and act as country-specific "shock absorber". In that case, the association between banking integration and financial cycles synchronization should be negative. On the other hand, financial integration can induce contagion effects and act as global "shock propagator". In that case, a positive association should be observed. This paper attempts to shed some light on the association between banking integration and financial cycles synchronization.
+The theory provides ambiguous predictions regarding the effect of financial integration on financial cycles synchronization. On the one hand, financial integration can help diversify risk, redirect capital to more profitable investment opportunities and act as country-specific "shock absorber". In that case, the association between banking integration and financial synchronization should be negative. On the other hand, banking integration can induce contagion effects and act as global "shock propagator". In that case, a positive association should be observed. This paper attempts to shed some light on the association between banking integration and financial cycles synchronization.
 
 <!-- How do you do it (methodology) -->
 
-To this end, I follow the methodology suggested by @Kalemli-Ozcan2013JF. Specifically, I use their measures of cycles synchronization and banking linkages and run a panel regression controlling for common and time-invariant unobservable factors. I also control for some other economic factors that can affect both financial cycle synchronization and banking integration. While the authors focus on 18 (KPP sample) OECD countries I expand my sample to all OECD countries.
+To this end, I follow the methodology suggested by @Kalemli-Ozcan2013JF. Specifically, I use their measures of cycles synchronization and banking linkages and run a panel regression controlling for common and time-invariant unobservable factors. I also control for (as much as possible) other economic factors that can affect both financial cycle synchronization and banking integration. While the authors focus on 18 OECD countries I expand my sample to all OECD countries.
 
 <!-- What do you find -->
-I find limited evidence that financial integration is negatively associated with cycles synchronization thus acting as a shock absorbent. My results show that the relationship is state dependent: I find that during financial crises financial integration is associated with more synchronized financial cycles relative to normal times. In a highly developed financial market, integration is also associated with more synchronized cycles relative to a low level of financial development. 
+I find evidence that financial integration is negatively associated with cycles synchronization thus acting as a shock absorbent. My results show that the relationship is state dependent: I find that during financial crises financial integration is associated with more synchronized financial cycles relative to normal times. In a highly developed financial market, integration is also associated with more synchronized cycles relative to a low level of financial development. 
 
 <!-- Contribution and policy implications -->
 
@@ -701,8 +797,6 @@ This paper contributes to the literature in several ways: first, I contribute to
 
 The paper is structured as follows. In section \ref{LitReview} I review the relevant literature and theoretical considerations. Empirical specification are formulated in section \ref{EmpSpec}. Section \ref{Data} provides a description of the data. Estimation results are presented in section \ref{results} and robustness test in section \ref{Robust}. Section \ref{conclusions} consludes the paper.
 
-
- 
 
 
 
@@ -728,38 +822,44 @@ $FinSynch_{i,j,i} = \alpha_{i,j} + \delta_{t} + \beta BankLinkages_{i,j,t-1} + C
 
 where $FinSynch$ is a measure of synchronization of financial cycles and $BankLinkages$ is a measure of banking integration between two countries.
 
-This specification includes time and country-pair fixed effect in order to control for unobservable time and country-pair specific factors (such as cultural difference or turmoil years). The year fixed effects account for the effect of global shocks and other common time-varying factors that affect both financial cycle patterns and banking integration. The country-pair effects account for hard-to-measure factors such as cultural ties and similarities, informational frictions, and other time-invariant unobservable factors that have an effect on both financial integration and financial cycle patterns. To account for the trend and the nonstationary nature of banking integration (see Figures \ref{plot_bank_gdp} and \ref{plot_bank_gdp_strata), I add country-pair specific linear time trend. I choose a linear trend for reasons of simplicity and comparability with @Kalemli-Ozcan2013JF, see @Bouvatier2015 for use of trends in banking integration measures. It should be noted that my results are sensitive to the inclusion of the trend\footnote{Exclusion of the trend makes most of the results lose significance. I present estimation without trend in section \ref{Robust}.} and it may be the case that the trend picks up the effect of some other omitted variable. Since I'm only interested in estimating the bank linkages effect in the regression (as opposed to explicitly modeling all the factors that affect financial synchronization), controlling for other variables (trend or another omitted variable) seems required.
+This specification includes time and country-pair fixed effect in order to control for unobservable time and country-pair specific factors (such as cultural difference or turmoil years). The year fixed effects account for the effect of global shocks and other common time-varying factors that affect both financial cycle patterns and banking integration. The country-pair effects account for hard-to-measure factors such as cultural ties and similarities, informational frictions, and other time-invariant unobservable factors that have an effect on both financial integration and financial cycle patterns. To account for the trend and the nonstationary nature of banking integration (see Figures \ref{plot_bank_gdp} and \ref{plot_bank_gdp_strata}), I add country-pair specific linear time trend. I choose a linear trend for reasons of simplicity and comparability with @Kalemli-Ozcan2013JF, see @Bouvatier2015 for use of trends in banking integration measures. It should be noted that my results are sensitive to the inclusion of the trend\footnote{Exclusion of the trend turns some of the coefficients to insignificant, the main result holds. I present estimation without trend in section \ref{Robust}.} and it may be the case that the trend picks up the effect of some other omitted variable. Since I'm only interested in estimating the bank linkages effect in the regression (as opposed to explicitly modeling all the factors that affect financial synchronization), controlling for other variables (trend or another omitted variable) seems required.
 
 
-The estimation results can be subject to endogeneity problem for reasons of omitting relevant variable or reverse causality. In order to address this issue, I take several steps: first, I augment the specified regression with a set of variables in order to control for other economic factors that can affect both financial cycle synchronization and banking integration. @Chinn2010 suggest that the most important factors for monetary policy are foreign exchange stability, monetary independence, and financial openness. The authors construct indexes of the relevant measures and I include them in the control variables set. I also include trading linkages and financial development measures\footnote{all the variables are explained in Appendix.}. Second, bank linkages enter in my specification in a lagged form (again following @Kalemli-Ozcan2013JF), that should attenuate the reverse causality problem.
+The estimation results can be subject to endogeneity problem for reasons of omitting relevant variable or reverse causality. In order to address this issue, I take several steps: first, I augment the specified regression with a set of variables in order to control for other economic factors that can affect both financial cycle synchronization and banking integration. @Chinn2010 suggest that the most important factors for monetary policy are foreign exchange stability, monetary independence, and financial openness. The authors construct indexes of the relevant measures and I include them in the control variables set. I also include trading linkages and gravity measure\footnote{All the variables are explained in Appendix.} in the controlling variables set. Second, bank linkages enter in my specification in a lagged form (again following @Kalemli-Ozcan2013JF), that should attenuate the reverse causality problem.
 
-@Kalemli-Ozcan2013JF focused on 18 (KPP sample) members of OECD for 1978-2006 years.
-I expand the sample to include all the OECD countries for `r paste(range(fin_reg_df_annual$Date), collapse = "-")` period. In order to address the differences between OECD countries, I split the country-pair data to 3 different groups: KPP sample countries that correspond to the authors' sample, Complement sample countries that are missing from their sample and Cross  group where one country belongs to KPP sample and the other to Complement sample group.
+@Kalemli-Ozcan2013JF focused on 18 members of OECD for 1978-2006 years.
+I expand the sample to include all the OECD countries for `r paste(range(fin_reg_df$Date), collapse = "-")` period.
 
 
 \subsection{Crisis effect}
 Several papers (see @Kalemli-Ozcan2013, @Aysun2019, @Fratzscher2012) find that during financial crises times the effect of global ("push") factors in cross border bank lending increases. If during financial crises times common (global) shocks are prevalent that should induce more synchronized financial cycles. That means that the crisis effect should be positive and the "shock propagator" role of banking integration should increase during crisis times.
 
-In order to account for those findings, I introduce an indicator variable for banking crises periods. The data comes from an updated version of @Laeven2013 and includes the start and end year of banking crises in the OECD countries for the entire sample period. I expect that the effect of banking integration will be different in crises vs normal times and in order to capture this difference I add an interaction variable between bank linkages and crisis indicator to the estimation equation.
+In order to account for those findings, I introduce an indicator variable for banking crises periods. The variable equals 1 if at least one country of the country-pair is going through banking crises at period \textit{t}. The data comes from an updated version of @Laeven2013 and includes the start and end year of banking crises in the OECD countries for the entire sample period. I expect that the effect of banking integration will be different in crises vs normal times and in order to capture this difference I add an interaction variable between bank linkages and crisis indicator to the estimation equation.
 
 
 
 \subsection{Financial development}
 
-@Mendoza2009 study the relationship between financial development and global imbalances. The authors show that financial development varies widely even among industrial countries and that financial integration can have different effects when countries differ in financial markets development. Countries with deeper financial markets react to financial integration by borrowing from abroad and investing in high-return foreign risky assets while countries that are less financial developed accumulate positions in safer assets.
+@Mendoza2009 study the relationship between financial development and global imbalances. The authors show that financial development varies widely even among industrial countries and that financial integration can have different effects when countries differ in financial markets development. Countries with deeper financial markets react to financial integration by borrowing from abroad and investing in high-return foreign risky assets while countries that are less financially developed accumulate positions in safer assets.
 
-<!-- [@Masten2008] analyze the effects of financial development on economic growth. Deeper financial markets reduce transaction and information costs and help diversify risk. They find that the effect is nonlinear. They also address the issue of interaction between financial development and financial integration arguing that financial integration has a positive effect on growth only after the development of a national financial market reaches a certain threshold.  -->
+@Bahadir2015 show that financial development convergence takes places. Countries with a high level of financial development exhibit lower credit growth rates in comparison to countries with a low level of financial development. @Kil2017 confirm the financial development convergence for EU15 countries. They find that both credit and stock markets exhibit convergence meaning that growth rates of these markets decrease at high levels of development. 
 
-@Bahadir2015 show that financial development convergence takes places. Countries with a high level of financial development exhibit lower credit growth rates in comparison to countries with a low level of financial development.@Kil2017 confirm the financial development convergence for EU15 countries. They find that both credit and stock markets exhibit convergence meaning that growth rates of these markets decrease at high levels of development. 
+@Fisman2004 analyze the role of financial development in allocating resources. They argue that global (productivity) shocks will induce comovement of growth rates among countries with a high level of financial development since undeveloped countries will not be able to react to the shocks of other countries. Thus, financial development at a high level can transmit global shocks and induce comovement in economic activity.
 
-@Fisman2004 analyze the role of financial development in allocating resources. They argue that global (productivity) shocks will induce comovement of growth rates among countries with a high level of financial development since undeveloped countries will not be able to react to the shocks of other countries. Thus financial development at a high level can transmit global shocks and induce comovement in economic activity.
+I hypothesize that this phenomenon (financial development at high level inducing comovement) holds with respect to financial activity as well. An example is given in @Acharya2010. The authors analyze an investment strategy of large commercial banks that set up asset back commercial paper (ABCP) conduits. This strategy involved selling to investors short-term asset-backed commercial paper and investing the proceeds mainly in US asset back longer-term securities. Once negative news about US assets emerged, all the banks suffered significant losses, thus inducing comovement. This investment strategy required a highly developed domestic financial market (financing through commercial paper instruments), and it is not surprising that the list of countries whose banks were pursuing this strategy includes US, UK, Germany, France, Belgium, and Portugal - highly developed countries.
 
-I hypothesize that this phenomenon (financial development at high level inducing comovement) holds with respect to financial activity as well. An example is given in @Acharya2010. The authors analyze an investment strategy of large commercial banks that set up asset back commercial paper (ABCP) conduits. This strategy involved selling to investors short-term asset-backed commercial paper and investing the proceeds mainly in US asset back longer-term securities. Once negative news about US assets emerged, all the banks suffered significant losses thus inducing comovement. This investment strategy required a highly developed domestic financial market (financing through the commercial paper), and it is not surprising that the list of countries whose banks were pursuing this strategy includes US, UK, Germany, France, Belgium, and Portugal - all members of KPP sample countries classification in my paper.
-
-To account for the fact that the effect of financial integration depends on the level of domestic financial development I include an index of financial development and an interaction term between financial development and banking integration. Data on financial development index comes from @Sviry2016 and includes an index of financial development of all the countries in my sample for `r paste(range(fin_reg_df_annual$Date[!is.na(fin_reg_df_annual$FD_tot)]), collapse = "-")` period.
+To account for the fact that the effect of financial integration depends on the level of domestic financial development I include an index of financial development (the sum of financial development index of each country in the country-pair) and an interaction term between financial development and banking integration. Data on financial development index comes from @Sviry2016 and includes an index of financial development of all the countries in my sample for `r paste(range(fin_reg_df$Date[!is.na(fin_reg_df$FD_tot)]), collapse = "-")` period.
 
 
 \subsection{Cultural Similarities}
+
+@Grinblatt2001 documents the importance of cultural similarites like distance, language and culture for financial decisions. The authors show that investors prefer to invest in firms that issue reports in their mother tongue and have chief executives of the same cultural background. @Altug2013 show that business cycle features are related to institutional and cultural characteristics, and that cultural features matter for cycles synchronization.
+@Frankel1998 analyze business cycles synchronization and find that countires that share common language tend to exhibit greater synchronization. The financial counterpart of this finding is the hypothesis that common language is associated with higher financial synchronization. In order to account for cultural differences I add an interaction term between common language indicator and banking integration\footnote{Country-pair fixed effects absorb the unconditional effect of common language}.
+
+<!-- \subsection{Common currency area} -->
+
+<!-- @Rose2005 survey the literature on currency unions, they show that currency union increases bilateral trade by between 30 and 90%. Since trade linkages and financial linkages are positively corellated I expect currency union to have similiar effect on financial linkages. @Gonzales2009 find that bussiness cycles synchronization increases after the adoption of Euro currency, thus, I hypothesize that financial synchronization should be higher in Euro countries and that banking linkages should induce higher synchronization in those countries -->
+
 
 \section{Data} \label{Data}
 
@@ -805,39 +905,18 @@ It also does not contain estimation error that emerges, for example, from self-s
 
 \subsection{Descriptive Statistics} \label{DescStat}
 
-Summary statistics of the data suggest that Base sample countries are more financially integrated and developed relative to Complement sample countries. Banking crises seem to be less frequent in Base sample countries. There seems to be no substantial difference in the average financial synchronization among the groups.
+Summary statistics of the data are presented in table \ref{summary_table}.
 
 ```{r countrypair_table_summary, include=FALSE}
 
 
-df_list = lapply(c("OECD","KPP","Complement"),
-                 function(temp_name){
-                   
-                   if(temp_name == "All"){
-                     
-                     return(fin_reg_df_annual %>% 
-                                select(Fin_synch, bank_gdp, Crises, FD_tot) %>% 
-                                as.data.frame())
-                     
-                     
-                   } else {
-
-                     return(fin_reg_df_annual %>% 
-                                filter(CountryPair_Category == temp_name) %>% 
-                                select(Fin_synch, bank_gdp, Crises, FD_tot) %>% 
-                                as.data.frame())
-                     
-                   }
-                   
-                   
-                 })
-
-names(df_list) = c("OECD","KPP","Complement")
-
-
-star = stargazer(df_list,table.placement = "H",
-          header =FALSE, summary = rep(TRUE,3),
-          title = names(df_list),digits = 2,digits.extra = 2,
+star = stargazer(fin_reg_df %>% 
+                   select(Fin_synch, bank_gdp, FD_tot) %>% 
+                   as.data.frame(),
+                 table.placement = "H",
+                 label = "summary_table",
+          header =FALSE, summary = TRUE,
+          digits = 2,digits.extra = 2,
           summary.stat = c("max","min","mean","median","sd","n"),
           notes = paste0("\\parbox[t]{16cm}{",
                          paste0("Note: The table reports summary statistics of ",
@@ -857,7 +936,7 @@ star = stargazer(df_list,table.placement = "H",
                          "}"))
 
 
-star = sub("Fin\\_synch","Financial cycles synchronization",star,fixed = TRUE)
+star = sub("Fin\\_synch","Fin cycles synch",star,fixed = TRUE)
 
 star = sub("bank\\_gdp","Banking linkages",star,fixed = TRUE)
 
@@ -886,7 +965,7 @@ Figure \ref{plot_bank_gdp} shows the average cross border (bilateral) bank linka
 ggplot() + 
   labs(title = "Average bank linkages \n (real, normalized by gdp)",
        y = "", x = "") + 
-  geom_line(fin_reg_df_annual %>% 
+  geom_line(fin_reg_df %>% 
               select(Date, bank_gdp) %>% 
               group_by(Date) %>% 
               summarise(Avg_bank = mean(bank_gdp,
@@ -909,16 +988,15 @@ ggplot() +
 ```
 
 
-```{r plot_bank_gdp_strata,fig.cap="Average real cross border bank by claims country-pair group \\label{plot_bank_gdp_strata}",fig.height=3}
+```{r plot_bank_gdp_strata,fig.cap="Average real cross border bank by claims country-pair group \\label{plot_bank_gdp_strata}",fig.height=3, eval=FALSE}
 
-ggplot(fin_reg_df_annual %>% 
-         select(Date, CountryPair,CountryPair_Category,bank_gdp) %>% 
-         mutate(CountryPair_Category = recode(
-           CountryPair_Category,
-           Strong = "KPP",
-           Weak = "Complement",
-           Cross = "Cross")) %>% 
-         group_by(Date, CountryPair_Category) %>% 
+ggplot(fin_reg_df %>% 
+         select(Date, CountryPair,Euro_both,bank_gdp) %>% 
+         mutate(Euro_both = recode(
+           Euro_both,
+           "1" = "Euro",
+           "0" = "Non Euro")) %>% 
+         group_by(Date, Euro_both) %>% 
          summarise(avg_bank_gdp = mean(bank_gdp)),
        aes(x = Date, y = avg_bank_gdp, group = 1)) + 
   geom_line() + 
@@ -928,14 +1006,14 @@ ggplot(fin_reg_df_annual %>%
   theme(axis.ticks = element_blank(),
         axis.text = element_blank(),
         panel.grid = element_blank(), plot.title = element_text(hjust = 0.5)) + 
-  facet_grid(~CountryPair_Category)
+  facet_grid(~Euro_both)
 
 ```
 
 
 ```{r plot_average_cycle_synch,fig.cap="Average financial cycle synchronization \\label{plot_Fin_synch}",fig.pos="H"}
 
-ggplot(fin_reg_df_annual %>% 
+ggplot(fin_reg_df %>% 
          select(Date, Fin_synch) %>% 
          group_by(Date) %>% 
          summarise(Avg_Fin_synch = mean(Fin_synch, na.rm = TRUE)) %>% 
@@ -953,8 +1031,7 @@ ggplot(fin_reg_df_annual %>%
 ```
 
 
-Figure \ref{plot_bank_gdp_strata} shows the time trajectory of bank linkages (normalized by GDP) broken into Base sample\footnote{Base sample group includes Australia, Austria, Belgium, Canada, Switzerland, Germany, Denmark, Spain, Finland, France, United Kingdom, Ireland, Italy,
-Japan, the Netherlands, Portugal, Sweden, and the United States.} and Complement sample\footnote{Complement sample group includes Chile, Czech Republic, Estonia, Greece, Hungary, Iceland, Israel, Korea, Latvia, Lithuania, Luxembourg, Mexico, New Zealand, Norway, and Poland, Slovak Republic, Slovenia, Turkey.} country-pairs groups. The plot shows that each group is characterized by its own trend: while Base sample countries exhibit an upward trend, Complement sample countries show a dramatic drop (probably as a result of GFC). The Cross groups sample (being the "average" of the two previous groups) doesn't show a significant trend as the other groups. In the regression analysis, I use the country-pair specific trend to account for this non-stationary behavior. 
+Figure \ref{plot_bank_gdp_strata} shows the time trajectory of bank linkages (normalized by GDP) broken into Euro and Non Euro country-pairs groups. The plot shows that each group is characterized by its own trend: while Non Euro country pairs show a dramatic drop (probably as a result of GFC) the Euro country pairs are much more stable. In the regression analysis, I use the country-pair specific trend to account for this non-stationary behavior.
 
 Figure \ref{plot_Fin_synch} shows the average synchronization (measured as the difference between credit and house price growth rates for each country-pair). The synchronization seems to be quite volatile with no specific trend until 2007-2008 (the global financial crises) and trending upward since. 
 
@@ -964,29 +1041,10 @@ Figure \ref{plot_Fin_synch} shows the average synchronization (measured as the d
 
 ```{r output_reg, include=FALSE}
 
-temp_reg_list = list(reg)
-
-temp_se_list = lapply(temp_reg_list,function(temp_plm){
-                        return(sqrt(diag(vcovHC(temp_plm,cluster = "group"))))
-                               })
-
-temp_names = c("lag\\(bank_gdp, 1\\)",
-               "Crises",
-               "FD_tot",
-               # "EU_both",
-               "Euro_both",
-               "lag\\(bank_gdp, 1\\):Crises",
-               "lag\\(bank_gdp, 1\\):FD_tot",
-               # "lag\\(bank_gdp, 1\\):EU_both",
-               "lag\\(bank_gdp, 1\\):Euro_both",
-               "lag\\(bank_gdp, 1\\):Common_Lang")
-
-
-
-star = stargazer(temp_reg_list, header = FALSE,
+star = stargazer(reg_list$baseline, header = FALSE,digits = 2,
           label = "baseline",table.placement = "H",
           title = "Panel specification with controls",
-          dep.var.caption = "Financial cycles synchronization",
+          dep.var.caption = "Fin cycles synch",
           model.numbers = FALSE,
           dep.var.labels.include = FALSE,
           notes = paste0("\\parbox[t]{8cm}{",
@@ -1006,23 +1064,13 @@ star = stargazer(temp_reg_list, header = FALSE,
                          "}"),
           notes.align = "l",
           notes.append = FALSE,
-          se = temp_se_list,
-          column.sep.width = "1pt",
+          se = list(sqrt(diag(vcovHC(reg_list$baseline,cluster = "group")))),
           keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
-          covariate.labels = c("Bank linkages (lag)",
-                               "Crises",
-                               "FD",
-                               # "EU both",
-                               "Euro both",
-                               "Bank linkages (lag) * Crises",
-                               "Bank linkages (lag) * FD",
-                               # "Bank linkages (lag) * EU both",
-                               "Bank linkages (lag) * Euro both",
-                               "Bank linkages (lag) * Lang"),
+          covariate.labels = temp_labels,
           omit.stat = c("f","adj.rsq"))
 
-star = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{11cm}{",
-                    "\\multicolumn{2}{l}{\\parbox[t]{14cm}{\\textit{Note:} ",
+star = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
+                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
                     star,fixed = TRUE)
 
 rm(temp_se_list, temp_reg_list)
@@ -1037,39 +1085,30 @@ cat(star,sep = "\n")
 
 ```
 
-Estimation results are shown in table \ref{baseline}.
 
+Estimation results are shown in table \ref{baseline}. Banking integration enters
+the equation with a negative sign, meaning that integration is associated with less synchronized cycles. We can see that this effect is state dependend: the interaction terms suggest that during banking crises periods or in highly developed financial markets integration is associated with higher synchronization. This is also the case for culturaly similar countries : countries that share common language are associated with higher financial synchronization, and the interaction term suggest that banking integration in
+those countries increases synchronization.
 
+Coefficient analysis shows that the magnitude of the effect is quite modest.
+A change of one percent in banking integration is associated with a change of `r abs(round(coef_vec[names(coef_vec) == "lag(bank_gdp, 1)"],2))` basis points in financial synchronization. During banking crises integration contributes `r abs(round(coef_vec[names(coef_vec) == "lag(bank_gdp, 1):Crises"],2))` basis points to the synchronization. In highly developed financial markets integration is associated with a `r abs(round(coef_vec[names(coef_vec) == "lag(bank_gdp, 1):FD_tot"],2))` basis points increase in synchronization.
 
 \section{Robustness} \label{Robust}
 
 \subsection{1978 - 2006 period}
 
-In this section, I reduce my sample to the 1978-2006 period. That serves several purposes: first, it allows comparison between @Kalemli-Ozcan2013JF results with respect to business cycles synchronization and my results with respect to financial cycles synchronization. Second, this setting end before turmoil years that were characterized by the Global Financial Crises, the European sovereign debt crises, and their aftermaths and enables to estimate the association between banking integration and financial cycles synchronization during "normal" times. There are few instances of banking crises during this period, the crises indicator is insignificant and for that reason, I exclude this variable from the equation. 
+In this section, I reduce my sample to the 1978-2006 period. That serves several purposes: first, it allows comparison between @Kalemli-Ozcan2013JF results with respect to business cycles synchronization and my results with respect to financial cycles synchronization. Second, this setting end before turmoil years that were characterized by the Global Financial Crises, the European sovereign debt crises, and their aftermaths and enables to estimate the association between banking integration and financial cycles synchronization during "normal" times. 
 
 
+```{r output_reg_2006, include=FALSE}
 
-```{r output_baseline_2007, include=FALSE, eval=FALSE}
-
-temp_reg_list = reg_list$baseline_2007
-
-temp_reg_list = temp_reg_list[!names(temp_reg_list) == "Cross and Low"]
-
-temp_se_list = lapply(temp_reg_list,function(temp_plm){
-                        return(sqrt(diag(vcovHC(temp_plm,cluster = "group"))))
-                               })
-
-temp_names = c("lag\\(bank_gdp, 1\\)")
-
-
-star = stargazer(temp_reg_list, header = FALSE,
-          label = "baseline_2007",table.placement = "H",
-          title = "Panel specification with controls, 1978-2006 period",
-          dep.var.caption = "Financial cycles synchronization",
+star_2006 = stargazer(reg_list$before_2007, header = FALSE,digits = 2,
+          label = "before_2007",table.placement = "H",
+          title = "Panel specification with controls, before 2006",
+          dep.var.caption = "Fin cycles synch",
           model.numbers = FALSE,
           dep.var.labels.include = FALSE,
-          column.labels = gsub("_","-", names(temp_reg_list)),
-          notes = paste0("\\parbox[t]{11cm}{",
+          notes = paste0("\\parbox[t]{8cm}{",
                          paste0("The table presents panel estimation that ",
                                 "includes twoway fixed effects and country-pair ",
                                 " specific linear time trend. ",
@@ -1077,211 +1116,38 @@ star = stargazer(temp_reg_list, header = FALSE,
                                 "difference of financial cycles growth rates. ",
                                 "Bank linkages is ",
                                 "the cross border banking claims. ",
-                                "Controls include measures of foreign exchange ",
+                                "Controls include foreign exchange ",
                                 "stability, monetary independence, financial ",
-                                "openness and trade linkages. ",
-                                "Each column includes subgroup ",
-                                "of countrypairs according to ",
-                                "Base sample and Complement sample groups. ",
-                                "Cross group refers to countrypairs ",
-                                "where one country belongs to Base sample ",
-                                "group and the other to Complement sample group. ",
+                                "openness , trade linkages and GDP (log). ",
                                 "The standard errors are clustered ",
                                 "at country-pair level and ",
                                 "heteroscedasticity robust."),
                          "}"),
           notes.align = "l",
           notes.append = FALSE,
-          se = temp_se_list,
-          column.sep.width = "1pt",
+          se = list(sqrt(diag(vcovHC(reg_list$before_2007,cluster = "group")))),
           keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
-          covariate.labels = c("Bank linkages (lag)"),
+          covariate.labels = temp_labels,
           omit.stat = c("f","adj.rsq"))
 
-star = sub("\\textit{Note:}  & \\multicolumn{4}{l}{\\parbox[t]{11cm}{",
-                    "\\multicolumn{5}{l}{\\parbox[t]{14cm}{\\textit{Note:} ",
-                    star,fixed = TRUE)
-
-rm(temp_se_list, temp_reg_list)
-
+star_2006 = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
+                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
+                    star_2006,fixed = TRUE)
 
 ```
 
 
-```{r output_baseline_2007_table, results="asis", eval=FALSE}
+```{r output_2006_table, results="asis"}
 
-cat(star,sep = "\n")
-
-```
-
-
-
-```{r output_fd_2007, include=FALSE, eval=FALSE}
-
-temp_reg_list = reg_list$fd_2007
-
-temp_reg_list = temp_reg_list[!names(temp_reg_list) == "Cross and Low"]
-
-temp_se_list = lapply(temp_reg_list,function(temp_plm){
-                        return(sqrt(diag(vcovHC(temp_plm,cluster = "group"))))
-                               })
-
-temp_names = c("lag\\(bank_gdp, 1\\)","FD_tot",
-                   "lag\\(bank_gdp, 1\\):FD_tot")
-
-star = stargazer(temp_reg_list, header = FALSE,
-          label = "fd_2007",table.placement = "H",
-          title = paste0("Panel with",
-                         " financial development indicators, 1978-2006  period"),
-          dep.var.caption = "Financial cycles synchronization",
-          model.numbers = FALSE,
-          dep.var.labels.include = FALSE,
-          column.labels = gsub("_","-", names(temp_reg_list)),
-          notes.append = FALSE,
-          notes = paste0("\\parbox[t]{11cm}{",
-                         paste0("The table presents panel estimation that ",
-                                "includes twoway fixed effects and country-pair ",
-                                " specific linear time trend. ",
-                                "Financial cycles synchronization is the negative ",
-                                "difference of financial cycles growth rates. ",
-                                "Bank linkages is ",
-                                "the cross border banking claims. ",
-                                "Crises is an indicator variable that equals ",
-                                "1 if at least one country undergoes ",
-                                "banking crises at that year. ",
-                                "Financial development is the sum of ",
-                                "the level of each country financial ",
-                                "development index. ",
-                                "Controls include measures of foreign exchange ",
-                                "stability, monetary independence, financial ",
-                                "openness and trade linkages. ",
-                                "Each column includes subgroup ",
-                                "of countrypairs according to ",
-                                "Base sample and Complement sample groups. ",
-                                "Cross group refers to countrypairs ",
-                                "where one country belongs to Base sample ",
-                                "group and the other to Complement sample group. ",
-                                "The standard errors are clustered ",
-                                "at country-pair level and ",
-                                "heteroscedasticity robust."),
-                         "}"),
-          se = temp_se_list,
-          column.sep.width = "1pt",
-          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
-          covariate.labels = c("Bank linkages (lag)",
-                               "Financial Development",
-                               "Bank linkages (lag)*FD"),
-          omit.stat = c("f","adj.rsq"))
-
-star = sub("\\textit{Note:}  & \\multicolumn{4}{r}{\\parbox[t]{11cm}{",
-                    "\\multicolumn{5}{l}{\\parbox[t]{14cm}{\\textit{Note:} ",
-                    star,fixed = TRUE)
-
-
-rm(temp_se_list, temp_reg_list,temp_names)
-
-
-
+cat(star_2006,sep = "\n")
 
 ```
 
 
-```{r output_fd_2007_table, results="asis", eval=FALSE}
-
-cat(star,sep = "\n")
-
-```
-
-
-Table \ref{baseline_2007} present the baseline estimation results. When financial development effect is uncontrolled for the results suggest a positive association between banking integration and financial cycles synchronization (significant in all but Complement sample group). However, once financial development is accounted for (results are shown in table \ref{fd_2007}), we can see that the positive effect comes from financial development. The coefficients of banking linkages turn negative (although insignificant) meaning that banking linkages are associated with less synchronized financial cycles. This finding offers some support to the hypothesis about banking flows that serve as rebalancing mechanism. 
-
-
-\subsection{Alternative empirical specifications}
-
-In this section, I exclude the country-pair specific linear trend in order to test the robustness of my estimation. Table \ref{crisis_fd_no_trend} presents the results. The only result that remains statistically significant is the crisis effect - during banking crises banking integration is associated with more synchronized cycles.
-
-
-```{r output_crisis_fd_no_trend, include=FALSE, eval=FALSE}
-
-temp_reg_list = reg_list$crisis_fd_no_trend
-
-temp_reg_list = temp_reg_list[!names(temp_reg_list) == "Cross and Low"]
-
-temp_se_list = lapply(temp_reg_list,function(temp_plm){
-                        return(sqrt(diag(vcovHC(temp_plm,cluster = "group"))))
-                               })
-
-temp_names = c("lag\\(bank_gdp, 1\\)","Crises",
-                   "lag\\(bank_gdp, 1\\):Crises","FD_tot",
-                   "lag\\(bank_gdp, 1\\):FD_tot")
-
-star = stargazer(temp_reg_list, header = FALSE,
-          label = "crisis_fd_no_trend",table.placement = "H",
-          title = paste0("Panel with crises and",
-                         " financial development indicators, no trend"),
-          dep.var.caption = "Financial cycles synchronization",
-          model.numbers = FALSE,
-          dep.var.labels.include = FALSE,
-          column.labels = gsub("_","-", names(temp_reg_list)),
-          notes.append = FALSE,
-          notes = paste0("\\parbox[t]{11cm}{",
-                         paste0("The table presents panel estimation that ",
-                                "includes twoway fixed effects. ",
-                                "Financial cycles synchronization is the negative ",
-                                "difference of financial cycles growth rates. ",
-                                "Bank linkages is ",
-                                "the cross border banking claims. ",
-                                "Crises is an indicator variable that equals ",
-                                "1 if at least one country undergoes ",
-                                "banking crises at that year. ",
-                                "Financial development is the sum of ",
-                                "the level of each country financial ",
-                                "development index. ",
-                                "Controls include measures of foreign exchange ",
-                                "stability, monetary independence, financial ",
-                                "openness and trade linkages. ",
-                                "Each column includes subgroup ",
-                                "of countrypairs according to ",
-                                "Base sample and Complement sample groups. ",
-                                "Cross group refers to countrypairs ",
-                                "where one country belongs to Base sample ",
-                                "group and the other to Complement sample group. ",
-                                "The standard errors are clustered ",
-                                "at country-pair level and ",
-                                "heteroscedasticity robust."),
-                         "}"),
-          se = temp_se_list,
-          column.sep.width = "1pt",
-          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
-          covariate.labels = c("Bank linkages (lag)",
-                               "Crises",
-                               "Bank linkages (lag)*Crises",
-                               "Financial Development",
-                               "Bank linkages (lag)*FD"),
-          omit.stat = c("f","adj.rsq"))
-
-star = sub("\\textit{Note:}  & \\multicolumn{4}{r}{\\parbox[t]{11cm}{",
-                    "\\multicolumn{5}{l}{\\parbox[t]{14cm}{\\textit{Note:} ",
-                    star,fixed = TRUE)
-
-
-rm(temp_se_list, temp_reg_list,temp_names)
-
-
-
-
-```
-
-
-```{r output_crisis_fd_table_no_trend, results="asis", eval=FALSE}
-
-cat(star,sep = "\n")
-
-```
+Table \ref{before_2007} present the results. The main results hold :  banking integration is associated with lower synchronization (`r abs(round(coef_vec_before_2007[names(coef_vec_before_2007) == "lag(bank_gdp, 1)"],2))` basis points reduction for a 1% change). The crisis and financial development effects work in the opposite direction (`r abs(round(coef_vec_before_2007[names(coef_vec_before_2007) == "lag(bank_gdp, 1):Crises"],2))` and `r abs(round(coef_vec_before_2007[names(coef_vec_before_2007) == "lag(bank_gdp, 1):FD_tot"],2))` respectively). The common language indicator enters the equation with the same sign but loses the statistical significance.
 
 
 \subsection{Alternative measures of financial synchronization}
-
 
 
 \section{Summary and conclusions} \label{conclusions}
@@ -1289,61 +1155,206 @@ cat(star,sep = "\n")
 This paper studies the effect of banking integration on the synchronization of financial cycles. There are opposite effects ("shock absorption" vs "shock propagation") that make the identification of this effect difficult. @Kalemli-Ozcan2013JF find that banking integration causes business cycles divergence, I find limited evidence of a negative association between banking integration and financial cycles synchronization. My results suggest that the relationship is state depended: I find that financial crises increase the "shock propagation" feature of banking integration. This is an important result for policymakers. It suggests that while banking integration may be desired, additional macroprudential measures may be warranted to account for the risk exposure during crisis times.
 
 
-
 \newpage
 
 \section{Appendix}
 
+\subsection{Alternative empirical specifications}
 
-```{r output_panel_reg_fd_no_trend, results="asis", eval=FALSE}
+\subsubsection{No trend}
 
-temp_reg_list = reg_list$panel_fd_no_trend
+In this section, I exclude the country-pair specific linear trend in order to test the robustness of my estimation. Table \ref{no_trend} presents the results.
 
-temp_se_list = lapply(temp_reg_list,function(temp_plm){
-                        return(sqrt(diag(vcovHC(temp_plm,cluster = "group"))))
-                               })
 
-temp_names = c("lag\\(bank_gdp, 1\\)","Crises",
-                   "lag\\(bank_gdp, 1\\):Crises","FD_tot",
-                   "lag\\(bank_gdp, 1\\):FD_tot")
+```{r output_no_trend, include=FALSE}
 
-stargazer(temp_reg_list, header = FALSE,
-          label = "panel_reg_FD",table.placement = "H",
-          title = paste0("Panel with crises and",
-                         " financial development indicators"),
-          dep.var.caption = "Financial cycles synchronization",
+
+star_no_trend = stargazer(reg_list$no_trend, header = FALSE,digits = 2,
+          label = "no_trend",table.placement = "H",
+          title = "Panel specification with controls, no trend",
+          dep.var.caption = "Fin cycles synch",
           model.numbers = FALSE,
           dep.var.labels.include = FALSE,
-          column.labels = gsub("_","-", names(temp_reg_list)),
-          notes = "Clustered standard errors",
-          se = temp_se_list,
-          column.sep.width = "1pt",
+          notes = paste0("\\parbox[t]{8cm}{",
+                         paste0("The table presents panel estimation that ",
+                                "includes twoway fixed effects. ",
+                                "Financial cycles synchronization is the negative ",
+                                "difference of financial cycles growth rates. ",
+                                "Bank linkages is ",
+                                "the cross border banking claims. ",
+                                "Controls include foreign exchange ",
+                                "stability, monetary independence, financial ",
+                                "openness , trade linkages and GDP (log). ",
+                                "The standard errors are clustered ",
+                                "at country-pair level and ",
+                                "heteroscedasticity robust."),
+                         "}"),
+          notes.align = "l",
+          notes.append = FALSE,
+          se = list(sqrt(diag(vcovHC(reg_list$no_trend,cluster = "group")))),
           keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
-          covariate.labels = c("Bank linkages (lag)",
-                               "Crises",
-                               "Bank linkages (lag)*Crises",
-                               "Financial Development",
-                               "Bank linkages (lag)*FD"),
-          omit.stat = c("f","adj.rsq"),
-          add.lines = list(c("Controls",
-                             rep("Yes", length(temp_reg_list))),
-                           c("Year FE",
-                             rep("Yes", length(temp_reg_list))),
-                           c("Country-pair FE",
-                             rep("Yes", length(temp_reg_list)))))
+          covariate.labels = temp_labels,
+          omit.stat = c("f","adj.rsq"))
 
-rm(temp_se_list, temp_reg_list,temp_names)
-
-
+star_no_trend = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
+                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
+                    star_no_trend,fixed = TRUE)
 
 
 ```
 
 
+```{r output_no_trend_table, results="asis"}
+
+cat(star_no_trend,sep = "\n")
+
+```
+
+\subsubsection{Credit}
+
+```{r output_credit, include=FALSE}
+
+
+star_credit = stargazer(reg_list$credit, header = FALSE,digits = 2,
+          label = "credit",table.placement = "H",
+          title = "Panel specification with controls, credit",
+          dep.var.caption = "Credit cycles synchronization",
+          model.numbers = FALSE,
+          dep.var.labels.include = FALSE,
+          notes = paste0("\\parbox[t]{8cm}{",
+                         paste0("The table presents panel estimation that ",
+                                "includes twoway fixed effects and country-pair ",
+                                " specific linear time trend. ",
+                                "Financial cycles synchronization is the negative ",
+                                "difference of financial cycles growth rates. ",
+                                "Bank linkages is ",
+                                "the cross border banking claims. ",
+                                "Controls include foreign exchange ",
+                                "stability, monetary independence, financial ",
+                                "openness , trade linkages and GDP (log). ",
+                                "The standard errors are clustered ",
+                                "at country-pair level and ",
+                                "heteroscedasticity robust."),
+                         "}"),
+          notes.align = "l",
+          notes.append = FALSE,
+          se = list(sqrt(diag(vcovHC(reg_list$credit,cluster = "group")))),
+          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
+          covariate.labels = temp_labels,
+          omit.stat = c("f","adj.rsq"))
+
+star_credit = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
+                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
+                    star_credit,fixed = TRUE)
+
+
+```
+
+
+```{r output_credit_table, results="asis"}
+
+cat(star_credit,sep = "\n")
+
+```
+
+\subsubsection{House}
+
+```{r output_house, include=FALSE}
+
+
+star_house = stargazer(reg_list$house, header = FALSE,digits = 2,
+          label = "house",table.placement = "H",
+          title = "Panel specification with controls, house",
+          dep.var.caption = "House cycles synchronization",
+          model.numbers = FALSE,
+          dep.var.labels.include = FALSE,
+          notes = paste0("\\parbox[t]{8cm}{",
+                         paste0("The table presents panel estimation that ",
+                                "includes twoway fixed effects and country-pair ",
+                                " specific linear time trend. ",
+                                "Financial cycles synchronization is the negative ",
+                                "difference of financial cycles growth rates. ",
+                                "Bank linkages is ",
+                                "the cross border banking claims. ",
+                                "Controls include foreign exchange ",
+                                "stability, monetary independence, financial ",
+                                "openness , trade linkages and GDP (log). ",
+                                "The standard errors are clustered ",
+                                "at country-pair level and ",
+                                "heteroscedasticity robust."),
+                         "}"),
+          notes.align = "l",
+          notes.append = FALSE,
+          se = list(sqrt(diag(vcovHC(reg_list$house,cluster = "group")))),
+          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
+          covariate.labels = temp_labels,
+          omit.stat = c("f","adj.rsq"))
+
+star_house = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
+                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
+                    star_house,fixed = TRUE)
+
+
+```
+
+
+```{r output_house_table, results="asis"}
+
+cat(star_house,sep = "\n")
+
+```
+
+\subsubsection{Lagged regression}
+
+```{r output_reg_lag, include=FALSE}
+
+
+
+star_lag = stargazer(reg_list$lag, header = FALSE,digits = 2,
+          label = "lagged",table.placement = "H",
+          title = "Panel specification with controls, lagged",
+          dep.var.caption = "Fin cycles synch",
+          model.numbers = FALSE,
+          dep.var.labels.include = FALSE,
+          notes = paste0("\\parbox[t]{8cm}{",
+                         paste0("The table presents panel estimation that ",
+                                "includes twoway fixed effects.",
+                                "Financial cycles synchronization is the negative ",
+                                "difference of financial cycles growth rates. ",
+                                "Bank linkages is ",
+                                "the cross border banking claims. ",
+                                "Controls include foreign exchange ",
+                                "stability, monetary independence, financial ",
+                                "openness , trade linkages and GDP (log). ",
+                                "The standard errors are clustered ",
+                                "at country-pair level and ",
+                                "heteroscedasticity robust."),
+                         "}"),
+          notes.align = "l",
+          notes.append = FALSE,
+          se = list(sqrt(diag(vcovHC(reg_list$lag,cluster = "group")))),
+          column.sep.width = "1pt",
+          keep = paste0("^",temp_names_lag,"$"),
+          order = paste0("^",temp_names_lag,"$"),
+          covariate.labels = temp_labels,
+          omit.stat = c("f","adj.rsq"))
+
+star_lag = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
+                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
+                    star_lag,fixed = TRUE)
+
+```
+
+
+```{r output_reg_lag_table, results="asis"}
+
+cat(star_lag,sep = "\n")
+
+```
+
 
 
 <!-- \subsection{Delta estimation} -->
-
 
 \subsection{Explanatory variables}
 
@@ -1355,7 +1366,7 @@ Importantly, the data account for credit from all sources, not only that extende
 I use data about residential property prices (RPP) from BIS selected residential property prices data set. The selected residential property prices are harmonized as much as possible with recommendations in the Handbook on residential property prices, an internationally agreed framework for classifying property price issues.
 
 \textbf{Bank linkages}
-This variable is based on bilateral cross-border holdings (stocks) of banks. Data on banks’ cross-border bilateral stocks of assets and liabilities come from BIS’s Locational Banking Statistics. For each country-pair and year there are up to four observations: i) asset holdings (stocks) of banks located in country i in all sectors of the economy in country j, ii) asset holdings (stocks) of banks located in country j in all sectors of the economy in country i, iii) liabilities (stocks) of banks located in country i to country j, and iv) liabilities (stocks) of banks located in country j to country i. The data are originally expressed in current U.S. dollars. I normalize the data with the following steps:
+This variable is based on bilateral cross-border holdings (stocks) of banks. Data on banks’ cross-border bilateral stocks of assets and liabilities come from BIS’s Locational Banking Statistics. For each country-pair and year there are up to four observations: i) asset holdings (stocks) of banks located in country i in all sectors of the economy in country j, ii) asset holdings (stocks) of banks located in country j in all sectors of the economy in country i, iii) liabilities (stocks) of banks located in country i to country j, and iv) liabilities (stocks) of banks located in country j to country i. The data are originally expressed in (millions) current U.S. dollars. I normalize the data with the following steps:
 
 \begin{enumerate}
   \item
@@ -1407,6 +1418,8 @@ MI = 1 - \frac{corr(i_{i},i_{j}) - (-1)}{1 - (-1)}
 where \textit{i} refers to home countries and \textit{j} to the base country. By construction, the maximum value is 1, and the minimum value is 0.
 Higher values of the index mean more monetary policy independence
 
+
+\textbf{GDP} - Source: World Development Index. Current US dollars
 
 \section{Bibliography}
 
