@@ -23,7 +23,6 @@ process.wdi.file = function(temp_file, var_name){
     gather(.,key = Year,value = UQ(var_name),-Country) %>%
     mutate(Year = str_extract(Year, "X[\\d]{4}")) %>%
     mutate(Year = sub("X","",Year)) %>%
-    mutate(Country = levels(Country)[Country]) %>%
     mutate(Country = gsub("\\s","_",Country))
 
 

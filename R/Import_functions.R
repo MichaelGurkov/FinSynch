@@ -149,7 +149,8 @@ import_wdi_df = function(filepath_list = NULL,
 
   df = lapply(names(filepath_list), function(temp_name){
 
-    res = read.csv(filepath_list[[temp_name]]) %>%
+    res = read.csv(filepath_list[[temp_name]],
+                   stringsAsFactors = FALSE) %>%
              process.wdi.file(.,var_name = temp_name)
 
     # Replace country names
@@ -378,7 +379,7 @@ import.fin.dev.ind = function(filepath = paste0(
   temp_df = read_xlsx(filepath)
 
   df = temp_df %>%
-    select(year, country, FD, FI) %>%
+    select(year, country, FD, FI, FM) %>%
     rename(Country = country) %>%
     mutate(Country = gsub("\\s","_", Country)) %>%
     {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec) else .} %>%
@@ -611,7 +612,8 @@ import.bis.lbs.data = function(filepath = paste0(
                                  "(domestic, foreign, consortium and ",
                                  "unclassified)"),
                                my_counter_sector = "All sectors",
-                               countries_vec = NULL){
+                               countries_vec = NULL,
+                               collapse_countrypair = TRUE){
 
   raw_df = read_csv(filepath, col_types = cols(), progress = FALSE)
 
@@ -641,10 +643,6 @@ import.bis.lbs.data = function(filepath = paste0(
     mutate(Counter_Country = gsub("\\s","_",Counter_Country)) %>%
     {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec) %>%
         filter(.,Counter_Country %in% countries_vec) else .} %>%
-    mutate(CountryPair = ifelse(Country < Counter_Country,
-                                paste(Country, Counter_Country, sep = "-"),
-                                paste(Counter_Country,Country, sep = "-"))) %>%
-    select(-Country,-Counter_Country) %>%
     rename(Balance_Pos = `Balance sheet position`)
 
 
@@ -654,10 +652,27 @@ import.bis.lbs.data = function(filepath = paste0(
              "Type of reporting institutions","Counterparty sector",
              "Parent country"))
 
-  long_df = gather(selected_df,key = Date,value = Balance,
-                   -c(Balance_Pos,CountryPair))
+  if(collapse_countrypair){
 
-  return(long_df)
+    res_df = selected_df %>%
+      mutate(CountryPair = ifelse(Country < Counter_Country,
+                                  paste(Country, Counter_Country, sep = "-"),
+                                  paste(Counter_Country,Country, sep = "-"))) %>%
+      select(-Country,-Counter_Country) %>%
+      gather(key = Date,value = Balance,
+             -c(Balance_Pos,CountryPair))
+
+  } else {
+
+    res_df = selected_df %>%
+      gather(key = Date,value = Balance,
+             -c(Balance_Pos,Country,Counter_Country))
+
+
+  }
+
+
+  return(res_df)
 
 }
 
@@ -822,4 +837,66 @@ import.crises.dates.df = function(filepath = paste0(
 
 
 }
+
+
+#' This function imports geo dist data from cepii
+#'
+#' @import readxl
+#'
+#' @import dplyr
+#'
+
+import.geodist.data = function(filepath = paste0("C:\\Users\\Misha\\Documents",
+                                                 "\\Data\\CEPII\\",
+                                                 "dist_cepii.xls")){
+
+  df = read_xls(filepath, col_types = c(rep("text",2), rep("numeric",12)))
+
+  codes = import.iso.codes()
+
+  df = df %>%
+    left_join(.,codes, by = c("iso_o" = "Code")) %>%
+    left_join(.,codes, by = c("iso_d" = "Code")) %>%
+    select(-iso_o,-iso_d) %>%
+    rename(Country = Country.x) %>%
+    rename(Counter_Country = Country.y)
+
+  return(df)
+}
+
+
+#' This function imports ISO codes for country names
+#'
+
+import.iso.codes = function(filepath = NULL, type = "3-digits"){
+
+
+  if(!is.null(filepath)){
+
+    df = read.csv(filepath)
+
+    } else if(type == "3-digits"){
+
+      df = read.csv(paste0("C:\\Users\\Misha\\Documents\\Data\\ISO\\",
+                           "iso_3digit_alpha_country_codes.csv"))
+
+    } else if(type == "2-digits"){
+
+    df = read.csv(paste0("C:\\Users\\Misha\\Documents\\Data\\ISO\\",
+                         "iso_2digit_alpha_country_codes.csv"))
+    }
+
+
+  df = df %>%
+   setNames(c("Code","Country")) %>%
+    mutate(Country = gsub("\\s","_",Country)) %>%
+    mutate(Country = sub("Korea,_Republic_of","Korea",Country,fixed = TRUE)) %>%
+    mutate(Country = sub("Czechia","Czech_Republic",Country,fixed = TRUE)) %>%
+    mutate(Country = sub("Slovakia","Slovak_Republic",Country,fixed = TRUE))
+
+  return(df)
+
+
+}
+
 

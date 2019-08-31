@@ -1,8 +1,8 @@
 ---
-title: "Identifying the Financial Cycle"
+title: "Financial Cycle synchronization and cross border credit"
 institute: "Bank of Israel \\newline Research Department, Finance Division"
 author: "Michael Gurkov"
-date: "August 15, 2018"
+# date: "August 15, 2018"
 classoption: t
 output:
   beamer_presentation:
@@ -11,23 +11,460 @@ output:
       in_header: GlobalFinCyclePreamble.tex
     latex_engine: xelatex
 vignette: >
-  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteIndexEntry{GlobalFinCycle-Presentation}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
-  collapse = TRUE,
+  collapse = TRUE,echo = FALSE,message = FALSE,warning = FALSE,
   comment = "#>"
 )
+```
+
+
+```{r load_package}
+
+devtools::load_all()
+
+library(ggplot2)
+
+library(stargazer)
+
+
+```
+
+
+```{r Import_dataset,cache = TRUE}
+
+params_list = make.params.list()
+
+dataset = import_dataset()
+
+```
+
+
+```{r fin_reg_calculate,cache = TRUE}
+
+fin_reg_list = lapply(list(NULL,
+                           params_list$strong_countries_pairs,
+                           params_list$weak_countries_pairs,
+                           params_list$cross_country_pairs,
+                           c(params_list$cross_country_pairs,
+                             params_list$weak_countries_pairs)),
+                      function(temp_vec){
+                        
+                        form = formula(Fin_ret ~ bank_gdp + trade_gdp +
+                                                FO_ind_tot + FX_stab_avg + 
+                                                FD_avg + MI_ind_tot)
+                        
+                        reg_df = dataset$fin_reg_df %>% 
+                          {if(!is.null(temp_vec)) filter(.,CountryPair %in%
+                                                           temp_vec) else .}
+
+                        temp_reg = plm(formula = form,
+                            model = "within",effect = "twoways",
+                            data = reg_df,
+                            index = c("CountryPair","Date"))
+                        
+                        return(temp_reg)
+                        
+                        })
+
+
+```
+
+
+```{r within_reg, results="asis",cache = TRUE}
+
+within_reg_list = lapply(list(NULL,
+                           params_list$strong_countries_pairs,
+                           params_list$weak_countries_pairs,
+                           params_list$cross_country_pairs,
+                           c(params_list$cross_country_pairs,
+                             params_list$weak_countries_pairs)),
+                      function(temp_vec){
+                        
+                        form = formula(Fin_ret ~ bank_gdp)
+                        
+                        reg_df = dataset$fin_reg_df %>% 
+                          {if(!is.null(temp_vec)) filter(.,CountryPair %in%
+                                                           temp_vec) else .}
+
+                        temp_reg = plm(formula = form,
+                            model = "within",effect = "twoways",
+                            data = reg_df, index = c("CountryPair","Date"))
+                        
+                        return(temp_reg)
+                        
+                        })
+
+
+
+panel_reg_list_pooling = lapply(list(NULL,
+                           params_list$strong_countries_pairs,
+                           params_list$weak_countries_pairs,
+                           params_list$cross_country_pairs,
+                           c(params_list$cross_country_pairs,
+                             params_list$weak_countries_pairs)),
+                      function(temp_vec){
+                        
+                        form = formula(Fin_ret ~ bank_gdp)
+                        
+                        reg_df = dataset$fin_reg_df %>% 
+                          {if(!is.null(temp_vec)) filter(.,CountryPair %in%
+                                                           temp_vec) else .}
+
+                        temp_reg = plm(formula = form,
+                            model = "pooling",
+                            data = reg_df, index = c("CountryPair","Date"))
+                        
+                        return(temp_reg)
+                        
+                        })
+
+
+panel_reg_list_time_FE = lapply(list(NULL,
+                           params_list$strong_countries_pairs,
+                           params_list$weak_countries_pairs,
+                           params_list$cross_country_pairs,
+                           c(params_list$cross_country_pairs,
+                             params_list$weak_countries_pairs)),
+                      function(temp_vec){
+                        
+                        form = formula(Fin_ret ~ bank_gdp)
+                        
+                        reg_df = dataset$fin_reg_df %>% 
+                          {if(!is.null(temp_vec)) filter(.,CountryPair %in%
+                                                           temp_vec) else .}
+
+                        temp_reg = plm(formula = form,
+                            model = "within",effect = "time",
+                            data = reg_df, index = c("CountryPair","Date"))
+                        
+                        return(temp_reg)
+                        
+                        })
+
+
+
+panel_reg_list_countrypair_FE = lapply(list(NULL,
+                           params_list$strong_countries_pairs,
+                           params_list$weak_countries_pairs,
+                           params_list$cross_country_pairs,
+                           c(params_list$cross_country_pairs,
+                             params_list$weak_countries_pairs)),
+                      function(temp_vec){
+                        
+                        form = formula(Fin_ret ~ bank_gdp)
+                        
+                        reg_df = dataset$fin_reg_df %>% 
+                          {if(!is.null(temp_vec)) filter(.,CountryPair %in%
+                                                           temp_vec) else .}
+
+                        temp_reg = plm(formula = form,
+                            model = "within",effect = "individual",
+                            data = reg_df, index = c("CountryPair","Date"))
+                        
+                        return(temp_reg)
+                        
+                        })
+
+
+
+
 ```
 
 # Motivation
 
 \begin{itemize}
-  \item
-  Kalemi-Ozcan et all (Journal of Finance, 2013) find \textbf{negative} association between financial integration and business cycles synchronization
 
+\setlength\itemsep{1.5em}
+
+  \item
+  Kalemi-Ozcan et all (Journal of Finance, 2013) find \textbf{negative}
+  association between financial integration and business cycles synchronization
+
+  \item
+  The authors use data of 18 ("strong OECD" such as Australia,Sweden,
+  United Kingdom, etc..) countries for 1978-2006 period.
+  They construct panel of 153 country pairs in each year.
+
+  \item
+  Possible economic mechanism: money moves from bad productivity shock to other   places and that results productivity divergency
 
 \end{itemize}
+
+
+
+
+
+# Motivation
+
+The general finding is \textbf{negative} association between financial integration and business cycles synchronization
+
+
+\begin{itemize}
+
+\setlength\itemsep{2em}
+
+  \item
+  The \textit{cross country} (between model) association is significantly
+  \textit{positive}.
+
+  \item
+  The \textit{panel} (within model with time and country pair fixed effects)
+  association is significantly \textit{negative}.
+
+  \item
+  Authors suggest that common global time shocks and specific country pair characterisitcs explain the difference
+
+\end{itemize}
+
+
+
+
+# Financial Cycle - Cross country Scatter plot
+
+```{r plot_between_model}
+
+ggplot(dataset$fin_reg_df %>% 
+         select(CountryPair, Fin_ret, bank_gdp) %>% 
+         group_by(CountryPair) %>% 
+         summarise_all(.,.funs = list(.~mean), na.rm = TRUE),
+       aes(x = bank_gdp, y = Fin_ret * 100,
+           color = ifelse(CountryPair %in% params_list$strong_countries_pairs,
+                         "\"Strong\" countrypairs","Other"))) + 
+  geom_point() + 
+  geom_smooth(method = "lm",se = FALSE) +
+  theme_bw() + 
+  labs(title = paste0("Average synchronization of financial growth rates",
+                      "\n (Between countrypairs)"),
+       y = "Growth rate negative difference (percent)",
+       x = "Cross border bank balance to gdp") + 
+  theme(plot.title = element_text(hjust = 0.5, size = 25),
+        legend.position = "bottom",
+        legend.title = element_blank(),
+        axis.text = element_text(size = 20),
+        legend.text = element_text(size = 20))
+
+
+```
+
+
+
+# Financial Cycle - Panel data Scatter plot
+
+```{r, cache=TRUE}
+
+temp_df = dataset$fin_reg_df %>% 
+  select(CountryPair,Date,Fin_ret,bank_gdp) %>% 
+  ungroup() %>% 
+  filter(complete.cases(.))
+
+clean_df = data.frame(Fin_Res = lm(Fin_ret~factor(CountryPair) + factor(Date), data = temp_df)$residuals,Bank_Res = lm(bank_gdp~factor(CountryPair) + factor(Date), data = temp_df)$residuals)
+
+clean_df = cbind.data.frame(clean_df, temp_df %>% 
+                              select(CountryPair, Date))
+
+  
+```
+
+
+```{r plot_within_model}
+
+ggplot(clean_df, aes(x = Bank_Res, y = Fin_Res,
+                     color = ifelse(CountryPair %in%
+                                      params_list$strong_countries_pairs,
+                         "\"Strong\" countrypairs","Other"))) + 
+  geom_point() + 
+  geom_smooth(method = "lm", se = FALSE) + 
+  labs(title = paste0("Average synchronization of financial growth rates",
+                      "\n (Within countrypairs,",
+                      " netting time and country pair fixed effects)"),
+       y = "Growth rate negative difference (percent)",
+       x = "Cross border bank balance to gdp") + 
+  theme_bw() + 
+  theme(plot.title = element_text(hjust = 0.5, size = 25),
+        legend.position = "bottom",
+        legend.title = element_blank(),
+        axis.text = element_text(size = 20),
+        legend.text = element_text(size = 20))
+
+
+```
+
+
+
+# Financial Cycle - Cross country
+
+```{r between_reg, results="asis",cache = TRUE}
+
+between_reg_list = lapply(list(NULL,
+                           params_list$strong_countries_pairs,
+                           params_list$weak_countries_pairs,
+                           params_list$cross_country_pairs,
+                           c(params_list$cross_country_pairs,
+                             params_list$weak_countries_pairs)),
+                      function(temp_vec){
+                        
+                        form = formula(Fin_ret ~ bank_gdp)
+                        
+                        reg_df = dataset$fin_reg_df %>% 
+                          {if(!is.null(temp_vec)) filter(.,CountryPair %in%
+                                                           temp_vec) else .}
+
+                        temp_reg = plm(formula = form,
+                            model = "between",data = reg_df,
+                            index = c("CountryPair","Date"))
+                        
+                        return(temp_reg)
+                        
+                        })
+
+
+stargazer(between_reg_list, header = FALSE,
+          dep.var.labels = rep("",5),
+          dep.var.caption = "Credit cycle synchronization",
+          column.labels = c("All","Strong","Weak","Cross","Cross and Weak"),
+          omit.stat = c("f","adj.rsq"), font.size = "scriptsize",
+          report = "vc*", title = "Cross country averages",
+          omit.table.layout = paste0("-","=","-!","=!","a", collapse = ""))
+
+
+```
+
+
+
+
+# Financial Cycle - Panel data
+
+```{r table_within_FE, results="asis"}
+
+stargazer(within_reg_list, header = FALSE,
+          dep.var.labels = rep("",5),
+          dep.var.caption = "Credit cycle synchronization",
+          column.labels = c("All","Strong","Weak","Cross","Cross and Weak"),
+          omit.stat = c("f","adj.rsq"), font.size = "scriptsize",
+          report = "vc*",title = "Panel fixed effect time and country pair",
+          omit.table.layout = paste0("-","=","-!","=!","a", collapse = ""))
+
+
+```
+
+
+
+
+
+
+
+
+# Financial Cycle Regressions
+
+```{r, results="asis",cache = TRUE}
+
+stargazer(fin_reg_list, header = FALSE,
+          dep.var.labels = rep("",5),
+          dep.var.caption = "Credit cycle synchronization",
+          column.labels = c("All","Strong","Weak","Cross","Cross and Weak"),
+          omit.stat = c("f","adj.rsq"), font.size = "scriptsize",
+          report = "vc*",title = "Panel regression with controls and fixed effects",
+          omit.table.layout = paste0("-","=","-!","=!","a", collapse = ""))
+
+
+```
+
+
+
+
+# Summary Statistics
+```{r summary_stat}
+
+
+ggplot(dataset$fin_reg_df %>% 
+         as.data.frame() %>% 
+         mutate(G = ifelse(CountryPair %in% params_list$strong_countries_pairs,
+                           "\"Strong\" countrypairs","Other")) %>% 
+         group_by(G) %>% 
+         summarise_at(.,.vars = vars(FD_avg,FO_ind_tot,FX_stab_avg,MI_ind_tot),
+                      .funs = list(~mean(., na.rm = TRUE))) %>% 
+         gather(key = Indicator, value = Val, -G),
+       aes(x = Indicator, y = Val, group = G, fill = G)) + 
+  geom_bar(stat = "identity", position = "dodge") + 
+  # scale_x_discrete(labels = rep("A",4)) + 
+  labs(title = "Controls comparison", y = "", x = "") + 
+  theme_bw() + 
+  theme(legend.position = "bottom",legend.title = element_blank(),
+        plot.title = element_text(hjust = 0.5),
+        legend.spacing.x = unit(10, "pt"))
+
+
+
+```
+
+# Financial Cycle - Panel data
+
+```{r table_within_pooling, results="asis"}
+
+stargazer(panel_reg_list_pooling, header = FALSE,
+          dep.var.labels = rep("",5),
+          dep.var.caption = "Credit cycle synchronization",
+          column.labels = c("All","Strong","Weak","Cross","Cross and Weak"),
+          omit.stat = c("f","adj.rsq"), font.size = "scriptsize",
+          report = "vc*",title = "Panel Pooling",
+          omit.table.layout = paste0("-","=","-!","=!","a", collapse = ""))
+
+
+```
+
+
+
+
+
+
+
+# Financial Cycle - Panel data
+
+```{r table_within_time_FE, results="asis"}
+
+stargazer(panel_reg_list_time_FE, header = FALSE,
+          dep.var.labels = rep("",5),
+          dep.var.caption = "Credit cycle synchronization",
+          column.labels = c("All","Strong","Weak","Cross","Cross and Weak"),
+          omit.stat = c("f","adj.rsq"), font.size = "scriptsize",
+          report = "vc*",title = "Panel fixed effect time",
+          omit.table.layout = paste0("-","=","-!","=!","a", collapse = ""))
+
+
+```
+
+
+
+
+
+
+
+# Financial Cycle - Panel data
+
+```{r table_within_countrypairFE, results="asis"}
+
+stargazer(panel_reg_list_countrypair_FE, header = FALSE,
+          dep.var.labels = rep("",5),
+          dep.var.caption = "Credit cycle synchronization",
+          column.labels = c("All","Strong","Weak","Cross","Cross and Weak"),
+          omit.stat = c("f","adj.rsq"), font.size = "scriptsize",
+          report = "vc*",title = "Panel fixed effect country pair",
+          omit.table.layout = paste0("-","=","-!","=!","a", collapse = ""))
+
+
+```
+
+
+
+
+
+
+
+
+

@@ -57,10 +57,10 @@ append.countrypair.dataframe = function(countrypair_df, country_df){
     separate(.,col = CountryPair, into = c("Country_A", "Country_B"),
              sep = "-", remove = FALSE)
 
-  temp_df = full_join(temp_df, country_df,
+  temp_df = left_join(temp_df, country_df,
                       by = c("Date" = "Date","Country_A" = "Country"))
 
-  temp_df = full_join(temp_df, country_df,
+  temp_df = left_join(temp_df, country_df,
                       by = c("Date" = "Date","Country_B" = "Country"),
                       suffix = c("_A","_B"))
 
@@ -448,6 +448,10 @@ construct_fin_reg = function(df,countries_vec = NULL,
 
 #' This function constructs country pair harmon index
 #'
+#' The function takes a data frame with "Directive","Country","Date"
+#' columns and calculates for each Date, Directive,CountryPair
+#' the transposed status (0,1)
+#'
 #'  @import dplyr
 #'
 #'
@@ -554,7 +558,7 @@ construct_countrypair_harmon_index = function(df, dates_vec = NULL,
 
 }
 
-#' This function constructs country pair harmon index
+#' This function constructs country pair EU index
 #'
 #'  @import dplyr
 #'
@@ -566,7 +570,7 @@ construct_countrypair_EU_index = function(eu_df, dates_vec = NULL,
                                           index_status = "both"){
 
   # Set parameters
-  #----------------------------------------------------------------------------
+  #-----------------------------------------------------------------------
 
   # Default dates vec
 
@@ -588,7 +592,8 @@ construct_countrypair_EU_index = function(eu_df, dates_vec = NULL,
   eu_countries = unique(eu_df$Country)
 
   # Construct countrypair df (indicate non EU/cross/both EU countries)
-  #----------------------------------------------------------------------------
+  # Initialize countrypairs df and classify country pairs
+  #-----------------------------------------------------------------------
 
   countrypairs_df = combn(countries,2) %>%
     t() %>%
@@ -606,9 +611,10 @@ construct_countrypair_EU_index = function(eu_df, dates_vec = NULL,
                            Counter_Country %in% eu_countries))
 
   # Construct output df
-  #----------------------------------------------------------------------------
+  #
+  #-----------------------------------------------------------------------
 
-  if(index_status == "both"){
+  if(index_status == "one"){
 
   # None EU countrypairs
 
@@ -651,7 +657,7 @@ construct_countrypair_EU_index = function(eu_df, dates_vec = NULL,
     select(-Country,-Counter_Country) %>%
     gather(key = Indicator, value = Val, -CountryPair) %>%
     group_by(CountryPair) %>%
-    summarise(Date = max(as.numeric(Val), na.rm = TRUE)) %>%
+    summarise(Date = min(as.numeric(Val), na.rm = TRUE)) %>%
     apply(1,function(temp_row){
 
       return(data.frame(Date = dates_vec,
@@ -670,7 +676,7 @@ construct_countrypair_EU_index = function(eu_df, dates_vec = NULL,
 
   return(bind_rows(mget(df_names[df_names %in% ls()])))
 
-  } else if (index_status == "one"){
+  } else if (index_status == "both"){
 
     # None and cross EU countrypairs
 
@@ -691,7 +697,7 @@ construct_countrypair_EU_index = function(eu_df, dates_vec = NULL,
       select(-Country,-Counter_Country) %>%
       gather(key = Indicator, value = Val, -CountryPair) %>%
       group_by(CountryPair) %>%
-      summarise(Date = min(as.numeric(Val), na.rm = TRUE)) %>%
+      summarise(Date = max(as.numeric(Val), na.rm = TRUE)) %>%
       apply(1,function(temp_row){
 
         return(data.frame(Date = dates_vec,
@@ -711,6 +717,7 @@ construct_countrypair_EU_index = function(eu_df, dates_vec = NULL,
   }
 
 }
+
 
 
 #'This function runs panel regression for each strata separately
