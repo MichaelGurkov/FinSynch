@@ -6,10 +6,6 @@
 
 raw_data = list()
 
-raw_data$HousePrice = import.bis.property.price.data(
-  countries_vec = countries_list$oecd_countries) %>%
-  mutate(Date = as.yearqtr(Date, format = "%Y-Q%q"))
-
 raw_data$TotalCredit = import.bis.tot.credit.data(
   countries_vec = countries_list$oecd_countries) %>%
   mutate(Date = as.yearqtr(Date, format = "%Y-Q%q"))
@@ -130,9 +126,6 @@ df_list = list(raw_data$TotalCredit %>%
                  mutate(Date = format(Date, "%Y")) %>%
                  deflate.data(.,vars_to_deflate = "Total_Credit") %>%
                  select(-Total_Credit),
-               # raw_data$HousePrice %>%
-               #   filter(quarters(Date) == "Q4") %>%
-               #   mutate(Date = format(Date, "%Y")),
                raw_data$WDI_annual %>%
                  rename(Date = Year) %>%
                  select(-GDP_per_Capita) %>%
@@ -145,13 +138,10 @@ country_df = df_list %>%
   reduce(right_join, by = c("Date", "Country")) %>%
   group_by(Country) %>%
   arrange(Date) %>%
-  mutate_at(.vars = c("Total_Credit_real","HousePrice"),
-            .funs = list(ret = ~ . / dplyr::lag(., order_by = Date) - 1)) %>%
-  mutate(Fin_ret = rowMeans(data.frame(Total_Credit_real_ret,
-                                       HousePrice_ret),na.rm = TRUE)) %>%
+  mutate(Credit_ret = Total_Credit_real /
+           dplyr::lag(Total_Credit_real, order_by = Date) - 1) %>%
   ungroup() %>%
-  filter(is.finite(Fin_ret)) %>%
-  filter(Date >=1978)
+  filter(is.finite(Credit_ret))
 
 rm(df_list)
 
@@ -194,14 +184,6 @@ bank_list$bank_gdp = raw_data$bank_balance_real_norm   %>%
   group_by(Date, CountryPair) %>%
   summarise(bank_gdp = mean(log(Balance_real), na.rm = TRUE)) %>%
   filter(!is.na(bank_gdp))
-
-# bank_pop = bank_balance_real  %>%
-#   normalize.bis.data(.,norm_df = df[,c("Date","Country", "Pop")],
-#                      norm_val = "Pop") %>%
-#   group_by(Date, CountryPair) %>%
-#   summarise(bank_pop = mean(log(Balance_real), na.rm = TRUE)) %>%
-#   filter(!is.na(bank_pop))
-
 
 ```
 
@@ -361,13 +343,12 @@ rm(controls)
 
 fin_reg_df = list(country_pair_df,
                   get.neg.abs.diff(country_df[, c("Date","Country",
-                                                  "Fin_ret")]) %>%
-                    rename(Fin_synch = Fin_ret)) %>%
+                                                  "Credit_ret")])) %>%
   reduce(left_join, by = c("CountryPair","Date")) %>%
   group_by(CountryPair) %>%
   mutate(Time_Trend = seq_along(Date)) %>%
   ungroup() %>%
-  mutate(Fin_synch = 100 * Fin_synch)
+  mutate(Credit_ret = 100 * Credit_ret)
 
 
 ```
@@ -375,11 +356,11 @@ fin_reg_df = list(country_pair_df,
 
 ```{r filter_outliers}
 
-country_pairs_table = table(fin_reg_df$CountryPair)
-
-fin_reg_df = fin_reg_df %>%
-  filter(CountryPair %in% names(country_pairs_table)[
-    country_pairs_table > 10])
+# country_pairs_table = table(fin_reg_df$CountryPair)
+# 
+# fin_reg_df = fin_reg_df %>%
+#   filter(CountryPair %in% names(country_pairs_table)[
+#     country_pairs_table > 10])
 
 # fin_reg_df = fin_reg_df %>%
 #   filter(bank_gdp >= quantile(bank_gdp,0.025) &

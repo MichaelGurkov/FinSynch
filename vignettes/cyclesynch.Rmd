@@ -109,8 +109,7 @@ control_vars = c("trade_gdp","FX_stab_tot","FO_ind_tot","MI_ind_tot",
                  "GDP_real_tot")
 
 
-reg_formula = paste("Fin_synch ~ lag(bank_gdp,1) * Crises",
-                    "lag(bank_gdp,1) * FD_tot",
+reg_formula = paste("Credit_ret ~ lag(bank_gdp,1) * Crises",
                     "lag(bank_gdp,1) * Common_Lang",
                     paste(control_vars,
                           collapse = "+"),
@@ -121,25 +120,19 @@ reg_formula = paste("Fin_synch ~ lag(bank_gdp,1) * Crises",
 
 temp_names = c("lag\\(bank_gdp, 1\\)",
                "Crises",
-               "FD_tot",
                "lag\\(bank_gdp, 1\\):Crises",
-               "lag\\(bank_gdp, 1\\):FD_tot",
                "lag\\(bank_gdp, 1\\):Common_Lang")
 
 temp_names_lag = c("lag\\(bank_gdp, 1\\)",
                    "lag\\(Crises, 1\\)",
-                   "lag\\(FD_tot, 1\\)",
                    "lag\\(bank_gdp, 1\\):lag\\(Crises, 1\\)",
-                   "lag\\(bank_gdp, 1\\):lag\\(FD_tot, 1\\)",
                    "lag\\(bank_gdp, 1\\):lag\\(Common_Lang, 1\\)")
 
 
 temp_labels = c("Bank linkages (lag)",
                 "Crises",
-                "FD",
-                 "Bank linkages (lag) * Crises",
-                "Bank linkages (lag) * FD",
-                 "Bank linkages (lag) * Commong Lang")
+                "Bank linkages (lag) * Crises",
+                "Bank linkages (lag) * Commong Lang")
 
 
 notes_str = paste0(" Financial cycles synchronization",
@@ -151,8 +144,6 @@ notes_str = paste0(" Financial cycles synchronization",
                                 "Bank linkages are the total bilateral ",
                                 "cross border banking claims normalized",
                                 " by total GDP. ",
-                                "Financial development is the sum of the ",
-                                "level of each country financial development ",
                                 "index. ","Crises is an indicator variable ",
                                 "that equals 1 if at least one country ",
                                 "undergoes ",
@@ -167,10 +158,17 @@ notes_str_ctrl = paste0(notes_str,
                        "heteroscedasticity robust.")
 
 
+run_all_inline = FALSE
+
 ```
 
 
 ```{r child="Import_Data.Rmd"}
+
+if(run_all_inline == TRUE){
+  knit(paste0("C:\\Users\\Misha\\Documents",
+              "\\Financial-Cycle\\GlobalFinancialCycleSynch",
+              "\\vignettes\\Import_Data.Rmd"))}
 
 ```
 
@@ -191,11 +189,11 @@ coef_vec = coef_vec[names(coef_vec) %in% c("lag(bank_gdp, 1)",
                                            "lag(bank_gdp, 1):Crises",
                                            "lag(bank_gdp, 1):FD_tot")]
 
-sd_ratio = sd(fin_reg_df$bank_gdp) / sd(fin_reg_df$Fin_synch)
+sd_ratio = sd(fin_reg_df$bank_gdp) / sd(fin_reg_df$Credit_ret)
 
 isr_ind = grepl("Israel",fin_reg_df$CountryPair)
 
-sd_ratio_isr = sd(fin_reg_df$bank_gdp[isr_ind]) / sd(fin_reg_df$Fin_synch[isr_ind])
+sd_ratio_isr = sd(fin_reg_df$bank_gdp[isr_ind]) / sd(fin_reg_df$Credit_ret[isr_ind])
 
 
 
@@ -338,7 +336,7 @@ Summary statistics of the data are presented in table \ref{summary_table}.
 
 
 star = stargazer(fin_reg_df %>% 
-                   select(Fin_synch, bank_gdp, FD_tot) %>% 
+                   select(Credit_ret, bank_gdp, FD_tot) %>% 
                    as.data.frame(),
                  title = "Summary statistics of the main variables",
                  table.placement = "H",
@@ -423,16 +421,16 @@ ggplot(fin_reg_df %>%
 ```
 
 
-```{r plot_average_cycle_synch,fig.cap="Average financial cycle synchronization \\label{plot_Fin_synch}",fig.pos="H"}
+```{r plot_average_cycle_synch,fig.cap="Average financial cycle synchronization \\label{plot_Credit_ret}",fig.pos="H"}
 
 ggplot(fin_reg_df %>% 
-         select(Date, Fin_synch) %>% 
+         select(Date, Credit_ret) %>% 
          group_by(Date) %>% 
-         summarise(Avg_Fin_synch = mean(Fin_synch, na.rm = TRUE)) %>% 
+         summarise(Avg_Credit_ret = mean(Credit_ret, na.rm = TRUE)) %>% 
          ungroup() %>% 
          filter(complete.cases(.)) %>% 
-         filter(is.finite(Avg_Fin_synch)),
-       aes(x = Date, y = Avg_Fin_synch, group = 1)) + 
+         filter(is.finite(Avg_Credit_ret)),
+       aes(x = Date, y = Avg_Credit_ret, group = 1)) + 
   labs(title = "Average financial cycle synchronization",y = "", x = "") + 
   geom_line() + 
   theme_bw() + 
@@ -443,7 +441,7 @@ ggplot(fin_reg_df %>%
 ```
 
 
-Figure \ref{plot_Fin_synch} shows the average synchronization (measured as the difference between credit and house price growth rates for each country-pair). The synchronization seems to be quite volatile with no specific trend until 2007-2008 (the global financial crises) and trending upward since. 
+Figure \ref{plot_Credit_ret} shows the average synchronization (measured as the difference between credit and house price growth rates for each country-pair). The synchronization seems to be quite volatile with no specific trend until 2007-2008 (the global financial crises) and trending upward since. 
 
 
 \section{Estimation and results} \label{results}
@@ -528,7 +526,13 @@ This paper studies the effect of banking integration on the synchronization of f
 
 \section{Appendix}
 
-```{r child="Appendix.Rmd"}
+```{r child="Appendix.Rmd", eval=FALSE}
+
+if(run_all_inline == TRUE){
+  knit(paste0("C:\\Users\\Misha\\Documents",
+              "\\Financial-Cycle\\GlobalFinancialCycleSynch",
+              "\\vignettes\\Appendix.Rmd"))}
+
 
 ```
 
