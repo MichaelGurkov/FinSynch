@@ -1,0 +1,68 @@
+
+
+<!-- Regression analysis 1978-2006 period-->
+
+
+```{r estimation_crisis_2007}
+
+reg_list$before_2007 = plm(formula = formula(reg_formula),
+          data = fin_reg_df %>% filter(Date <= 2006),
+          model = "within",effect = "twoways",
+          index = c("CountryPair","Date"))
+
+coef_vec_before_2007 = coefficients(reg_list$before_2007)
+
+coef_vec_before_2007 = coef_vec_before_2007[names(coef_vec_before_2007) %in%
+                                              c("lag(bank_gdp, 1)",
+                                                "lag(bank_gdp, 1):Crises",
+                                                "lag(bank_gdp, 1):FD_tot")]
+
+
+```
+
+
+
+```{r output_reg_2006, include=FALSE}
+
+star_2006 = stargazer(reg_list$before_2007, header = FALSE,digits = 2,
+          label = "before_2007",table.placement = "H",
+          title = paste("Financial synchronization and banking integration",
+                         "in pre GFC period"),
+          dep.var.caption = "Fin cycles synch",
+          model.numbers = FALSE,
+          dep.var.labels.include = FALSE,
+          notes = paste0("\\parbox[t]{8cm}{",
+                         paste0("The table presents panel estimation that ",
+                                "includes twoway fixed effects and country-pair ",
+                                " specific linear time trend. ",notes_str_ctrl,
+                         "}")),
+          notes.align = "l",
+          notes.append = FALSE,
+          se = list(sqrt(diag(vcovHC(reg_list$before_2007,cluster = "group")))),
+          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
+          covariate.labels = temp_labels,
+          omit.stat = c("f","adj.rsq"))
+
+star_2006 = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
+                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
+                    star_2006,fixed = TRUE)
+
+```
+
+
+
+
+
+
+\subsection{1978 - 2006 period}
+
+In this section, I reduce my sample to the 1978-2006 period. That serves several purposes: first, it allows comparison between @Kalemli-Ozcan2013JF results with respect to business cycles synchronization and my results with respect to financial cycles synchronization. Second, this setting end before turmoil years that were characterized by the Global Financial Crises, the European sovereign debt crises, and their aftermaths and enables to estimate the association between banking integration and financial cycles synchronization during "normal" times. 
+
+```{r output_2006_table, results="asis"}
+
+cat(star_2006,sep = "\n")
+
+```
+
+
+Table \ref{before_2007} present the results. The main results hold :  banking integration is associated with lower synchronization while the crisis and financial development effects work in the opposite direction. The common language indicator enters the equation with the same sign but loses the statistical significance.

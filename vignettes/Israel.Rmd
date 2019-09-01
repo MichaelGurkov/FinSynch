@@ -1,0 +1,86 @@
+For illustration purpose I present in this section the result of the analysis for the case of Israel.
+
+
+```{r plot_israel_vars, fig.height=7, fig.height=7, eval=FALSE}
+
+ggplot(country_df %>%
+         filter(Country == "Israel") %>%
+         select(Date, Total_Credit_real, HousePrice, GDP_real, FD) %>%
+         rename(Credit = Total_Credit_real, GDP = GDP_real) %>%
+         mutate(GDP = GDP * 10 ^ (-3)) %>%
+         gather(key = Indicator, value = Val, -Date),
+       aes(x = Date, y = Val, group = Indicator)) +
+  geom_line() +
+  labs(x = "", y = "", title = "Main indicators for Israel") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, size = 5),
+        plot.title = element_text(hjust = 0.5)) +
+  facet_wrap(~Indicator, scales = "free")
+
+```
+
+The distribution of Israel's bilateral cross border credit is shown in figure \ref{plot_israel_bank_linkages}. Israel's cross border credit is quite concentrated: United states is the largest counterparty followed by Switzerland and United Kingdom.
+
+```{r plot_israel_bank_linkages,fig.cap="Israel's cross border credit\\label{plot_israel_bank_linkages}", fig.pos="H"}
+
+net_df = raw_data$bis_lbs %>%
+  filter(grepl("Israel",CountryPair)) %>%
+  filter(Date == as.yearqtr("2018 Q4")) %>% 
+  select(CountryPair, Balance) %>%
+  group_by(CountryPair) %>%
+  summarise(Balance = mean(Balance, na.rm = TRUE) * 10 ^ (-3)) %>%
+  ungroup() %>%
+  mutate(CountryPair = gsub("Israel","",CountryPair)) %>%
+  mutate(CountryPair = gsub("-","",CountryPair)) %>%
+  mutate(CountryPair = gsub("\\s","",CountryPair)) %>%
+  rename(Country = CountryPair)
+
+
+ggplot(net_df, aes(x = reorder(Country, Balance), y = Balance)) +
+  geom_bar(stat = "identity") +
+  scale_y_continuous(label = comma) +
+  labs(x = "", y = "Total cross border bilateral credit (USD billions)",
+       title = paste("Israel's total cross border bilateral credit",
+                     " counterparties in 2018 Q4")) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  coord_flip()
+
+
+```
+
+Figure \ref{plot_israel_us} shows the correlation between financial synchronization and banking integration for Israel - United States pair (United States was the largest Israel's counterpart in 2018). In order to control for the effect of other factors I first regress financial synchronization and banking integration on control variables set (including fixed effect). The figure plots the residuals of this first step regressions.
+
+```{r plot_israel_us,fig.cap="\\label{plot_israel_us}", fig.pos="H"}
+
+bank_clean = plm(sub("Fin_synch","bank_gdp",
+                     gsub("lag(bank_gdp,1) *","",reg_formula, fixed = TRUE),
+                     fixed = TRUE),
+                 data = fin_reg_df, index = c("CountryPair","Date"),
+                 model = "within", effect = "twoways")
+
+synch_clean = plm(gsub("lag(bank_gdp,1) *","",reg_formula, fixed = TRUE),
+                  data = fin_reg_df, index = c("CountryPair","Date"),
+                  model = "within", effect = "twoways")
+
+df_clean = list(bank_clean$model$CountryPair,
+                bank_clean$residuals, synch_clean$residuals) %>%
+  reduce(cbind.data.frame) %>%
+  setNames(c("CountryPair","Bank","FinSynch"))
+
+ggplot(df_clean %>%
+         filter(CountryPair == "Israel-United_States"),
+       aes(x = Bank, y = FinSynch)) +
+  geom_point() +
+  labs(x = "Banking integration (log of bank credit to gdp)",
+       y = "Financial synchronization (percent)",
+       title = "Israel-United States \n (netting fixed effects and controls)") +
+  geom_smooth(method = "lm", se = FALSE) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+The effect of banking linkages in Israel sub sample is similiar to the effect in the total sample. A one standard deviation change in banking linkages reduces the synchronization by `r abs(round(coef_vec[names(coef_vec) == "lag(bank_gdp, 1)"] * sd_ratio_isr,2))` standard deviations.
+
+

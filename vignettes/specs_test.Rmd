@@ -1,0 +1,565 @@
+---
+title: "Specs Test"
+author: "Michael Gurkov"
+date: "June 16, 2019"
+geometry: margin=2cm
+output: pdf_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,echo = FALSE,cache = TRUE,
+  message = FALSE,warning = FALSE,comment = "#>"
+)
+```
+
+
+```{r load_package}
+
+devtools::load_all()
+
+library(tidyverse)
+
+library(plm)
+
+library(stargazer)
+ 
+library(sandwich)
+
+library(clubSandwich)
+
+library(lmtest)
+
+library(purrr)
+
+```
+
+
+```{r params_setup}
+
+countries_list = list(
+  oecd_countries = c("Australia","Austria","Belgium","Canada","Chile",
+                  "Czech_Republic","Denmark","Estonia","Finland","France",
+                  "Germany","Greece","Hungary", "Iceland","Ireland",
+                  "Israel","Italy","Japan","Korea","Latvia",
+                  "Lithuania","Luxembourg","Mexico","Netherlands",
+                  "New_Zealand","Norway","Poland","Portugal",
+                  "Slovak_Republic","Slovenia","Spain","Sweden",
+                  "Switzerland","Turkey","United_Kingdom"
+                  ,"United_States"),
+  strong_countries = c("Australia","Austria","Belgium","Canada",
+                  "Switzerland","Germany","Denmark","Spain",
+                  "Finland","France","United_Kingdom","Ireland",
+                  "Italy","Japan","Netherlands","Portugal",
+                  "Sweden","United_States"),
+  fsap_countries = c("Austria","Belgium","Germany","Denmark","Spain",
+                   "France","Finland","Greece","Ireland","Italy",
+                   "Luxembourg","Netherlands","Portugal",
+                   "Sweden","United_Kingdom"))
+
+countries_list$weak_countries = countries_list$oecd_countries[!countries_list$oecd_countries %in% countries_list$strong_countries]
+
+
+pairs_list = lapply(names(countries_list),
+           function(temp_name){
+             apply(combn(countries_list[[temp_name]],2), 2,
+                   function(temp_col){
+                     ifelse(temp_col[1]<temp_col[2],
+                            paste(temp_col[1],temp_col[2],sep = "-"),
+                            paste(temp_col[2],temp_col[1],sep = "-"))})
+  
+})
+
+names(pairs_list) = paste(names(countries_list), "pairs", sep = "_")
+
+countries_list = c(countries_list, pairs_list)
+
+rm(pairs_list)
+
+countries_list$cross_country_pairs = countries_list$oecd_countries_pairs[!countries_list$oecd_countries_pairs %in% countries_list$strong_countries_pairs & !countries_list$oecd_countries_pairs %in% countries_list$weak_countries_pairs]
+
+reg_list = list()
+
+control_vars = c("trade_gdp",
+           "FX_stab_tot","MI_ind_tot","FO_ind_tot","WGI_tot")
+
+table_names = c("bank_gdp","Crises","bank_gdp:Crises","FD_tot",
+                "lag(Fin_synch, 1)","trade_gdp","FX_stab_tot","MI_ind_tot",
+                "FO_ind_tot","WGI_tot")
+
+cov_labels = c("Banking linkages",
+                 "Crises indicator",
+                 "Crises Interaction",
+                 "FD indicator",
+                 "Fin cycle synch lag",
+                 "Trading linkages",
+                 "FX stability",
+                 "Monetary Independence",
+                 "Financial openness",
+                 "Governance")
+
+
+reg_formula = paste("Fin_synch ~ bank_gdp * Crises + FD_tot",
+                     "lag(Fin_synch,1)",paste(control_vars, collapse = "+"),
+                     sep = "+")
+
+reg_formula_bank_detrended = paste("Fin_synch ~ bank_gdp_detrended * Crises",
+                                   "FD_tot",
+                                   "lag(Fin_synch,1)",
+                                   paste(control_vars, collapse = "+"),
+                                   sep = "+")
+
+reg_formula_both_detrended = paste("Fin_synch_detrended ~ bank_gdp_detrended * Crises",
+                                   "FD_tot",
+                                   "lag(Fin_synch,1)",
+                                   paste(control_vars, collapse = "+"),
+                                   sep = "+")
+
+
+
+
+```
+
+
+```{r Import_data}
+
+fin_reg_df_annual = read_rds("C:\\Users\\Misha\\Desktop\\temp_df.rds")
+
+reg_df = fin_reg_df_annual %>% 
+    select(c("Date", "CountryPair","Fin_synch_1", "bank_gdp","Crises",
+             control_vars,"FD_tot","Time_trend","bank_gdp_detrended",
+             "Fin_synch_detrended")) %>% 
+  filter(complete.cases(.)) %>% 
+  rename(Fin_synch = Fin_synch_1)
+
+
+```
+
+
+\section{Fixed effect and time effect estimation}
+
+
+```{r twoways_estimation}
+
+reg_list$twoways =  make_strata_reg_list(
+  countries_list = countries_list,
+  reg_df = reg_df,
+  reg_formula = formula(reg_formula),my_effect = "twoways")
+
+
+```
+
+
+```{r output_twoways, results="asis"}
+
+var_names = names(reg_list$twoways$Strong$coefficients)
+
+
+temp_ind = sapply(table_names,function(temp_name){
+                    which(var_names == temp_name)})
+
+
+temp_se_list = lapply(reg_list$twoways,function(temp_plm){
+                        return(sqrt(diag(vcovHC(temp_plm,cluster = "group"))))
+                               })
+
+
+stargazer(reg_list$twoways, header = FALSE,
+          title = "Twoways -  time and country-pair FE",
+          dep.var.caption = "Fin cycle synch",
+          dep.var.labels.include = FALSE,
+          column.labels = gsub("_","-",names(reg_list$twoways)),
+          notes = "Clustered standard errors",
+          se = temp_se_list,
+          order = unlist(temp_ind),
+          keep = unlist(temp_ind),
+          covariate.labels = cov_labels,
+          column.sep.width = "2pt",omit.stat = c("f","adj.rsq"))
+
+rm(temp_se_list, temp_ind, var_names)
+
+
+```
+
+\newpage
+
+
+\section{Fixed effect,and linear trend estimation}
+
+
+```{r individual_lin_trend_estimation}
+
+reg_list$individual_lin_trend =  make_strata_reg_list(
+  countries_list = countries_list,
+  reg_df = reg_df,
+  reg_formula = formula(paste(reg_formula,"Time_trend", sep = "+")),
+  my_effect = "individual")
+
+
+```
+
+
+```{r output_individual_lin_trend, results="asis"}
+
+temp_reg_list = reg_list$individual_lin_trend
+
+var_names = names(temp_reg_list$Strong$coefficients)
+
+
+temp_ind = sapply(table_names,function(temp_name){
+                    which(var_names == temp_name)})
+
+
+temp_se_list = lapply(temp_reg_list,
+                      function(temp_plm){
+                        return(sqrt(diag(vcovHC(temp_plm,cluster = "group"))))
+                               })
+
+
+stargazer(temp_reg_list, header = FALSE,
+          title = "Fin synch individual with linear trend",
+          dep.var.caption = "Fin cycle synch",
+          dep.var.labels.include = FALSE,
+          column.labels = gsub("_","-",names(temp_reg_list)),
+          notes = "Clustered standard errors",
+          se = temp_se_list,
+          order = unlist(temp_ind),
+          keep = unlist(temp_ind),
+          covariate.labels = cov_labels,
+          column.sep.width = "2pt",
+          omit.stat = c("f","adj.rsq"), 
+          add.lines = list(c("Linear trend",
+                        rep("Yes", length(temp_reg_list)))))
+
+rm(temp_se_list, temp_ind, var_names, temp_reg_list)
+
+
+```
+
+
+
+\newpage
+
+
+\section{Fixed effect,time effect and country-pair linear trend estimation}
+
+
+```{r twoways_lin_trend_estimation}
+
+reg_list$twoways_lin_trend =  make_strata_reg_list(
+  countries_list = countries_list,
+  reg_df = reg_df,
+  reg_formula = formula(paste(reg_formula,"CountryPair:Time_trend", sep = "+")),
+  my_effect = "twoways")
+
+
+```
+
+
+```{r output_twoways_lin_trend, results="asis"}
+
+var_names = names(reg_list$twoways_lin_trend$Strong$coefficients)
+
+
+temp_ind = sapply(table_names,function(temp_name){
+                    which(var_names == temp_name)})
+
+
+temp_se_list = lapply(reg_list$twoways_lin_trend,
+                      function(temp_plm){
+                        return(sqrt(diag(vcovHC(temp_plm,cluster = "group"))))
+                               })
+
+
+stargazer(reg_list$twoways_lin_trend, header = FALSE,
+          title = "Fin synch twoways with linear trend",
+          dep.var.caption = "Fin cycle synch",
+          dep.var.labels.include = FALSE,
+          column.labels = gsub("_","-",names(reg_list$twoways_lin_trend)),
+          notes = "Clustered standard errors",
+          se = temp_se_list,
+          order = unlist(temp_ind),
+          keep = unlist(temp_ind),
+          covariate.labels = cov_labels,
+          column.sep.width = "2pt",
+          omit.stat = c("f","adj.rsq"), 
+          add.lines = list(c("Country-pair linear trend",
+                        rep("Yes", length(reg_list$twoways_lin_trend)))))
+
+rm(temp_se_list, temp_ind, var_names)
+
+
+```
+
+
+\newpage
+
+\section{Fixed effect,time effect and country-pair robust trend estimation}
+
+
+```{r twoways_rob_trend_estimation}
+
+reg_list$twoways_rob_trend =  make_strata_reg_list(
+  countries_list = countries_list,
+  reg_df = reg_df,
+  reg_formula = formula(paste(reg_formula,"CountryPair:as.integer(Date)",
+                              sep = "+")),
+  my_effect = "twoways")
+
+
+```
+
+
+```{r output_twoways_rob_trend, results="asis"}
+
+temp_reg_list = reg_list$twoways_rob_trend
+
+var_names = names(temp_reg_list$Strong$coefficients)
+
+
+temp_ind = sapply(table_names,function(temp_name){
+                    which(var_names == temp_name)})
+
+
+temp_se_list = lapply(temp_reg_list,
+                      function(temp_plm){
+                        return(sqrt(diag(vcovHC(temp_plm,cluster = "group"))))
+                               })
+
+
+stargazer(temp_reg_list, header = FALSE,
+          title = "Fin synch twoways with robust trend",
+          dep.var.caption = "Fin cycle synch",
+          dep.var.labels.include = FALSE,
+          column.labels = gsub("_","-",names(temp_reg_list)),
+          notes = "Clustered standard errors",
+          se = temp_se_list,
+          order = unlist(temp_ind),
+          keep = unlist(temp_ind),
+          covariate.labels = cov_labels,
+          column.sep.width = "2pt",
+          omit.stat = c("f","adj.rsq"), 
+          add.lines = list(c("Country-pair robust trend",
+                        rep("Yes", length(temp_reg_list)))))
+
+rm(temp_se_list, temp_ind, var_names,temp_reg_list)
+
+
+```
+
+
+\newpage
+
+\section{Fixed effect,time effect and detrended bank}
+
+
+```{r twoway_bank_detrend_estimation}
+
+reg_list$twoway_bank_detrend =  make_strata_reg_list(
+  countries_list = countries_list,
+  reg_df = reg_df,
+  reg_formula = formula(reg_formula_bank_detrended),
+  my_effect = "twoways")
+
+
+```
+
+
+```{r output_twoway_bank_detrend, results="asis"}
+
+var_names = names(reg_list$twoway_bank_detrend$Strong$coefficients)
+
+
+temp_ind = sapply(gsub("bank_gdp","bank_gdp_detrended",table_names),
+                  function(temp_name){
+                    which(var_names == temp_name)})
+
+
+temp_se_list = lapply(reg_list$twoway_bank_detrend,
+                      function(temp_plm){
+                        return(sqrt(diag(vcovHC(temp_plm,cluster = "group"))))
+                               })
+
+
+stargazer(reg_list$twoway_bank_detrend, header = FALSE,
+          title = "Fin synch twoway with detrended banking",
+          dep.var.caption = "Fin cycle synch",
+          dep.var.labels.include = FALSE,
+          column.labels = gsub("_","-",names(reg_list$twoway_bank_detrend)),
+          notes = "Clustered standard errors",
+          se = temp_se_list,
+          order = unlist(temp_ind),
+          keep = unlist(temp_ind),
+          covariate.labels = gsub("Banking linkages","Banking linkages (detrended)",
+                                  cov_labels),
+          column.sep.width = "2pt",omit.stat = c("f","adj.rsq"))
+
+rm(temp_se_list, temp_ind, var_names)
+
+
+```
+
+
+
+\section{Fixed effect,time effect and detrended bank, linear trend}
+
+
+```{r twoway_bank_detrend_lin_trend_estimation}
+
+reg_list$twoway_bank_detrend_lin_trend =  make_strata_reg_list(
+  countries_list = countries_list,
+  reg_df = reg_df,
+  reg_formula = formula(paste(reg_formula_bank_detrended,
+                              "CountryPair:Time_trend", sep = "+")),
+  my_effect = "twoways")
+
+
+```
+
+
+```{r output_twoway_bank_detrend_lin_trend, results="asis"}
+
+var_names = names(reg_list$twoway_bank_detrend_lin_trend$Strong$coefficients)
+
+temp_ind = sapply(gsub("bank_gdp","bank_gdp_detrended",table_names),
+                  function(temp_name){
+                    which(var_names == temp_name)})
+
+
+temp_se_list = lapply(reg_list$twoway_bank_detrend_lin_trend,
+                      function(temp_plm){
+                        return(sqrt(diag(vcovHC(temp_plm,cluster = "group"))))
+                               })
+
+
+stargazer(reg_list$twoway_bank_detrend_lin_trend, header = FALSE,
+          title = "Twoway with detrended banking and linear trend",
+          dep.var.caption = "Fin cycle synch",
+          dep.var.labels.include = FALSE,
+          column.labels = gsub("_","-",names(reg_list$twoway_bank_detrend_lin_trend)),
+          notes = "Clustered standard errors",
+          se = temp_se_list,
+          order = unlist(temp_ind),
+          keep = unlist(temp_ind),
+          covariate.labels = gsub("Banking linkages",
+                                  "Banking linkages (detrended)",
+                                  cov_labels),
+          column.sep.width = "2pt",omit.stat = c("f","adj.rsq"), 
+          add.lines = list(c("Country-pair linear trend",
+                        rep("Yes", length(reg_list$twoways_lin_trend)))))
+
+rm(temp_se_list, temp_ind, var_names)
+
+
+```
+
+
+\newpage
+
+\section{Fixed effect,time effect and detrended bank, robust trend}
+
+
+```{r twoway_bank_detrend_rob_trend_estimation}
+
+reg_list$twoway_bank_detrend_rob_trend =  make_strata_reg_list(
+  countries_list = countries_list,
+  reg_df = reg_df,
+  reg_formula = formula(paste(reg_formula_bank_detrended,
+                              "CountryPair:as.integer(Date)", sep = "+")),
+  my_effect = "twoways")
+
+
+```
+
+
+```{r output_twoway_bank_detrend_rob_trend, results="asis"}
+
+var_names = names(reg_list$twoway_bank_detrend_rob_trend$Strong$coefficients)
+
+temp_ind = sapply(gsub("bank_gdp","bank_gdp_detrended",table_names),
+                  function(temp_name){
+                    which(var_names == temp_name)})
+
+
+temp_se_list = lapply(reg_list$twoway_bank_detrend_rob_trend,
+                      function(temp_plm){
+                        return(sqrt(diag(vcovHC(temp_plm,cluster = "group"))))
+                               })
+
+
+stargazer(reg_list$twoway_bank_detrend_rob_trend, header = FALSE,
+          title = "Twoway with detrended banking and robust trend",
+          dep.var.caption = "Fin cycle synch",
+          dep.var.labels.include = FALSE,
+          column.labels = gsub("_","-",
+                               names(reg_list$twoway_bank_detrend_rob_trend)),
+          notes = "Clustered standard errors",
+          se = temp_se_list,
+          order = unlist(temp_ind),
+          keep = unlist(temp_ind),
+          covariate.labels = gsub("Banking linkages",
+                                  "Banking linkages (detrended)",
+                                  cov_labels),
+          column.sep.width = "2pt",omit.stat = c("f","adj.rsq"), 
+          add.lines = list(c("Country-pair robust trend",
+                        rep("Yes", length(reg_list$twoways_lin_trend)))))
+
+rm(temp_se_list, temp_ind, var_names)
+
+
+```
+
+
+\newpage
+
+\section{Fixed effect,time effect, detrended bank and detrended fin synch}
+
+
+```{r twoway_both_detrend_estimation}
+
+
+reg_list$twoway_both_detrend =  make_strata_reg_list(
+  countries_list = countries_list,
+  reg_df = reg_df,
+  reg_formula = formula(reg_formula_both_detrended),
+  my_effect = "twoways")
+
+
+
+
+```
+
+
+```{r output_twoway_both_detrend, results="asis"}
+
+var_names = names(reg_list$twoway_both_detrend$Strong$coefficients)
+
+temp_ind = sapply(gsub("Fin_synch","Fin_synch_detrended",
+                       gsub("bank_gdp","bank_gdp_detrended",
+                            table_names)),function(temp_name){
+                    which(var_names == temp_name)})
+
+
+temp_se_list = lapply(reg_list$twoway_both_detrend,
+                      function(temp_plm){
+                        return(sqrt(diag(vcovHC(temp_plm,cluster = "group"))))
+                               })
+
+
+stargazer(reg_list$twoway_both_detrend, header = FALSE,
+          title = "Twoways both detrended",
+          dep.var.caption = "Fin cycle synch",
+          dep.var.labels.include = FALSE,
+          column.labels = gsub("_","-",names(reg_list$twoway_both_detrend)),
+          notes = "Clustered standard errors",
+          se = temp_se_list,
+          order = unlist(temp_ind),
+          keep = unlist(temp_ind),
+          covariate.labels = cov_labels,
+          column.sep.width = "2pt",omit.stat = c("f","adj.rsq"))
+
+rm(temp_se_list, temp_ind, var_names)
+
+
+```
+

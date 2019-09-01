@@ -1,0 +1,44 @@
+
+
+```{r import_harmon_data}
+
+raw_data$Harmon_both_quarter = import.harmon.data() %>%
+  construct_countrypair_harmon_index(.,dates_vec = seq.Date(
+    from = as.Date(min(raw_data$bis_lbs$Date)),
+    to = as.Date(max(raw_data$bis_lbs$Date)),
+    by = "quarter") %>% as.yearqtr())
+
+raw_data$Harmon_one_quarter = import.harmon.data() %>%
+  construct_countrypair_harmon_index(.,dates_vec = seq.Date(
+    from = as.Date(min(raw_data$bis_lbs$Date)),
+    to = as.Date(max(raw_data$bis_lbs$Date)),
+    by = "quarter") %>% as.yearqtr(),index_status = "one")
+
+```
+
+
+```{r construct_iv_df}
+
+iv_df = fin_reg_df %>% 
+  filter(CountryPair %in%  countries_list$fsap_countries_pairs) %>% 
+  left_join(raw_data$Harmon_both_quarter %>% 
+              group_by(Date, CountryPair) %>% 
+              summarise(Harmon = log(sum(1+Transposed))) %>% 
+              ungroup() %>% 
+              filter(quarters(Date) == "Q4") %>% 
+              mutate(Date = format(Date,"%Y")),
+            by = c("Date", "CountryPair"))
+
+```
+
+
+```{r run_iv_reg}
+
+reg_list$iv_reg =  plm(formula = formula(paste0(reg_formula,
+                                                "|.-lag(bank_gdp, 1) + Harmon")),
+                       data = iv_df,
+                       model = "within",effect = "twoways",
+                       index = c("CountryPair","Date"))
+
+```
+

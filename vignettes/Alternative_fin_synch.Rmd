@@ -1,0 +1,66 @@
+
+
+```{r corr_estimation}
+
+
+fin_corr = get.roll.cor(country_df[,c("Date","Country","Fin_ret")],
+                        win_len = 10) %>% 
+  rename(Fin_corr = Fin_ret)
+
+
+
+reg_list$corr = plm(formula =formula(gsub("Fin_synch",
+                                              "Fin_corr",
+                                              reg_formula)),
+                        data = left_join(fin_reg_df, fin_corr,
+                                         by = c("Date","CountryPair")),
+                        model = "within",effect = "twoways",
+                        index = c("CountryPair","Date"))
+
+
+```
+
+
+```{r output_reg_corr, include=FALSE}
+
+star_corr = stargazer(reg_list$corr, header = FALSE,digits = 3,
+          label = "corr",table.placement = "H",
+          title = paste("Financial correlation and banking integration"),
+          dep.var.caption = "Fin cycles correlation",
+          model.numbers = FALSE,
+          dep.var.labels.include = FALSE,
+          notes = paste0("\\parbox[t]{8cm}{",
+                         paste0("The table presents panel estimation that ",
+                                "includes twoway fixed effects and country-pair ",
+                                " specific linear time trend. ",
+                                sub("in year \\textit{t}","",
+                  sub(paste0("Financial cycles synchronization is ",
+                             "the negative of the absolute difference"),
+                      paste0("Financial cycles correlation is the ",
+                             "rolling (using 10 year window) correlation"),
+                      notes_str_ctrl, fixed = TRUE),fixed = TRUE),
+                  "}")),
+          notes.align = "l",
+          notes.append = FALSE,
+          se = list(sqrt(diag(vcovHC(reg_list$corr,cluster = "group")))),
+          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
+          covariate.labels = temp_labels,
+          omit.stat = c("f","adj.rsq"))
+
+star_corr = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
+                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
+                    star_corr,fixed = TRUE)
+
+```
+
+
+\subsection{Alternative measures of financial synchronization}
+
+In this section I measure the synchronization of financial cycles using rolling correlation (with 10 year window). Banking integration in this specification is also associated with less synchronized financial cycles. Crisis and financial development effects enter the equation with positive signs but only financial development remains statiscally significant.
+
+```{r output_corr_table, results="asis"}
+
+cat(star_corr,sep = "\n")
+
+```
+

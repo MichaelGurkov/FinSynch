@@ -1,0 +1,619 @@
+---
+title: "The synchronization of financial cycles and financial integration"
+institute: "Bank of Israel \\newline Research Department, Finance Division"
+author: "Michael Gurkov"
+date: "July 15, 2019"
+classoption: t
+output:
+  beamer_presentation:
+    keep_tex: true
+    includes:
+      in_header: C:\\Users\\Misha\\Documents\\Financial-Cycle\\GlobalFinancialCycleSynch\\vignettes\\GlobalFinCyclePreamblePresentation.tex
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,
+                      dev = 'pdf')
+
+```
+
+
+```{r load}
+
+library(tidyverse)
+
+library(plm)
+
+library(stargazer)
+
+```
+
+
+```{r import_data}
+
+raw_data = read_rds(paste0("C:\\Users\\Misha\\Documents\\Data",
+                                    "\\TempData\\temp_raw_df.rds"))
+
+
+fin_reg_df_annual = read_rds(paste0("C:\\Users\\Misha\\Documents\\Data",
+                                    "\\TempData\\temp_fin_df.rds"))
+
+reg_list = read_rds(paste0("C:\\Users\\Misha\\Documents\\Data",
+                                    "\\TempData\\temp_reg.rds"))
+
+```
+
+# Presentation Structure
+
+\begin{itemize}
+
+\setlength\itemsep{1.5em}
+  \item
+  Introduction of the field and some terminology
+	\item
+	Motivation
+	\item
+	Literature review
+	\item
+	Definition and methodology
+	\item
+	Main results - Frequency based analysis
+	\item
+	Summary and future research
+	\item
+	Robustness test - Turning points analysis
+
+\end{itemize}
+
+
+
+
+# Motivation
+
+Financial integration had increased and received close attention in the literature
+
+\begin{itemize}
+		\setlength\itemsep{1em}
+		\item 
+		Potential benefits of financial integration include efficient capital
+		allocation and risk-sharing, higher investment and growth.
+		\item 		
+		Higher degree of financial integration can generate a severe financial
+		contagion in integrated economies.
+	\end{itemize}
+
+
+Financial cycle is new important concept
+
+
+# Descriptive statistics
+
+
+```{r plot_bank_gdp, fig.align="center", out.width="90%"}
+
+ggplot() + 
+  labs(title = "Average banking linkages \n (real, normalized by gdp)",
+       y = "", x = "") + 
+  geom_line(fin_reg_df_annual  %>% 
+              filter(CountryPair_Category == "Strong") %>% 
+              select(Date, bank_gdp) %>% 
+              group_by(Date) %>% 
+              summarise(Avg_bank = mean(bank_gdp, na.rm = TRUE)) %>% 
+              ungroup() %>% 
+              filter(complete.cases(.)),
+            mapping = aes(x = Date, y = Avg_bank, group = 1)) + 
+  geom_rect(data = raw_data$crises_df %>% 
+              select(Start,End),
+            mapping = aes(xmin = Start,xmax = End,
+                          ymin = -Inf, ymax = Inf),
+            fill = "lightgray", alpha = 0.1) +
+  theme_bw() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 0,size = 7),
+        axis.text.y = element_blank(),axis.ticks.y = element_blank(),
+        legend.position = "bottom", plot.title = element_text(hjust = 0.5),
+        axis.title.x = element_blank(),
+        title = element_text(size = 15, family = "serif"))
+
+
+```
+
+
+# Descriptive statistics
+
+```{r plot_bank_gdp_strata,fig.align="center", out.width="90%"}
+
+ggplot(fin_reg_df_annual %>% 
+         select(Date, CountryPair,CountryPair_Category,bank_gdp) %>% 
+         mutate(CountryPair_Category = recode(
+           CountryPair_Category,
+           Strong = "Hi Income country pairs",
+           Weak = "Low Income country pairs",
+           Cross = "Cross (Hi - Low) Income country pairs")) %>% 
+         group_by(Date, CountryPair_Category) %>% 
+         summarise(avg_bank_gdp = mean(bank_gdp)),
+       aes(x = Date, y = avg_bank_gdp, group = 1)) + 
+  geom_line() + 
+  labs(y = "", x = "") + 
+  theme_bw() + 
+  labs(title = "Banking linkages by country groups") + 
+  theme(axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        panel.grid = element_blank(),
+        plot.title = element_text(hjust = 0.5),
+        title = element_text(size = 15, family = "serif")) + 
+  facet_grid(~CountryPair_Category)
+
+```
+
+
+# Descriptive statistics
+
+```{r plot_average_cycle_synch,fig.align="center", out.width="90%"}
+
+ggplot(fin_reg_df_annual %>% 
+         filter(CountryPair_Category == "Strong") %>% 
+         select(Date, Fin_synch) %>% 
+         group_by(Date) %>% 
+         summarise(Avg_Fin_synch = mean(Fin_synch, na.rm = TRUE)) %>% 
+         ungroup() %>% 
+         filter(complete.cases(.)) %>% 
+         filter(is.finite(Avg_Fin_synch)),
+       aes(x = Date, y = Avg_Fin_synch, group = 1)) + 
+  labs(title = "Average financial cycle synchronization",y = "", x = "") + 
+  geom_line() + 
+  theme_bw() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 0),
+        legend.position = "bottom", plot.title = element_text(hjust = 0.5),
+        title = element_text(size = 15, family = "serif"))
+
+
+```
+
+
+
+
+# Data - Banking linkages
+
+\begin{equation*}
+	\begin{aligned}
+  	Banklinkages_{i,j,t} =& \frac{1}{4} \bigg[
+  	log\left(\frac{Assets_{i,t}}{GDP_{i,t} + 
+  	GDP_{j,t}}\right)  + log\left(\frac{Liabilities_{i,t}}{GDP_{i,t} + 
+  	GDP_{j,t}}\right)  + \\ & log\left(\frac{Assets_{j,t}}{GDP_{i,t} +
+  	GDP_{j,t}}\right)  + log\left(\frac{Liabilities_{j,t}}{GDP_{i,t} +
+  	GDP_{j}}\right) \bigg]
+	\end{aligned}
+\end{equation*}
+
+
+# Data - Finanacial synchronzation
+
+\begin{equation*}
+FinSynch_{i,j,i} = -\lvert (Y_{i,t} - Y_{i,t-1}) - (Y_{j,t} - Y_{j,t-1}) \rvert
+\end{equation*}
+
+where:
+
+\begin{equation*}
+Y_{i,t} = 0.5 \cdot ln \left(  \frac{TotalCredit_{t}}{TotalCredit_{t-1}} \right) 
++0.5 \cdot ln\left( \frac{HousePrice_{t}}{HousePrice_{t-1}} \right) 
+\end{equation*}
+
+
+
+# Hypotheses formulation - Empirical specification
+\begin{equation*}
+		\begin{aligned}
+		FinSynch_{i,j,i} &= \beta BankLinkages_{i,j,t-1} + 
+		\gamma_{1} Crises_{i,j,t} +
+		\gamma_{2} BankLinkages_{i,j,t-1} * Crises_{i,j,t} \\
+		&  + \delta_{1} FinancialDevelopment_{i,j,t} 	+
+		\delta_{2} BankLinkages_{i,j,t-1} * FinancialDevelopment_{i,j,t} \\
+		& + \theta_{1} InstitutionalGovernance_{i,j,t} +
+		\theta_{2} BankLinkages_{i,j,t-1} * InstitutionalGovernance_{i,j,t}  \\
+		& + Controls_{i,j,t}  + \omega_{i,j} +
+		\tau_{t} + \varepsilon_{i,j,t}	
+		\end{aligned}
+\end{equation*}
+# Hypotheses formulation - Crises effect
+Several papers (see (Kalemli-Ozcan, Papaioannou, and Perri 2013),
+(Aysun and Hepp 2016), (Fratzscher 2012)) find that during financial crises times the effect of global (“push”) factors in cross border bank lending increases and lending becomes more synchronized.
+
+During financial crises times common (global) shocks are prevalent and that should induce more synchronized financial cycles. That means that the crisis effect should be positive and the "shock propagator" role of banking integration should increase during crisis times. 
+
+
+Thus the hypothesis is that $\gamma_{1} > 0, \gamma_{2} > 0$.
+
+
+# Hypotheses formulation - Financial Development effect
+[@Mendoza2009] show that financial integration can have different effects when countries differ in financial markets development.
+
+[@Fisman2004] argue that financial development at high level can transmit global shocks and induce comovement in economic activity.
+
+[@Acharya2010] analyze an investment strategy that requires a highly developed domestic financial market and show it can induce comovement.
+
+Financial development at high level can transmit global shocks and induce comovement in economic and financial activity. In that case my hypothesis is that $\delta_{1} > 0, \delta_{2} > 0$.
+
+
+# Hypotheses formulation - Institutional Quality effect
+[@Alfaro2007] suggest that one of the main determinants of capital flows is institutional quality and difference in the institutional quality among the rich and poor countries exlpain this finding.
+
+[@Fratzscher2012] finds that countries with higher institutional quality are less likely to experience sharp capital reversals and that better institutions may be instrumental in insulating a country from negative external shocks.
+
+
+[@Cerutti2015] show that composition of lending to EME countries is determined by institutional quality. 
+
+Institutional governance enable diversification and risk sharing, this should reduce the synchronization of finanacial cycles.
+
+The hypothesis is that $\theta_{1} < 0, \theta_{2} < 0$.
+
+# Estimation Results - Crises effect
+
+\vspace{-0.5cm}
+
+```{r output_panel_reg_controls, include=FALSE}
+
+temp_reg_list = reg_list$panel
+
+temp_se_list = lapply(temp_reg_list,function(temp_plm){
+                        return(sqrt(diag(vcovHC(temp_plm,cluster = "group"))))
+                               })
+
+temp_names = c("lag\\(bank_gdp, 1\\)","Crises","EU_both",
+                   "lag\\(bank_gdp, 1\\):Crises")
+
+
+output_panel_reg_table = stargazer(temp_reg_list,
+                                   header = FALSE,
+          dep.var.labels.include = FALSE,
+          column.labels = gsub("_","-", names(temp_reg_list)),
+          notes = "Clustered standard errors",
+          dep.var.caption = "Fin cycle synch",
+          font.size = "tiny",
+          model.numbers = FALSE,
+          omit.table.layout = "=!n",
+          se = temp_se_list,
+          column.sep.width = "0.5pt",
+          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
+          covariate.labels = c("Banking linkages (lag)",
+                               "Crises",
+                               "EU country pair",
+                               "Banking linkages (lag)*Crises"),
+          omit.stat = c("f","adj.rsq"),
+          notes.append = FALSE,
+          add.lines = list(c("Controls",
+                             rep("Yes", length(temp_reg_list))),
+                           c("Year FE",
+                             rep("Yes", length(temp_reg_list))),
+                           c("Country-pair FE",
+                             rep("Yes", length(temp_reg_list))),
+                           c("Country-pair linear trend",
+                             rep("Yes", length(temp_reg_list)))))
+
+
+output_panel_reg_table = sub('^.+\\caption.+$','', output_panel_reg_table)
+
+rm(temp_se_list, temp_reg_list)
+
+
+```
+
+
+```{r out_table, results="asis"}
+
+cat(output_panel_reg_table, sep='\n')
+
+```
+
+
+
+
+
+
+
+# Estimation Results - Crises & FD effect
+
+\vspace{-0.5cm}
+
+```{r output_panel_reg_fd, include=FALSE}
+
+temp_reg_list = reg_list$panel_fd
+
+temp_se_list = lapply(temp_reg_list,function(temp_plm){
+                        return(sqrt(diag(vcovHC(temp_plm,cluster = "group"))))
+                               })
+
+temp_names = c("lag\\(bank_gdp, 1\\)","Crises","EU_both",
+                   "lag\\(bank_gdp, 1\\):Crises","FD_tot",
+                   "lag\\(bank_gdp, 1\\):FD_tot")
+
+
+output_panel_fd_table = stargazer(temp_reg_list,
+                                   header = FALSE,
+          dep.var.labels.include = FALSE,
+          column.labels = gsub("_","-", names(temp_reg_list)),
+          notes = "Clustered standard errors",
+          dep.var.caption = "Fin cycle synch",
+          font.size = "tiny",
+          model.numbers = FALSE,
+          omit.table.layout = "=!n",
+          se = temp_se_list,
+          column.sep.width = "0.5pt",
+          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
+          covariate.labels = c("Bank linkages (lag)",
+                               "Crises",
+                               "EU country pair",
+                               "Bank linkages (lag)*Crises",
+                               "Financial Development",
+                               "Bank linkages (lag)*FD"),
+          omit.stat = c("f","adj.rsq"),
+          add.lines = list(c("Controls + FE + Trend",
+                             rep("Yes", length(temp_reg_list)))))
+
+
+output_panel_fd_table = sub('^.+\\caption.+$','', output_panel_fd_table)
+
+rm(temp_se_list, temp_reg_list)
+
+
+```
+
+```{r out_table_fd, results="asis"}
+
+cat(output_panel_fd_table, sep='\n')
+
+```
+
+
+
+
+
+
+# Estimation Results - Crises & FD & IG effect
+
+\vspace{-0.5cm}
+
+```{r output_panel_reg_fd_wgi, include=FALSE}
+
+temp_reg_list = reg_list$panel_fd_wgi
+
+temp_se_list = lapply(temp_reg_list,function(temp_plm){
+                        return(sqrt(diag(vcovHC(temp_plm,cluster = "group"))))
+                               })
+
+temp_names = c("lag\\(bank_gdp, 1\\)","Crises","EU_both",
+                   "lag\\(bank_gdp, 1\\):Crises","FD_tot",
+                   "lag\\(bank_gdp, 1\\):FD_tot","WGI_tot",
+                   "lag\\(bank_gdp, 1\\):WGI_tot")
+
+
+output_panel_fd_wgi_table = stargazer(temp_reg_list,
+                                   header = FALSE,
+          dep.var.labels.include = FALSE,
+          column.labels = gsub("_","-", names(temp_reg_list)),
+          notes = "Clustered standard errors",
+          dep.var.caption = "Fin cycle synch",
+          font.size = "tiny",
+          model.numbers = FALSE,
+          omit.table.layout = "=!n",
+          se = temp_se_list,
+          column.sep.width = "0.5pt",
+          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
+          covariate.labels = c("Bank linkages (lag)",
+                               "Crises",
+                               "EU country pair",
+                               "Bank linkages (lag)*Crises",
+                               "Financial Development",
+                               "Bank linkages (lag)*FD",
+                               "Institutional Governance",
+                               "Bank linkages (lag)*IG"),
+          omit.stat = c("f","adj.rsq"),
+          add.lines = list(c("Controls + FE + Trend",
+                             rep("Yes", length(temp_reg_list)))))
+
+
+output_panel_fd_wgi_table = sub('^.+\\caption.+$','',
+                                output_panel_fd_wgi_table)
+
+rm(temp_se_list, temp_reg_list)
+
+
+```
+
+
+```{r out_table_fd_wgi, results="asis"}
+
+cat(output_panel_fd_wgi_table, sep='\n')
+
+```
+
+
+
+
+# Estimation Results (1978-2006) - Crises effect
+
+\vspace{-0.5cm}
+
+```{r output_panel_reg_controls_2007, include=FALSE}
+
+temp_reg_list = reg_list$panel_2007
+
+temp_se_list = lapply(temp_reg_list,function(temp_plm){
+                        return(sqrt(diag(vcovHC(temp_plm,cluster = "group"))))
+                               })
+
+temp_names = c("lag\\(bank_gdp, 1\\)","Crises","EU_both",
+                   "lag\\(bank_gdp, 1\\):Crises")
+
+
+output_panel_reg_table = stargazer(temp_reg_list,
+                                   header = FALSE,
+          dep.var.labels.include = FALSE,
+          column.labels = gsub("_","-", names(temp_reg_list)),
+          notes = "Clustered standard errors",
+          dep.var.caption = "Fin cycle synch",
+          font.size = "tiny",
+          model.numbers = FALSE,
+          omit.table.layout = "=!n",
+          se = temp_se_list,
+          column.sep.width = "0.5pt",
+          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
+          covariate.labels = c("Banking linkages (lag)",
+                               "Crises",
+                               "EU country pair",
+                               "Banking linkages (lag)*Crises"),
+          omit.stat = c("f","adj.rsq"),
+          notes.append = FALSE,
+          add.lines = list(c("Controls",
+                             rep("Yes", length(temp_reg_list))),
+                           c("Year FE",
+                             rep("Yes", length(temp_reg_list))),
+                           c("Country-pair FE",
+                             rep("Yes", length(temp_reg_list))),
+                           c("Country-pair linear trend",
+                             rep("Yes", length(temp_reg_list)))))
+
+
+output_panel_reg_table = sub('^.+\\caption.+$','', output_panel_reg_table)
+
+rm(temp_se_list, temp_reg_list)
+
+
+```
+
+
+```{r out_table_2007, results="asis"}
+
+cat(output_panel_reg_table, sep='\n')
+
+```
+
+
+
+
+
+
+
+
+
+# Estimation Results (1978-2006) - Crises & FD effect
+
+\vspace{-0.5cm}
+
+```{r output_panel_reg_fd_2007, include=FALSE}
+
+temp_reg_list = reg_list$panel_fd_2007
+
+temp_se_list = lapply(temp_reg_list,function(temp_plm){
+                        return(sqrt(diag(vcovHC(temp_plm,cluster = "group"))))
+                               })
+
+temp_names = c("lag\\(bank_gdp, 1\\)","Crises","EU_both",
+                   "lag\\(bank_gdp, 1\\):Crises","FD_tot",
+                   "lag\\(bank_gdp, 1\\):FD_tot")
+
+
+output_panel_fd_table = stargazer(temp_reg_list,
+                                   header = FALSE,
+          dep.var.labels.include = FALSE,
+          column.labels = gsub("_","-", names(temp_reg_list)),
+          notes = "Clustered standard errors",
+          dep.var.caption = "Fin cycle synch",
+          font.size = "tiny",
+          model.numbers = FALSE,
+          omit.table.layout = "=!n",
+          se = temp_se_list,
+          column.sep.width = "0.5pt",
+          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
+          covariate.labels = c("Bank linkages (lag)",
+                               "Crises",
+                               "EU country pair",
+                               "Bank linkages (lag)*Crises",
+                               "Financial Development",
+                               "Bank linkages (lag)*FD"),
+          omit.stat = c("f","adj.rsq"),
+          add.lines = list(c("Controls + FE + Trend",
+                             rep("Yes", length(temp_reg_list)))))
+
+
+output_panel_fd_table = sub('^.+\\caption.+$','', output_panel_fd_table)
+
+rm(temp_se_list, temp_reg_list)
+
+
+```
+
+```{r out_table_fd_2007, results="asis"}
+
+cat(output_panel_fd_table, sep='\n')
+
+```
+
+
+
+
+
+
+
+
+# Estimation Results (1978-2006) - Crises & FD & IG effect
+
+\vspace{-0.5cm}
+
+```{r output_panel_reg_fd_wgi_2007, include=FALSE}
+
+temp_reg_list = reg_list$panel_fd_wgi_2007
+
+temp_se_list = lapply(temp_reg_list,function(temp_plm){
+                        return(sqrt(diag(vcovHC(temp_plm,cluster = "group"))))
+                               })
+
+temp_names = c("lag\\(bank_gdp, 1\\)","Crises","EU_both",
+                   "lag\\(bank_gdp, 1\\):Crises","FD_tot",
+                   "lag\\(bank_gdp, 1\\):FD_tot","WGI_tot",
+                   "lag\\(bank_gdp, 1\\):WGI_tot")
+
+
+output_panel_fd_wgi_table = stargazer(temp_reg_list,
+                                   header = FALSE,
+          dep.var.labels.include = FALSE,
+          column.labels = gsub("_","-", names(temp_reg_list)),
+          notes = "Clustered standard errors",
+          dep.var.caption = "Fin cycle synch",
+          font.size = "tiny",
+          model.numbers = FALSE,
+          omit.table.layout = "=!n",
+          se = temp_se_list,
+          column.sep.width = "0.5pt",
+          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
+          covariate.labels = c("Bank linkages (lag)",
+                               "Crises",
+                               "EU country pair",
+                               "Bank linkages (lag)*Crises",
+                               "Financial Development",
+                               "Bank linkages (lag)*FD",
+                               "Institutional Governance",
+                               "Bank linkages (lag)*IG"),
+          omit.stat = c("f","adj.rsq"),
+          add.lines = list(c("Controls + FE + Trend",
+                             rep("Yes", length(temp_reg_list)))))
+
+
+output_panel_fd_wgi_table = sub('^.+\\caption.+$','',
+                                output_panel_fd_wgi_table)
+
+rm(temp_se_list, temp_reg_list)
+
+
+```
+
+
+```{r out_table_fd_wgi_2007, results="asis"}
+
+cat(output_panel_fd_wgi_table, sep='\n')
+
+```
+
+
+

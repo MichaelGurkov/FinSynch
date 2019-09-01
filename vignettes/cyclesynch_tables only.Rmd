@@ -1,0 +1,1067 @@
+---
+title: "Financial cycles synchronization and financial integration"
+subtitle: 'Preliminary draft'
+author: "Michael Gurkov"
+fontsize: 11pt
+output:
+  rmarkdown::pdf_document:
+    latex_engine: xelatex
+    number_sections: true
+    includes:
+            in_header: C:\\Users\\Misha\\Documents\\Financial-Cycle\\GlobalFinancialCycleSynch\\vignettes\\GlobalFinCyclePreambleDoc.tex
+
+vignette: >
+  %\VignetteIndexEntry{CycleSynch}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,echo = FALSE,
+  message = FALSE,warning = FALSE,
+  comment = "#>"
+)
+```
+
+
+```{r load_package}
+
+devtools::load_all()
+
+# library(car)
+
+library(tidyverse)
+
+library(plm)
+
+library(stargazer)
+ 
+# library(sandwich)
+# 
+# library(clubSandwich)
+# 
+# library(lmtest)
+
+library(purrr)
+
+# library(igraph)
+
+# library(DescTools)
+
+```
+
+
+```{r params_setup}
+
+save_temp_status = FALSE
+
+countries_list = list(
+  oecd_countries = c("Australia","Austria","Belgium","Canada","Chile",
+                  "Czech_Republic","Denmark","Estonia","Finland","France",
+                  "Germany","Greece","Hungary", "Iceland","Ireland",
+                  "Israel","Italy","Japan","Korea","Latvia",
+                  "Lithuania","Luxembourg","Mexico","Netherlands",
+                  "New_Zealand","Norway","Poland","Portugal",
+                  "Slovak_Republic","Slovenia","Spain","Sweden",
+                  "Switzerland","Turkey","United_Kingdom"
+                  ,"United_States"),
+  strong_countries = c("Australia","Austria","Belgium","Canada",
+                  "Switzerland","Germany","Denmark","Spain",
+                  "Finland","France","United_Kingdom","Ireland",
+                  "Italy","Japan","Netherlands","Portugal",
+                  "Sweden","United_States"),
+  fsap_countries = c("Austria","Belgium","Germany","Denmark","Spain",
+                   "France","Finland","Greece","Ireland","Italy",
+                   "Luxembourg","Netherlands","Portugal",
+                   "Sweden","United_Kingdom"),
+  eu_countries = c("Austria","Belgium","Bulgaria","Croatia","Cyprus",
+                   "Czech_Republic","Denmark","Estonia","Finland","France",
+                   "Germany","Greece","Hungary","Ireland","Italy",
+                   "Latvia","Lithuania","Luxembourg", "Malta","Netherlands",
+                   "Poland","Portugal","Romania","Slovak_Republic",
+                   "Slovenia","Spain","Sweden","United_Kingdom"),
+  euro_countries = c("Austria","Belgium","Cyprus","Estonia","Finland",
+                     "France","Germany","Greece","Ireland","Italy",
+                     "Latvia","Lithuania","Luxembourg", "Malta",
+                     "Netherlands","Portugal","Slovak_Republic",
+                     "Slovenia","Spain"))
+
+countries_list$weak_countries = countries_list$oecd_countries[!countries_list$oecd_countries %in% countries_list$strong_countries]
+
+
+pairs_list = lapply(names(countries_list),
+           function(temp_name){
+             apply(combn(countries_list[[temp_name]],2), 2,
+                   function(temp_col){
+                     ifelse(temp_col[1]<temp_col[2],
+                            paste(temp_col[1],temp_col[2],sep = "-"),
+                            paste(temp_col[2],temp_col[1],sep = "-"))})
+  
+})
+
+names(pairs_list) = paste(names(countries_list), "pairs", sep = "_")
+
+countries_list = c(countries_list, pairs_list)
+
+rm(pairs_list)
+
+countries_list$cross_country_pairs = countries_list$oecd_countries_pairs[!countries_list$oecd_countries_pairs %in% countries_list$strong_countries_pairs & !countries_list$oecd_countries_pairs %in% countries_list$weak_countries_pairs]
+
+reg_list = list()
+
+hyp_test_list = list()
+
+
+control_vars = c("trade_gdp","FX_stab_tot","FO_ind_tot","MI_ind_tot",
+                 "GDP_real_tot")
+
+
+reg_formula = paste("Fin_synch ~ lag(bank_gdp,1) * Crises",
+                    "lag(bank_gdp,1) * FD_tot",
+                    # "lag(bank_gdp,1) * EU_both",
+                    # "lag(bank_gdp,1) * Euro_both",
+                    "lag(bank_gdp,1) * Common_Lang",
+                         paste(control_vars,
+                               collapse = "+"),
+                        "CountryPair:Time_Trend",
+                     sep = "+")
+
+
+
+temp_names = c("lag\\(bank_gdp, 1\\)",
+               "Crises",
+               "FD_tot",
+               # "EU_both",
+               # "Euro_both",
+               "lag\\(bank_gdp, 1\\):Crises",
+               "lag\\(bank_gdp, 1\\):FD_tot",
+               # "lag\\(bank_gdp, 1\\):EU_both",
+               # "lag\\(bank_gdp, 1\\):Euro_both",
+               "lag\\(bank_gdp, 1\\):Common_Lang")
+
+temp_names_lag = c("lag\\(bank_gdp, 1\\)",
+               "lag\\(Crises, 1\\)",
+               "lag\\(FD_tot, 1\\)",
+               # "lag\\(EU_both, 1\\)",
+               # "lag\\(Euro_both, 1\\)",
+               "lag\\(bank_gdp, 1\\):lag\\(Crises, 1\\)",
+               "lag\\(bank_gdp, 1\\):lag\\(FD_tot, 1\\)",
+               # "lag\\(bank_gdp, 1\\):lag\\(EU_both, 1\\)",
+               # "lag\\(bank_gdp, 1\\):lag\\(Euro_both, 1\\)",
+               "lag\\(bank_gdp, 1\\):lag\\(Common_Lang, 1\\)")
+
+
+temp_labels = c("Bank linkages (lag)",
+                "Crises",
+                "FD",
+                # "EU both",
+                # "Euro both",
+                "Bank linkages (lag) * Crises",
+                "Bank linkages (lag) * FD",
+                # "Bank linkages (lag) * EU both",
+                # "Bank linkages (lag) * Euro both",
+                "Bank linkages (lag) * Commong Lang")
+
+
+
+```
+
+
+```{r Import_raw_data}
+
+raw_data = list()
+
+raw_data$HousePrice = import.bis.property.price.data(
+  countries_vec = countries_list$oecd_countries) %>% 
+  mutate(Date = as.yearqtr(Date, format = "%Y-Q%q"))
+
+raw_data$TotalCredit = import.bis.tot.credit.data(
+  countries_vec = countries_list$oecd_countries) %>% 
+  mutate(Date = as.yearqtr(Date, format = "%Y-Q%q"))
+
+raw_data$WDI_annual = import_wdi_df(
+  countries_vec = countries_list$oecd_countries) %>% 
+  mutate(GDP = GDP * 10 ^ (-6)) # Convert to millions USD
+
+
+raw_data$bis_lbs = import.bis.lbs.data(
+  countries_vec = countries_list$oecd_countries) %>% 
+  mutate(Date = as.yearqtr(Date, format = "%Y-Q%q"))
+
+# raw_data$Harmon_both_quarter = import.harmon.data() %>% 
+#   construct_countrypair_harmon_index(.,dates_vec = seq.Date(
+#     from = as.Date(min(raw_data$bis_lbs$Date)),
+#     to = as.Date(max(raw_data$bis_lbs$Date)),
+#     by = "quarter") %>% as.yearqtr())
+# 
+# raw_data$Harmon_one_quarter = import.harmon.data() %>% 
+#   construct_countrypair_harmon_index(.,dates_vec = seq.Date(
+#     from = as.Date(min(raw_data$bis_lbs$Date)),
+#     to = as.Date(max(raw_data$bis_lbs$Date)),
+#     by = "quarter") %>% as.yearqtr(),index_status = "one")
+
+raw_data$codes = read.csv(paste0("C:\\Users\\Misha\\Documents",
+                                 "\\Data\\ISO\\",
+                                 "iso_2digit_alpha_country",
+                                 "_codes.csv")) %>% 
+  setNames(c("Code","Country"))
+
+
+
+  
+
+```
+
+
+```{r Import_raw_data_EU_membership}
+
+eu_df = read.csv(paste0("C:\\Users\\Misha\\Documents\\",
+                        "Data\\Misc\\EU_membership.csv"),
+                 stringsAsFactors = FALSE) %>% 
+  setNames(c("Country","Euro_area","EU")) %>% 
+  mutate(Country = gsub("\\s","_",Country)) %>% 
+  mutate(Country = sub("The_Netherlands","Netherlands",
+                       Country,fixed = TRUE)) %>% 
+  mutate(Country = sub("Slovakia","Slovak_Republic", Country,fixed = TRUE))
+
+
+eu_dates_vec = seq.Date(
+    from = as.Date(min(raw_data$bis_lbs$Date)),
+    to = as.Date(max(raw_data$bis_lbs$Date)),
+    by = "year") %>% 
+  format(.,"%Y")
+
+raw_data$EU_both = construct_countrypair_EU_index(
+  eu_df = eu_df %>% 
+    select(Country, EU) %>% 
+    rename(Date = EU),
+  dates_vec = eu_dates_vec,
+  countries = countries_list$oecd_countries) %>% 
+  rename(EU_both = Status) %>% 
+  mutate(Date = as.character(Date))
+
+raw_data$EU_one = construct_countrypair_EU_index(
+  eu_df = eu_df %>% 
+    select(Country, EU) %>% 
+    rename(Date = EU),
+  dates_vec = eu_dates_vec,
+  countries = countries_list$oecd_countries,
+  index_status = "one") %>% 
+  rename(EU_one = Status) %>% 
+  mutate(Date = as.character(Date))
+
+
+raw_data$Euro_both = construct_countrypair_EU_index(
+  eu_df = eu_df %>% 
+    select(Country, Euro_area) %>% 
+    rename(Date = Euro_area) %>% 
+    filter(!Date == "Not a member"),
+  dates_vec = eu_dates_vec,
+  countries = countries_list$oecd_countries) %>% 
+  rename(Euro_both = Status) %>% 
+  mutate(Date = as.character(Date))
+
+raw_data$Euro_one = construct_countrypair_EU_index(
+  eu_df = eu_df %>% 
+    select(Country, Euro_area) %>% 
+    rename(Date = Euro_area),
+  dates_vec = eu_dates_vec,
+  countries = countries_list$oecd_countries,
+  index_status = "one") %>% 
+  rename(Euro_one = Status) %>% 
+  mutate(Date = as.character(Date))
+
+rm(eu_df, eu_dates_vec)
+
+```
+
+
+```{r Import_raw_data_common_language}
+
+raw_data$geodist = import.geodist.data() %>% 
+  filter(Country %in% countries_list$oecd_countries) %>% 
+  filter(Counter_Country %in% countries_list$oecd_countries) %>% 
+  mutate(CountryPair = ifelse(Country < Counter_Country,
+                              paste(Country, Counter_Country, sep = "-"),
+                              paste(Counter_Country,Country, sep = "-"))) %>% 
+  select(-Country, -Counter_Country) %>% 
+  distinct()
+
+```
+
+
+```{r Import_raw_data_crises_dates}
+
+raw_data$crises_df =  import.crises.dates.df(countries_vec = countries_list$oecd_countries)
+
+```
+
+
+```{r make_country_df}
+
+df_list = list(raw_data$TotalCredit %>%
+  filter(quarters(Date) == "Q4") %>%
+  mutate(Date = format(Date, "%Y")) %>% 
+  deflate.data(.,vars_to_deflate = "Total_Credit") %>% 
+  select(-Total_Credit),
+  raw_data$HousePrice %>%
+  filter(quarters(Date) == "Q4") %>%
+  mutate(Date = format(Date, "%Y")),
+  raw_data$WDI_annual %>%
+  rename(Date = Year) %>%
+  select(-GDP_per_Capita) %>% 
+  deflate.data(.,vars_to_deflate = c("GDP"),
+               cpi = raw_data$CPI) %>% 
+  select(-GDP))
+
+
+country_df = df_list %>% 
+  reduce(right_join, by = c("Date", "Country")) %>% 
+  group_by(Country) %>% 
+  arrange(Date) %>% 
+  mutate_at(.vars = c("Total_Credit_real","HousePrice"),
+            .funs = list(ret = ~ . / dplyr::lag(., order_by = Date) - 1)) %>%
+  # mutate_at(.vars = c("Total_Credit_real","HousePrice"),
+  #           .funs = list(ret = ~c(NA,diff(log(.))))) %>%
+  mutate_at(.vars = vars("Total_Credit_real","HousePrice"),
+            .funs = list(cycle = ~cffilter(., pl = 2 * 4,
+                                           pu = 8* 4 )[["cycle"]] / .)) %>%
+  mutate(Fin_ret = rowMeans(data.frame(Total_Credit_real_ret,
+                                      HousePrice_ret),na.rm = TRUE)) %>%
+  mutate(Fin_cycle = rowMeans(data.frame(Total_Credit_real_cycle,
+                                      HousePrice_cycle),na.rm = TRUE)) %>%
+  ungroup() %>%
+  filter(is.finite(Fin_ret)) %>% 
+  filter(Date >=1978)
+
+rm(df_list)
+
+
+
+```
+
+
+```{r Import_trilemma_data}
+
+country_df = left_join(country_df, import.trilemma.ind(),
+               by = c("Country","Date"))
+
+```
+
+
+```{r Import_fin_development_data}
+
+country_df = left_join(country_df, import.fin.dev.ind(),
+               by = c("Country","Date"))
+
+
+
+```
+
+
+```{r make_bank_list}
+
+bank_list = list()
+
+raw_data$bank_balance_real_norm = raw_data$bis_lbs %>%
+  filter(quarters(Date) == "Q4") %>%
+  mutate(Date = format(Date, "%Y")) %>%
+  deflate.data(.,vars_to_deflate = "Balance") %>%
+  select(Date, CountryPair,Balance_Pos, Balance_real) %>%
+  normalize.bis.data(.,norm_df = country_df[,c("Date","Country", "GDP_real")],
+                     norm_val = "GDP_real")
+
+bank_list$bank_gdp = raw_data$bank_balance_real_norm   %>% 
+  group_by(Date, CountryPair) %>%
+  summarise(bank_gdp = mean(log(Balance_real), na.rm = TRUE)) %>%
+  filter(!is.na(bank_gdp))
+  
+# bank_pop = bank_balance_real  %>%
+#   normalize.bis.data(.,norm_df = df[,c("Date","Country", "Pop")],
+#                      norm_val = "Pop") %>% 
+#   group_by(Date, CountryPair) %>%
+#   summarise(bank_pop = mean(log(Balance_real), na.rm = TRUE)) %>%
+#   filter(!is.na(bank_pop))
+
+
+```
+
+
+```{r Import_IMF_Data}
+
+trade_list = list()
+
+export_df = lapply(list.files(paste0("C:\\Users\\Misha\\Documents\\Data",
+                                     "\\IMF\\Export-Import\\Export"),
+                              full.names = TRUE),
+                   import_imf_df,
+                   countries_vec = countries_list$oecd_countries) %>% 
+  bind_rows() %>% 
+  mutate(Exports = as.numeric(Exports)) %>% 
+  group_by(Date, CountryPair) %>% 
+  summarise(Exports = sum(Exports, na.rm = TRUE))
+
+
+import_df = lapply(list.files(paste0("C:\\Users\\Misha\\Documents\\Data",
+                                     "\\IMF\\Export-Import\\Import"),
+                              full.names = TRUE),
+                   import_imf_df,
+                   countries_vec = countries_list$oecd_countries) %>% 
+  bind_rows() %>% 
+  mutate(Imports = as.numeric(Imports)) %>%
+  group_by(Date, CountryPair) %>% 
+  summarise(Imports = sum(Imports, na.rm = TRUE))
+
+trade_df = full_join(export_df,import_df, by = c("Date", "CountryPair")) %>% 
+  gather(.,key = Balance_Pos, value = Trade, -Date, - CountryPair) %>% 
+  deflate.data(.,vars_to_deflate = "Trade") %>% 
+  select(-Trade)
+
+
+trade_list$trade_gdp = trade_df %>%
+  ungroup() %>% 
+  normalize.imf.data(.,wdi_df = country_df[,c("Date","Country", "GDP_real")],
+                     norm_val = "GDP_real") %>%
+  group_by(Date, CountryPair) %>%
+  summarise(trade_gdp = mean(log(Trade_real), na.rm = TRUE)) %>%
+  filter(!is.na(trade_gdp)) %>% 
+  filter(is.finite(trade_gdp))
+
+rm(export_df, import_df, trade_df)
+
+
+
+```
+
+
+```{r make_indicators_list}
+
+ind_list = list()
+  
+# ind_list$Harmon_both = raw_data$Harmon_both_quarter %>% 
+#                        mutate(Date = format(Date, "%Y")) %>% 
+#                        group_by(CountryPair, Date, Directive) %>% 
+#                        summarise(Transposed = max(Transposed)) %>% 
+#                        group_by(Date,CountryPair) %>% 
+#                        summarise(Harmon_both_Index = log(
+#                          sum(Transposed + 1,na.rm = TRUE)))
+# 
+#  ind_list$Harmon_one = raw_data$Harmon_one_quarter %>% 
+#                        mutate(Date = format(Date, "%Y")) %>% 
+#                        group_by(CountryPair, Date, Directive) %>% 
+#                        summarise(Transposed = max(Transposed)) %>% 
+#                        group_by(Date,CountryPair) %>% 
+#                        summarise(Harmon_one_Index = log(
+#                          sum(Transposed + 1,na.rm = TRUE)))
+   
+   ind_list$EU_both = raw_data$EU_both
+
+   ind_list$EU_one =  raw_data$EU_one
+
+   ind_list$Euro_both =  raw_data$Euro_both
+
+   ind_list$Euro_one = raw_data$Euro_one
+
+
+```
+
+
+```{r make_countrypair_df}
+
+
+country_pair_df = unlist(list(bank_list, trade_list, ind_list),
+                         recursive = FALSE) %>% 
+  reduce(left_join, by = c("Date","CountryPair"))
+
+
+
+```
+
+
+```{r country_pair_df_add_crises_indicator}
+
+country_pair_df = country_pair_df %>% 
+  separate(col = CountryPair,into = c("Country_A","Country_B"),
+           sep = "-", remove = FALSE) %>% 
+  group_by(Country_A) %>% 
+  mutate(Country_A_crises = classify_crises_dates(
+    Target_Country = Country_A[1],
+    dates_vec = Date,
+    crises_df = raw_data$crises_df[,1:3])) %>% 
+  group_by(Country_B) %>% 
+  mutate(Country_B_crises = classify_crises_dates(
+    Target_Country = Country_B[1],
+    dates_vec = Date,
+    crises_df = raw_data$crises_df[,1:3])) %>% 
+  ungroup() %>% 
+  rowwise() %>% 
+  mutate(Crises_tot = sum(Country_A_crises, Country_B_crises)) %>% 
+  mutate(Crises_one = as.numeric(Crises_tot ==1)) %>% 
+  mutate(Crises_both = as.numeric(Crises_tot ==2)) %>% 
+  mutate(Crises = min(Crises_tot,1)) %>% 
+  ungroup() %>% 
+  select(-Country_A,-Country_B)
+
+```
+
+
+```{r country_pair_df_add_geodist}
+
+country_pair_df = country_pair_df %>% 
+  left_join(.,raw_data$geodist %>% 
+              select(CountryPair, comlang_ethno) %>% 
+              rename(Common_Lang = comlang_ethno) %>% 
+              distinct(), by = "CountryPair")
+```
+
+
+```{r country_pair_df_add_controls}
+
+controls =  c("FX_stab","MI_ind","FO_ind","FD","GDP_real","Pop")
+
+country_pair_df = append.countrypair.dataframe(
+  country_pair_df,
+  country_df %>%
+    select(Date,Country,controls) %>% 
+    mutate(GDP_real = log(GDP_real))) %>% 
+  collapse_pair_controls(controls,collapse_funcs = "sum")
+ 
+rm(controls)
+
+
+```
+
+
+<!-- Dataset construction -->
+
+```{r make_fin_reg_df_old, eval=FALSE}
+
+fin_reg_df = construct_fin_reg(
+  df = df %>% 
+    select(c("FX_stab","MI_ind","FO_ind","FD","GDP_real","Pop",
+             "Country","Date","Fin_ret")) %>% 
+    mutate(GDP_real = log(GDP_real),
+           Pop = log(Pop)),
+  countries_vec = countries_list$oecd_countries,
+  control_vars = c("FX_stab","MI_ind","FO_ind","FD","GDP_real","Pop"),
+  collapse_funcs = c("sum"))
+
+fin_reg_df = fin_reg_df %>% 
+  full_join(.,get.roll.cor(df %>% select(Date, Country,Fin_cycle),win_len = 5) %>% 
+              rename(Fin_cycle_corr = Fin_cycle),
+            by = c("Date","CountryPair"))
+
+fin_reg_df = fin_reg_df %>% 
+  full_join(.,country_pair_df, by = c("Date","CountryPair"))
+
+fin_reg_df = fin_reg_df %>% 
+  filter(!is.na(CountryPair)) %>% 
+  filter(!is.na(Fin_synch)) %>% 
+  filter(!is.na(bank_gdp)) %>% 
+  filter(!is.na(Date))
+
+
+temp_lm_resid = function(x,Time){
+  
+  if(sum(!is.na(x)) < 2){return(rep(NA, length(x)))}
+  
+  return(residuals(lm(x ~ Time)))
+  
+}
+
+
+fin_reg_df = fin_reg_df %>% 
+  group_by(CountryPair) %>% 
+  mutate(Time_trend = seq.int(from = 1,to = length(Date))) %>% 
+  # mutate(bank_gdp_delta = c(NA, diff(bank_gdp))) %>% 
+  # mutate(Fin_synch_delta = c(NA, diff(Fin_synch))) %>% 
+  # mutate(bank_gdp_detrended = temp_lm_resid(bank_gdp, Time_trend)) %>% 
+  # mutate(Fin_synch_detrended = temp_lm_resid(Fin_synch, Time_trend)) %>% 
+  # mutate(Harmon_both_detrended = temp_lm_resid(Harmon_both_Index,
+  #                                              Time_trend)) %>% 
+  ungroup()
+
+fin_reg_df$CountryPair_Category[fin_reg_df$CountryPair %in% countries_list$strong_countries_pairs] = "KPP"
+
+fin_reg_df$CountryPair_Category[fin_reg_df$CountryPair %in% c(countries_list$weak_countries_pairs, countries_list$cross_country_pairs)] = "Complement"
+
+
+# saveRDS(fin_reg_df, "C:\\Users\\Misha\\Desktop\\temp_df.rds")
+
+
+```
+
+
+```{r make_dep_df}
+
+fin_synch = get.neg.abs.diff(country_df[,c("Date","Country","Fin_ret")]) %>% 
+  rename(Fin_synch = Fin_ret)
+
+credit_synch = get.neg.abs.diff(country_df[,c("Date","Country",
+                                              "Total_Credit_real_ret")]) %>% 
+  rename(Credit_synch = Total_Credit_real_ret)
+
+house_synch = get.neg.abs.diff(country_df[,c("Date","Country",
+                                             "HousePrice_ret")]) %>% 
+  rename(House_synch = HousePrice_ret)
+
+
+
+```
+
+
+```{r make_fin_df}
+
+fin_reg_df = list(country_pair_df, fin_synch, credit_synch, house_synch) %>%
+  reduce(left_join, by = c("CountryPair","Date")) %>% 
+  group_by(CountryPair) %>% 
+  mutate(Time_Trend = seq_along(Date)) %>% 
+  ungroup() %>% 
+  mutate(Fin_synch = 100 * Fin_synch) %>% 
+  mutate(Credit_synch = 100 * Credit_synch) %>% 
+  mutate(House_synch = 100 * House_synch)
+
+
+# fin_reg_df$CountryPair_Category[fin_reg_df$CountryPair %in% countries_list$strong_countries_pairs] = "KPP"
+# 
+# fin_reg_df$CountryPair_Category[fin_reg_df$CountryPair %in% c(countries_list$weak_countries_pairs, countries_list$cross_country_pairs)] = "Complement"
+
+```
+
+
+```{r filter_outliers}
+
+country_pairs_table = table(fin_reg_df$CountryPair)
+
+fin_reg_df = fin_reg_df %>%
+  filter(CountryPair %in% names(country_pairs_table)[
+    country_pairs_table > 10])
+
+# fin_reg_df = fin_reg_df %>% 
+#   filter(bank_gdp >= quantile(bank_gdp,0.025) &
+#          bank_gdp <= quantile(bank_gdp,0.975))
+
+```
+
+
+```{r save_temp_data, eval=save_temp_status}
+
+write_rds(x = raw_data,
+        path = paste0("C:\\Users\\Misha\\Documents\\Data\\TempData",
+                      "\\temp_raw_data.rds"))
+
+write_rds(x = country_df,
+        path = "C:\\Users\\Misha\\Documents\\Data\\TempData\\temp_country_df.rds")
+
+
+write_rds(x = fin_reg_df,
+        path = "C:\\Users\\Misha\\Documents\\Data\\TempData\\temp_fin_df_new.rds")
+
+```
+
+
+<!-- Regression analysis -->
+
+
+```{r estimation}
+
+
+reg_list$baseline = plm(formula = formula(reg_formula),data = fin_reg_df,
+          model = "within",effect = "twoways",
+          index = c("CountryPair","Date"))
+
+
+coef_vec = coefficients(reg_list$baseline)
+
+coef_vec = coef_vec[names(coef_vec) %in% c("lag(bank_gdp, 1)",
+                                           "lag(bank_gdp, 1):Crises",
+                                           "lag(bank_gdp, 1):FD_tot")]
+
+```
+
+
+```{r robustness}
+
+reg_list$credit = plm(formula = formula(sub("Fin_synch","Credit_synch",
+                                           reg_formula, fixed = TRUE)),
+                      data = fin_reg_df,
+                      model = "within",effect = "twoways",
+                      index = c("CountryPair","Date"))
+
+
+reg_list$house = plm(formula = formula(sub("Fin_synch","House_synch",
+                                           reg_formula, fixed = TRUE)),
+                     data = fin_reg_df,
+                     model = "within",effect = "twoways",
+                     index = c("CountryPair","Date"))
+
+
+
+reg_list$lag = plm(
+  formula = formula(paste("Fin_synch ~ lag(bank_gdp,1) * lag(Crises,1)",
+                                  "lag(bank_gdp,1) * lag(FD_tot,1)",
+                                  "lag(bank_gdp,1) * lag(EU_both,1)",
+                                  # "lag(bank_gdp,1) * lag(Euro_both,1)",
+                                  "lag(bank_gdp,1) * lag(Common_Lang,1)",
+                                  paste(paste0("lag(",control_vars,",1)"),
+                                        collapse = "+"),
+                                  "CountryPair:Time_Trend",
+                                  sep = "+")),data = fin_reg_df,
+          model = "within",effect = "twoways",
+          index = c("CountryPair","Date"))
+
+
+```
+
+
+
+<!-- Regression analysis 1978-2006 period-->
+
+
+```{r estimation_crisis_fd_2007}
+
+reg_list$before_2007 = plm(formula = formula(reg_formula),
+          data = fin_reg_df %>% filter(Date <= 2006),
+          model = "within",effect = "twoways",
+          index = c("CountryPair","Date"))
+
+coef_vec_before_2007 = coefficients(reg_list$before_2007)
+
+coef_vec_before_2007 = coef_vec_before_2007[names(coef_vec_before_2007) %in%
+                                              c("lag(bank_gdp, 1)",
+                                                "lag(bank_gdp, 1):Crises",
+                                                "lag(bank_gdp, 1):FD_tot")]
+
+
+```
+
+
+<!-- Regression analysis no trend-->
+
+
+```{r estimation_no_trend}
+
+reg_no_trend_formula = paste("Fin_synch ~ lag(bank_gdp,1) * Crises",
+                             "lag(bank_gdp,1) * FD_tot",
+                             # "lag(bank_gdp,1) * EU_both",
+                             "lag(bank_gdp,1) * Euro_both",
+                             "lag(bank_gdp,1) * Common_Lang",
+                             paste(control_vars, collapse = "+"),
+                             sep = "+")
+
+
+reg_list$no_trend = plm(formula = formula(reg_no_trend_formula),
+                   data = fin_reg_df,
+                   model = "within",effect = "twoways",
+                   index = c("CountryPair","Date"))
+
+
+```
+
+
+<!-- Instrumental variable regression -->
+
+```{r save_temp_reg, eval=FALSE}
+
+write_rds(x = reg_list,
+        path = "C:\\Users\\Misha\\Documents\\Data\\TempData\\temp_reg.rds")
+
+```
+
+
+\section{Estimation and results} \label{results}
+
+
+```{r output_reg, include=FALSE}
+
+star = stargazer(reg_list$baseline, header = FALSE,digits = 2,
+          label = "baseline",table.placement = "H",
+          title = "Panel specification with controls",
+          dep.var.caption = "Fin cycles synch",
+          model.numbers = FALSE,
+          dep.var.labels.include = FALSE,
+          notes = paste0("\\parbox[t]{8cm}{",
+                         paste0("The table presents panel estimation that ",
+                                "includes twoway fixed effects and country-pair ",
+                                " specific linear time trend. ",
+                                "Financial cycles synchronization is the negative ",
+                                "difference of financial cycles growth rates. ",
+                                "Bank linkages is ",
+                                "the cross border banking claims. ",
+                                "Controls include foreign exchange ",
+                                "stability, monetary independence, financial ",
+                                "openness , trade linkages and GDP (log). ",
+                                "The standard errors are clustered ",
+                                "at country-pair level and ",
+                                "heteroscedasticity robust."),
+                         "}"),
+          notes.align = "l",
+          notes.append = FALSE,
+          se = list(sqrt(diag(vcovHC(reg_list$baseline,cluster = "group")))),
+          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
+          covariate.labels = temp_labels,
+          omit.stat = c("f","adj.rsq"))
+
+star = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
+                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
+                    star,fixed = TRUE)
+
+rm(temp_se_list, temp_reg_list)
+
+
+```
+
+
+```{r output_baseline_table, results="asis"}
+
+cat(star,sep = "\n")
+
+```
+
+
+
+\section{Robustness} \label{Robust}
+
+\subsection{1978 - 2006 period}
+
+
+```{r output_reg_2006, include=FALSE}
+
+star_2006 = stargazer(reg_list$before_2007, header = FALSE,digits = 2,
+          label = "before_2007",table.placement = "H",
+          title = "Panel specification with controls, before 2006",
+          dep.var.caption = "Fin cycles synch",
+          model.numbers = FALSE,
+          dep.var.labels.include = FALSE,
+          notes = paste0("\\parbox[t]{8cm}{",
+                         paste0("The table presents panel estimation that ",
+                                "includes twoway fixed effects and country-pair ",
+                                " specific linear time trend. ",
+                                "Financial cycles synchronization is the negative ",
+                                "difference of financial cycles growth rates. ",
+                                "Bank linkages is ",
+                                "the cross border banking claims. ",
+                                "Controls include foreign exchange ",
+                                "stability, monetary independence, financial ",
+                                "openness , trade linkages and GDP (log). ",
+                                "The standard errors are clustered ",
+                                "at country-pair level and ",
+                                "heteroscedasticity robust."),
+                         "}"),
+          notes.align = "l",
+          notes.append = FALSE,
+          se = list(sqrt(diag(vcovHC(reg_list$before_2007,cluster = "group")))),
+          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
+          covariate.labels = temp_labels,
+          omit.stat = c("f","adj.rsq"))
+
+star_2006 = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
+                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
+                    star_2006,fixed = TRUE)
+
+```
+
+
+```{r output_2006_table, results="asis"}
+
+cat(star_2006,sep = "\n")
+
+```
+
+
+
+\section{Appendix}
+
+\subsubsection{No trend}
+
+In this section, I exclude the country-pair specific linear trend in order to test the robustness of my estimation. Table \ref{no_trend} presents the results.
+
+
+```{r output_no_trend, include=FALSE}
+
+
+star_no_trend = stargazer(reg_list$no_trend, header = FALSE,digits = 2,
+          label = "no_trend",table.placement = "H",
+          title = "Panel specification with controls, no trend",
+          dep.var.caption = "Fin cycles synch",
+          model.numbers = FALSE,
+          dep.var.labels.include = FALSE,
+          notes = paste0("\\parbox[t]{8cm}{",
+                         paste0("The table presents panel estimation that ",
+                                "includes twoway fixed effects. ",
+                                "Financial cycles synchronization is the negative ",
+                                "difference of financial cycles growth rates. ",
+                                "Bank linkages is ",
+                                "the cross border banking claims. ",
+                                "Controls include foreign exchange ",
+                                "stability, monetary independence, financial ",
+                                "openness , trade linkages and GDP (log). ",
+                                "The standard errors are clustered ",
+                                "at country-pair level and ",
+                                "heteroscedasticity robust."),
+                         "}"),
+          notes.align = "l",
+          notes.append = FALSE,
+          se = list(sqrt(diag(vcovHC(reg_list$no_trend,cluster = "group")))),
+          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
+          covariate.labels = temp_labels,
+          omit.stat = c("f","adj.rsq"))
+
+star_no_trend = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
+                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
+                    star_no_trend,fixed = TRUE)
+
+
+```
+
+
+```{r output_no_trend_table, results="asis"}
+
+cat(star_no_trend,sep = "\n")
+
+```
+
+\subsubsection{Credit}
+
+```{r output_credit, include=FALSE}
+
+
+star_credit = stargazer(reg_list$credit, header = FALSE,digits = 2,
+          label = "credit",table.placement = "H",
+          title = "Panel specification with controls, credit",
+          dep.var.caption = "Credit cycles synchronization",
+          model.numbers = FALSE,
+          dep.var.labels.include = FALSE,
+          notes = paste0("\\parbox[t]{8cm}{",
+                         paste0("The table presents panel estimation that ",
+                                "includes twoway fixed effects and country-pair ",
+                                " specific linear time trend. ",
+                                "Financial cycles synchronization is the negative ",
+                                "difference of financial cycles growth rates. ",
+                                "Bank linkages is ",
+                                "the cross border banking claims. ",
+                                "Controls include foreign exchange ",
+                                "stability, monetary independence, financial ",
+                                "openness , trade linkages and GDP (log). ",
+                                "The standard errors are clustered ",
+                                "at country-pair level and ",
+                                "heteroscedasticity robust."),
+                         "}"),
+          notes.align = "l",
+          notes.append = FALSE,
+          se = list(sqrt(diag(vcovHC(reg_list$credit,cluster = "group")))),
+          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
+          covariate.labels = temp_labels,
+          omit.stat = c("f","adj.rsq"))
+
+star_credit = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
+                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
+                    star_credit,fixed = TRUE)
+
+
+```
+
+
+```{r output_credit_table, results="asis"}
+
+cat(star_credit,sep = "\n")
+
+```
+
+\subsubsection{House}
+
+```{r output_house, include=FALSE}
+
+
+star_house = stargazer(reg_list$house, header = FALSE,digits = 2,
+          label = "house",table.placement = "H",
+          title = "Panel specification with controls, house",
+          dep.var.caption = "House cycles synchronization",
+          model.numbers = FALSE,
+          dep.var.labels.include = FALSE,
+          notes = paste0("\\parbox[t]{8cm}{",
+                         paste0("The table presents panel estimation that ",
+                                "includes twoway fixed effects and country-pair ",
+                                " specific linear time trend. ",
+                                "Financial cycles synchronization is the negative ",
+                                "difference of financial cycles growth rates. ",
+                                "Bank linkages is ",
+                                "the cross border banking claims. ",
+                                "Controls include foreign exchange ",
+                                "stability, monetary independence, financial ",
+                                "openness , trade linkages and GDP (log). ",
+                                "The standard errors are clustered ",
+                                "at country-pair level and ",
+                                "heteroscedasticity robust."),
+                         "}"),
+          notes.align = "l",
+          notes.append = FALSE,
+          se = list(sqrt(diag(vcovHC(reg_list$house,cluster = "group")))),
+          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
+          covariate.labels = temp_labels,
+          omit.stat = c("f","adj.rsq"))
+
+star_house = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
+                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
+                    star_house,fixed = TRUE)
+
+
+```
+
+
+```{r output_house_table, results="asis"}
+
+cat(star_house,sep = "\n")
+
+```
+
+\subsubsection{Lagged regression}
+
+```{r output_reg_lag, include=FALSE}
+
+
+
+star_lag = stargazer(reg_list$lag, header = FALSE,digits = 2,
+          label = "lagged",table.placement = "H",
+          title = "Panel specification with controls, lagged",
+          dep.var.caption = "Fin cycles synch",
+          model.numbers = FALSE,
+          dep.var.labels.include = FALSE,
+          notes = paste0("\\parbox[t]{8cm}{",
+                         paste0("The table presents panel estimation that ",
+                                "includes twoway fixed effects.",
+                                "Financial cycles synchronization is the negative ",
+                                "difference of financial cycles growth rates. ",
+                                "Bank linkages is ",
+                                "the cross border banking claims. ",
+                                "Controls include foreign exchange ",
+                                "stability, monetary independence, financial ",
+                                "openness , trade linkages and GDP (log). ",
+                                "The standard errors are clustered ",
+                                "at country-pair level and ",
+                                "heteroscedasticity robust."),
+                         "}"),
+          notes.align = "l",
+          notes.append = FALSE,
+          se = list(sqrt(diag(vcovHC(reg_list$lag,cluster = "group")))),
+          column.sep.width = "1pt",
+          keep = paste0("^",temp_names_lag,"$"),
+          order = paste0("^",temp_names_lag,"$"),
+          covariate.labels = temp_labels,
+          omit.stat = c("f","adj.rsq"))
+
+star_lag = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
+                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
+                    star_lag,fixed = TRUE)
+
+```
+
+
+```{r output_reg_lag_table, results="asis"}
+
+cat(star_lag,sep = "\n")
+
+```
+
+

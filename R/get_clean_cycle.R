@@ -8,6 +8,8 @@
 get.clean.cycle = function(timeseries, my_pl = 8,
                            my_pu = 20, filter = "bk"){
 
+  na_ind = is.na(timeseries)
+
   if(sum(is.na(timeseries)) >=5){return(rep(NA, length(timeseries)))}
 
   if(filter == "bk"){return(bkfilter(timeseries,pl = my_pl,
