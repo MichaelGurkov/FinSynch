@@ -130,9 +130,9 @@ df_list = list(raw_data$TotalCredit %>%
                  mutate(Date = format(Date, "%Y")) %>%
                  deflate.data(.,vars_to_deflate = "Total_Credit") %>%
                  select(-Total_Credit),
-               raw_data$HousePrice %>%
-                 filter(quarters(Date) == "Q4") %>%
-                 mutate(Date = format(Date, "%Y")),
+               # raw_data$HousePrice %>%
+               #   filter(quarters(Date) == "Q4") %>%
+               #   mutate(Date = format(Date, "%Y")),
                raw_data$WDI_annual %>%
                  rename(Date = Year) %>%
                  select(-GDP_per_Capita) %>%
@@ -145,17 +145,10 @@ country_df = df_list %>%
   reduce(right_join, by = c("Date", "Country")) %>%
   group_by(Country) %>%
   arrange(Date) %>%
-  # filter(!is.na(Total_Credit_real)) %>%
-  # filter(!is.na(HousePrice)) %>%
   mutate_at(.vars = c("Total_Credit_real","HousePrice"),
             .funs = list(ret = ~ . / dplyr::lag(., order_by = Date) - 1)) %>%
-  # mutate_at(.vars = vars("Total_Credit_real","HousePrice"),
-  #           .funs = list(cycle = ~cffilter(., pl = 2 * 4,
-  #                                          pu = 8* 4 )[["cycle"]] / .)) %>%
   mutate(Fin_ret = rowMeans(data.frame(Total_Credit_real_ret,
                                        HousePrice_ret),na.rm = TRUE)) %>%
-  # mutate(Fin_cycle = rowMeans(data.frame(Total_Credit_real_cycle,
-  #                                     HousePrice_cycle),na.rm = TRUE)) %>%
   ungroup() %>%
   filter(is.finite(Fin_ret)) %>%
   filter(Date >=1978)
