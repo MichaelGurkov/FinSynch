@@ -110,6 +110,9 @@ control_vars = c("trade_gdp","FX_stab_tot","FO_ind_tot","MI_ind_tot",
 
 
 reg_formula = paste("Credit_ret ~ lag(bank_gdp,1) * Crises",
+                    # "lag(bank_gdp,1) * FD_tot",
+                    "lag(bank_gdp,1) * Euro_both",
+                    "lag(bank_gdp,1) * EU_both",
                     "lag(bank_gdp,1) * Common_Lang",
                     paste(control_vars,
                           collapse = "+"),
@@ -120,30 +123,38 @@ reg_formula = paste("Credit_ret ~ lag(bank_gdp,1) * Crises",
 
 temp_names = c("lag\\(bank_gdp, 1\\)",
                "Crises",
+               # "FD_tot",
+               "Euro_both",
+               "EU_both",
                "lag\\(bank_gdp, 1\\):Crises",
+               # "lag\\(bank_gdp, 1\\):FD_tot",
+               "lag\\(bank_gdp, 1\\):Euro_both",
+               "lag\\(bank_gdp, 1\\):EU_both",
                "lag\\(bank_gdp, 1\\):Common_Lang")
-
-temp_names_lag = c("lag\\(bank_gdp, 1\\)",
-                   "lag\\(Crises, 1\\)",
-                   "lag\\(bank_gdp, 1\\):lag\\(Crises, 1\\)",
-                   "lag\\(bank_gdp, 1\\):lag\\(Common_Lang, 1\\)")
-
 
 temp_labels = c("Bank linkages (lag)",
                 "Crises",
+                # "FD",
+                "Euro",
+                "EU",
                 "Bank linkages (lag) * Crises",
+                # "Bank linkages (lag) * FD",
+                "Bank linkages (lag) * Euro",
+                "Bank linkages (lag) * EU",
                 "Bank linkages (lag) * Commong Lang")
 
 
-notes_str = paste0(" Financial cycles synchronization",
+notes_str = paste0("Credit cycles synchronization",
                                 " is the ",
                                 "negative of the absolute difference of ",
-                                "financial cycle growth between country",
+                                "credit growth between country",
                                 " \\textit{i}",
                                 " and country \\textit{j} in year \\textit{t}. ",
                                 "Bank linkages are the total bilateral ",
                                 "cross border banking claims normalized",
                                 " by total GDP. ",
+                                "Financial development is the sum of the ",
+                                "level of each country financial development ",
                                 "index. ","Crises is an indicator variable ",
                                 "that equals 1 if at least one country ",
                                 "undergoes ",
@@ -183,17 +194,12 @@ reg_list$baseline = plm(formula = formula(reg_formula),data = fin_reg_df,
           index = c("CountryPair","Date"))
 
 
-coef_vec = coefficients(reg_list$baseline)
-
-coef_vec = coef_vec[names(coef_vec) %in% c("lag(bank_gdp, 1)",
-                                           "lag(bank_gdp, 1):Crises",
-                                           "lag(bank_gdp, 1):FD_tot")]
-
-sd_ratio = sd(fin_reg_df$bank_gdp) / sd(fin_reg_df$Credit_ret)
-
-isr_ind = grepl("Israel",fin_reg_df$CountryPair)
-
-sd_ratio_isr = sd(fin_reg_df$bank_gdp[isr_ind]) / sd(fin_reg_df$Credit_ret[isr_ind])
+reg_list$no_trend = plm(formula = formula(
+  reg_formula %>% sub(pattern = "+CountryPair:Time_Trend",
+        replacement = "",fixed = TRUE)),
+                        data = fin_reg_df,
+          model = "within",effect = "twoways",
+          index = c("CountryPair","Date"))
 
 
 
@@ -485,12 +491,43 @@ cat(star,sep = "\n")
 ```
 
 
-Estimation results are shown in table \ref{baseline}. Banking integration enters
-the equation with a negative sign, meaning that integration is associated with less synchronized cycles. We can see that this effect is state depended: the interaction terms suggest that during banking crises periods or in highly developed financial markets integration is associated with higher synchronization. This is also the case for cultural similar countries, banking integration in
-those countries increases financial synchronization.
 
-Coefficient analysis shows that the effect is economicaly significant.
-A change of one standard deviation in banking integration is associated with a change of `r abs(round(coef_vec[names(coef_vec) == "lag(bank_gdp, 1)"] * sd_ratio,2))` standard deviations in financial synchronization. During banking crises one standard deviation change in integration contributes `r abs(round(coef_vec[names(coef_vec) == "lag(bank_gdp, 1):Crises"] * sd_ratio,2))` standard deviations to the synchronization. 
+```{r output_no_trend, include=FALSE}
+
+star_no_trend = stargazer(reg_list$no_trend, header = FALSE,digits = 2,
+          label = "no_trend",table.placement = "H",
+          title = paste0("Credit synchronization and banking integration: ",
+                         "panel specification"),
+          dep.var.caption = "Credit cycles synch",
+          model.numbers = FALSE,
+          dep.var.labels.include = FALSE,
+          notes = paste0("\\parbox[t]{8cm}{",
+                         paste0("The table presents panel estimation that ",
+                                "includes twoway fixed effects. ",
+                                notes_str_ctrl,
+                                "}")),
+          notes.align = "l",
+          notes.append = FALSE,
+          se = list(sqrt(diag(vcovHC(reg_list$no_trend,cluster = "group")))),
+          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
+          covariate.labels = temp_labels,
+          omit.stat = c("f","adj.rsq"))
+
+star_no_trend = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
+                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
+                    star_no_trend,fixed = TRUE)
+
+
+```
+
+
+```{r output_no_trend_table, results="asis"}
+
+cat(star_no_trend,sep = "\n")
+
+```
+
+
 
 
 <!-- \section{Instrumental variable estimation} -->

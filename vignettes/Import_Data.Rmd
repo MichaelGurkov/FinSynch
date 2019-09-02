@@ -356,15 +356,15 @@ fin_reg_df = list(country_pair_df,
 
 ```{r filter_outliers}
 
-# country_pairs_table = table(fin_reg_df$CountryPair)
-# 
-# fin_reg_df = fin_reg_df %>%
-#   filter(CountryPair %in% names(country_pairs_table)[
-#     country_pairs_table > 10])
+country_pairs_table = table(fin_reg_df$CountryPair)
 
-# fin_reg_df = fin_reg_df %>%
-#   filter(bank_gdp >= quantile(bank_gdp,0.025) &
-#          bank_gdp <= quantile(bank_gdp,0.975))
+fin_reg_df = fin_reg_df %>%
+  filter(CountryPair %in% names(country_pairs_table)[
+    country_pairs_table > 10])
+
+fin_reg_df = fin_reg_df %>%
+  filter(bank_gdp >= quantile(bank_gdp,0.025) &
+         bank_gdp <= quantile(bank_gdp,0.975))
 
 ```
 
