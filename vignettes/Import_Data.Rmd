@@ -6,17 +6,42 @@
 
 raw_data = list()
 
-raw_data$HousePrice = import.bis.property.price.data(
-  countries_vec = countries_list$oecd_countries) %>%
-  mutate(Date = as.yearqtr(Date, format = "%Y-Q%q"))
+raw_data$oecd_codes = read.csv(paste0("C:\\Users\\Misha\\Documents",
+                                 "\\Data\\ISO\\",
+                                 "iso_3digit_alpha_country",
+                                 "_codes.csv"),
+                               stringsAsFactors = FALSE) %>%
+  setNames(c("Code","Country")) %>% 
+  mutate(Country = gsub(Country,pattern = "\\s",
+      replacement = "_")) %>% 
+  mutate(Country = sub(Country,pattern = "Korea,_Republic_of",
+      replacement = "Korea", fixed = TRUE)) %>% 
+  mutate(Country = sub(Country,pattern = "Czechia",
+      replacement = "Czech_Republic", fixed = TRUE)) %>% 
+  mutate(Country = sub(Country,pattern = "Slovakia",
+      replacement = "Slovak_Republic", fixed = TRUE))
+
+
+raw_data$HousePrice = import.oecd.houseprice() %>% 
+  rename(Code = Country) %>% 
+  left_join(raw_data$oecd_codes, by = "Code") %>% 
+  select(-Code) %>% 
+  select(Country, Date, HousePrice)
 
 raw_data$TotalCredit = import.bis.tot.credit.data(
   countries_vec = countries_list$oecd_countries) %>%
   mutate(Date = as.yearqtr(Date, format = "%Y-Q%q"))
 
-raw_data$WDI_annual = import_wdi_df(
-  countries_vec = countries_list$oecd_countries) %>%
-  mutate(GDP = GDP * 10 ^ (-6)) # Convert to millions USD
+
+raw_data$WDI = import_wdi_df() %>% 
+  rename(Date = Year) %>% 
+  mutate(GDP = GDP * 10 ^ (-6)) %>% 
+  deflate.data(vars_to_deflate = "GDP")
+
+raw_data$GDP = import.oecd.gdp.quarter() %>% 
+  rename(Code = Country) %>% 
+  left_join(raw_data$oecd_codes, by = "Code") %>% 
+  select(-Code)
 
 
 raw_data$bis_lbs = import.bis.lbs.data(
@@ -24,13 +49,12 @@ raw_data$bis_lbs = import.bis.lbs.data(
   mutate(Date = as.yearqtr(Date, format = "%Y-Q%q"))
 
 
-raw_data$codes = read.csv(paste0("C:\\Users\\Misha\\Documents",
-                                 "\\Data\\ISO\\",
-                                 "iso_2digit_alpha_country",
-                                 "_codes.csv")) %>%
-  setNames(c("Code","Country"))
 
-
+raw_data$cpi = import.bis.cpi.data(annual_freq = FALSE) %>% 
+  mutate(Date = as.yearqtr(Date, format = "%Y.%m")) %>% 
+  group_by(Date) %>% 
+  summarise(US_CPI = mean(US_CPI)) %>% 
+  ungroup()
 
 
 
@@ -125,44 +149,26 @@ raw_data$crises_df =  import.crises.dates.df(countries_vec = countries_list$oecd
 
 ```{r make_country_df}
 
-df_list = list(raw_data$TotalCredit %>%
-                 filter(quarters(Date) == "Q4") %>%
-                 mutate(Date = format(Date, "%Y")) %>%
-                 deflate.data(.,vars_to_deflate = "Total_Credit") %>%
-                 select(-Total_Credit),
-               raw_data$HousePrice %>%
-                 filter(quarters(Date) == "Q4") %>%
-                 mutate(Date = format(Date, "%Y")),
-               raw_data$WDI_annual %>%
-                 rename(Date = Year) %>%
-                 select(-GDP_per_Capita) %>%
-                 deflate.data(.,vars_to_deflate = c("GDP"),
-                              cpi = raw_data$CPI) %>%
-                 select(-GDP))
 
+country_df = list(raw_data$TotalCredit,raw_data$HousePrice) %>%
+  reduce(inner_join, by = c("Date", "Country")) %>%
+  group_by(Country) %>% 
+  filter_all(all_vars(!is.na(.))) %>% 
+  deflate.data(vars_to_deflate = "Total_Credit",
+               cpi = raw_data$cpi) %>% 
+  mutate_at(vars(c("Total_Credit_real","HousePrice")),
+          list(change = ~ (. / dplyr::lag(.,4)) - 1)) %>% 
+  rowwise() %>% 
+  mutate(Fin_ret = mean(c(Total_Credit_real_change,HousePrice_change))) %>% 
+  arrange(Country) %>% 
+  filter(!is.na(Fin_ret))
 
-country_df = df_list %>%
-  reduce(right_join, by = c("Date", "Country")) %>%
-  group_by(Country) %>%
-  arrange(Date) %>%
-  # filter(!is.na(Total_Credit_real)) %>%
-  # filter(!is.na(HousePrice)) %>%
-  mutate_at(.vars = c("Total_Credit_real","HousePrice"),
-            .funs = list(ret = ~ . / dplyr::lag(., order_by = Date) - 1)) %>%
-  # mutate_at(.vars = vars("Total_Credit_real","HousePrice"),
-  #           .funs = list(cycle = ~cffilter(., pl = 2 * 4,
-  #                                          pu = 8* 4 )[["cycle"]] / .)) %>%
-  mutate(Fin_ret = rowMeans(data.frame(Total_Credit_real_ret,
-                                       HousePrice_ret),na.rm = TRUE)) %>%
-  # mutate(Fin_cycle = rowMeans(data.frame(Total_Credit_real_cycle,
-  #                                     HousePrice_cycle),na.rm = TRUE)) %>%
-  ungroup() %>%
-  filter(is.finite(Fin_ret)) %>%
-  filter(Date >=1978)
-
-rm(df_list)
-
-
+country_df = country_df %>% 
+  filter(quarters(Date) == "Q4") %>% 
+  mutate(Date = format(Date, "%Y")) %>% 
+  left_join(raw_data$WDI %>% 
+              select(Country, Date, GDP_real),
+            by = c("Country","Date"))
 
 ```
 
@@ -189,25 +195,19 @@ country_df = left_join(country_df, import.fin.dev.ind(),
 
 bank_list = list()
 
-raw_data$bank_balance_real_norm = raw_data$bis_lbs %>%
-  filter(quarters(Date) == "Q4") %>%
-  mutate(Date = format(Date, "%Y")) %>%
-  deflate.data(.,vars_to_deflate = "Balance") %>%
+raw_data$bank_balance_real_norm = raw_data$bis_lbs %>% 
+  deflate.data(.,vars_to_deflate = "Balance",
+               cpi = raw_data$cpi) %>%
   select(Date, CountryPair,Balance_Pos, Balance_real) %>%
-  normalize.bis.data(.,norm_df = country_df[,c("Date","Country", "GDP_real")],
+  filter(quarters(Date) == "Q4") %>% 
+  mutate(Date = format(Date, "%Y"))
+  normalize.bis.data(norm_df = country_df[,c("Date","Country", "GDP_real")],
                      norm_val = "GDP_real")
 
-bank_list$bank_gdp = raw_data$bank_balance_real_norm   %>%
+bank_list$bank_gdp = raw_data$bank_balance_real_norm %>% 
   group_by(Date, CountryPair) %>%
   summarise(bank_gdp = mean(log(Balance_real), na.rm = TRUE)) %>%
   filter(!is.na(bank_gdp))
-
-# bank_pop = bank_balance_real  %>%
-#   normalize.bis.data(.,norm_df = df[,c("Date","Country", "Pop")],
-#                      norm_val = "Pop") %>%
-#   group_by(Date, CountryPair) %>%
-#   summarise(bank_pop = mean(log(Balance_real), na.rm = TRUE)) %>%
-#   filter(!is.na(bank_pop))
 
 
 ```
@@ -303,6 +303,9 @@ country_pair_df = unlist(list(bank_list, trade_list, ind_list),
   reduce(left_join, by = c("Date","CountryPair"))
 
 
+country_pair_df = country_pair_df %>% 
+  ungroup() %>% 
+  filter(complete.cases(.))
 
 ```
 
@@ -346,7 +349,7 @@ country_pair_df = country_pair_df %>%
 
 ```{r country_pair_df_add_controls}
 
-controls =  c("FX_stab","MI_ind","FO_ind","FD","GDP_real","Pop")
+controls =  c("FX_stab","MI_ind","FO_ind","FD","GDP_real")
 
 country_pair_df = append.countrypair.dataframe(
   country_pair_df,
@@ -364,7 +367,6 @@ rm(controls)
 <!-- Construct regression dataset -->
 
 ```{r make_fin_df}
-
 
 fin_reg_df = list(country_pair_df,
                   get.neg.abs.diff(country_df[, c("Date","Country",
