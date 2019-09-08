@@ -19,7 +19,9 @@ raw_data$oecd_codes = read.csv(paste0("C:\\Users\\Misha\\Documents",
   mutate(Country = sub(Country,pattern = "Czechia",
       replacement = "Czech_Republic", fixed = TRUE)) %>% 
   mutate(Country = sub(Country,pattern = "Slovakia",
-      replacement = "Slovak_Republic", fixed = TRUE))
+      replacement = "Slovak_Republic", fixed = TRUE)) %>% 
+  mutate(Country = sub("The_Netherlands","Netherlands",
+                       Country,fixed = TRUE))
 
 
 raw_data$HousePrice = import.oecd.houseprice() %>% 
@@ -157,23 +159,23 @@ country_df = list(raw_data$TotalCredit,raw_data$HousePrice) %>%
   deflate.data(vars_to_deflate = "Total_Credit",
                cpi = raw_data$cpi) %>% 
   mutate_at(vars(c("Total_Credit_real","HousePrice")),
-          list(change = ~ (. / dplyr::lag(.,4)) - 1)) %>% 
+          list(ret = ~ (. / dplyr::lag(.,4)) - 1)) %>% 
   rowwise() %>% 
-  mutate(Fin_ret = mean(c(Total_Credit_real_change,HousePrice_change))) %>% 
+  mutate(Fin_ret = mean(c(Total_Credit_real_ret,HousePrice_ret))) %>% 
   arrange(Country) %>% 
   filter(!is.na(Fin_ret))
 
-country_df = country_df %>% 
-  filter(quarters(Date) == "Q4") %>% 
-  mutate(Date = format(Date, "%Y")) %>% 
-  left_join(raw_data$WDI %>% 
-              select(Country, Date, GDP_real),
-            by = c("Country","Date"))
+# country_df = country_df %>% 
+#   filter(quarters(Date) == "Q4") %>% 
+#   mutate(Date = format(Date, "%Y")) %>% 
+#   left_join(raw_data$WDI %>% 
+#               select(Country, Date, GDP_real),
+#             by = c("Country","Date"))
 
 ```
 
 
-```{r Import_trilemma_data}
+```{r Import_trilemma_data, eval=FALSE}
 
 country_df = left_join(country_df, import.trilemma.ind(),
                        by = c("Country","Date"))
@@ -181,7 +183,7 @@ country_df = left_join(country_df, import.trilemma.ind(),
 ```
 
 
-```{r Import_fin_development_data}
+```{r Import_fin_development_data, eval=FALSE}
 
 country_df = left_join(country_df, import.fin.dev.ind(),
                        by = c("Country","Date"))
@@ -200,7 +202,7 @@ raw_data$bank_balance_real_norm = raw_data$bis_lbs %>%
                cpi = raw_data$cpi) %>%
   select(Date, CountryPair,Balance_Pos, Balance_real) %>%
   filter(quarters(Date) == "Q4") %>% 
-  mutate(Date = format(Date, "%Y"))
+  mutate(Date = format(Date, "%Y")) %>% 
   normalize.bis.data(norm_df = country_df[,c("Date","Country", "GDP_real")],
                      norm_val = "GDP_real")
 
@@ -384,11 +386,11 @@ fin_reg_df = list(country_pair_df,
 
 ```{r filter_outliers}
 
-country_pairs_table = table(fin_reg_df$CountryPair)
-
-fin_reg_df = fin_reg_df %>%
-  filter(CountryPair %in% names(country_pairs_table)[
-    country_pairs_table > 10])
+# country_pairs_table = table(fin_reg_df$CountryPair)
+# 
+# fin_reg_df = fin_reg_df %>%
+#   filter(CountryPair %in% names(country_pairs_table)[
+#     country_pairs_table > 10])
 
 # fin_reg_df = fin_reg_df %>%
 #   filter(bank_gdp >= quantile(bank_gdp,0.025) &

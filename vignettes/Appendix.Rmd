@@ -175,70 +175,6 @@ star_avg_synch = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
 ```
 
 
-<!-- Complete data synchronization -->
-
-```{r complete_estimation}
-
-complete_ret = country_df %>% 
-  select(Country, Date, Total_Credit_real_ret, HousePrice_ret) %>% 
-  filter(complete.cases(.)) %>% 
-  rowwise() %>% 
-  mutate(Fin_ret = mean(c(Total_Credit_real_ret, HousePrice_ret))) %>% 
-  select(Country, Date, Fin_ret) %>% 
-  get.neg.abs.diff() %>%
-  rename(Comp_synch = Fin_ret) %>% 
-  mutate(Comp_synch = Comp_synch * 100)
-  
-
-
-reg_list$comp_synch = plm(formula = formula(sub("Fin_synch","Comp_synch",
-                                           reg_formula, fixed = TRUE)),
-                     data = left_join(fin_reg_df, complete_ret,
-                                       by = c("Date","CountryPair")),
-                     model = "within",effect = "twoways",
-                     index = c("CountryPair","Date"))
-
-```
-
-
-```{r output_complete_synch, include=FALSE}
-
-
-star_comp_synch = stargazer(reg_list$comp_synch, header = FALSE,digits = 2,
-          label = "comp_synch",table.placement = "H",
-          title = paste0("Complete synchronization and banking integration: ",
-                         "panel specification"),
-          dep.var.caption = "Complete cycles synch",
-          model.numbers = FALSE,
-          dep.var.labels.include = FALSE,
-          notes = paste0("\\parbox[t]{8cm}{",
-                         paste0("The table presents panel estimation that ",
-                                "includes twoway fixed effects and country-pair ",
-                                " specific linear time trend. ",
-                               notes_str_ctrl %>% 
-                                 sub(pattern = "Financial cycles",
-                                     replacement = "Average",
-                                     fixed = TRUE) %>% 
-                                 sub(pattern = "financial cycle",
-                                     replacement = paste0("each component of",
-                                                          " financial cycle"),
-                                     fixed = TRUE),"}")),
-          notes.align = "l",
-          notes.append = FALSE,
-          se = list(sqrt(diag(vcovHC(reg_list$comp_synch,cluster = "group")))),
-          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
-          covariate.labels = temp_labels,
-          omit.stat = c("f","adj.rsq"))
-
-star_comp_synch = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
-                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
-                    star_comp_synch,fixed = TRUE)
-
-
-```
-
-
-
 
 <!-- All independend variables lagged by one period -->
 
@@ -347,14 +283,6 @@ star_no_trend = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
 
 The two main components of financial cycle are total credit and property prices. 
 The financial cycle is then calculated as a simple average of the percentage changes of the two variables. Unfortunately both timeseries have missing values and are not available for all countries in all years. Due to this data availability constrain the simple average calculation takes both (credit and property price) data points where available and only one data point if the other is unavailable. This calculation can produce a "structural break" problem where part of the series is calculated based on say just credit changes while the other part averages credit and property price changes. From econometric point of view we can think of both series as measuring the financial cycle with some noise. If this is the case then this "structural break" leads to heteroscedasticity problem (part of the series is based on more accurate data relative to other part). To test for robustness I run two separate regression with only the credit (or the property price) synchronization as the depended variables. The results of credit or property price synchronization presented in tables \ref{credit} and \ref{house} respectively. The results are consistent with nosier estimation behavior. In both tables the signs of banking linkages and crises effect are aligned with the main results but the statistical significance is now parted : banking integration is significant in property price specification while the crises effect is significant in credit specification.
-
-
-```{r output_comp_synch_table, results="asis"}
-
-cat(star_comp_synch,sep = "\n")
-
-```
-
 
 
 
