@@ -47,5 +47,3 @@ import.wdi.gdp = function(filepath,countries_codes = NULL,
   return(df)
 
 }
-
-
