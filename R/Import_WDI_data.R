@@ -42,7 +42,7 @@ import.wdi.gdp = function(filepath,countries_codes = NULL,
     select_if(.predicate = list(~!all(is.na(.)))) %>%
     rename_all(.funs = list(~gsub("X","",.))) %>%
     {if(!is.null(countries_codes)) filter(.,Code %in% countries_codes) else .} %>%
-    gather(key = Date,value = GDP_constant,-Country,-Code)
+    gather(key = Date,value = GDP,-Country,-Code)
 
   return(df)
 
