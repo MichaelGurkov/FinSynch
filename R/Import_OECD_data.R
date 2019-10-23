@@ -71,7 +71,6 @@
 
 import.oecd.shareprice = function(
   filepath = paste0("C:\\Users\\Misha\\Documents\\Data",
-<<<<<<< HEAD
                     "\\OECD\\House_prices.csv"),
   my_frequency = "Q"){
 
