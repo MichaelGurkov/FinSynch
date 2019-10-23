@@ -67,17 +67,24 @@
 #'
 #' @param my_frequency filters the required frequency
 #' (annual - A , quarter - Q or monthly - M). The default is Q
+#'
+#' @param my_subject filters the required category
+#' (nominal - NOMINAL, real - REAL,
+#' ratio of price to income - PRICEINCOME,
+#' ratio of price to rent - PRICERENT). The default is NOMINAL
 
 
 import.oecd.houseprice = function(
   filepath = paste0("C:\\Users\\Misha\\Documents\\Data",
                     "\\OECD\\House_prices.csv"),
-  my_frequency = "Q"){
+  my_frequency = "Q",
+  my_subject = "NOMINAL"){
 
   df = read.csv(file = filepath, stringsAsFactors = FALSE)
 
   df = df %>%
     filter(FREQUENCY == my_frequency) %>%
+    filter(SUBJECT == my_subject) %>%
     select(ï..LOCATION,TIME, Value) %>%
     rename(Country = ï..LOCATION, Date = TIME, HousePrice = Value) %>%
     mutate(Date = as.yearqtr(Date, format = "%Y-Q%q"))
