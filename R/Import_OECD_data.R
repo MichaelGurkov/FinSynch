@@ -39,8 +39,39 @@
 #' (annual - A or quarter - Q). The default is Q
 
 
-import.oecd.houseprice = function(
+
+#' Import OECD share price dataframe
+#'
+#'
+#' This function imports share price data from OECD format.
+#'
+#'
+#' @details
+#' Share price indices are calculated from the prices of common shares of
+#' companies traded on national or foreign stock exchanges. They are usually
+#' determined by the stock exchange, using the closing daily values for the
+#' monthly data, and normally expressed as simple arithmetic averages of the
+#' daily data. A share price index measures how the value of the stocks in the
+#' index is changing, a share return index tells the investor what their
+#' “return” is, meaning how much money they would make as a result of investing
+#' in that basket of shares. A price index measures changes in the market
+#' capitalisation of the basket of shares in the index whereas a return index
+#' adds on to the price index the value of dividend payments, assuming they
+#' are re-invested in the same stocks. Occasionally agencies such as central
+#' banks will compile share indices.
+#'
+#' @import dplyr
+#'
+#' @import zoo
+#'
+#'
+#' @param my_frequency filters the required frequency
+#' (annual - A , quarter - Q or monthly - M). The default is Q
+
+
+import.oecd.shareprice = function(
   filepath = paste0("C:\\Users\\Misha\\Documents\\Data",
+<<<<<<< HEAD
                     "\\OECD\\House_prices.csv"),
   my_frequency = "Q"){
 
@@ -88,6 +119,8 @@ import.oecd.houseprice = function(
 
 import.oecd.shareprice = function(
   filepath = paste0("C:\\Users\\Misha\\Documents\\Data",
+=======
+>>>>>>> 8f1ad00069a9a0e6bfa0ac390106d87b20bdc241
                     "\\OECD\\Share_prices.csv"),
   my_frequency = "Q"){
 
