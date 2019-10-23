@@ -69,7 +69,7 @@
 #' (annual - A , quarter - Q or monthly - M). The default is Q
 
 
-import.oecd.shareprice = function(
+import.oecd.houseprice = function(
   filepath = paste0("C:\\Users\\Misha\\Documents\\Data",
                     "\\OECD\\House_prices.csv"),
   my_frequency = "Q"){
@@ -118,8 +118,6 @@ import.oecd.shareprice = function(
 
 import.oecd.shareprice = function(
   filepath = paste0("C:\\Users\\Misha\\Documents\\Data",
-=======
->>>>>>> 8f1ad00069a9a0e6bfa0ac390106d87b20bdc241
                     "\\OECD\\Share_prices.csv"),
   my_frequency = "Q"){
 
