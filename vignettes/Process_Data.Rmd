@@ -1,0 +1,269 @@
+
+<!-- Construct Country level data frame -->
+
+```{r make_country_df}
+
+# Import and deflate data
+
+country_df = list(raw_data$TotalCredit %>% 
+                    deflate.data(vars_to_deflate = "Total_Credit",
+                                 cpi = raw_data$cpi),
+                  raw_data$SharePrice %>% 
+                    deflate.data(vars_to_deflate = "SharePrice",
+                                 cpi = raw_data$cpi),
+                  raw_data$HousePrice %>% 
+                    rename(HousePrice_real = HousePrice)) %>%
+  reduce(inner_join, by = c("Date", "Country")) %>% 
+  select(c("Country","Date",grep("_real$",names(.),value = TRUE))) %>% 
+  group_by(Country) %>% 
+  filter_all(all_vars(!is.na(.)))
+
+
+# Calculate YoY returns and average to get financial cycle
+
+country_df = country_df %>% 
+  mutate_at(grep("_real$",names(.),value = TRUE),
+          list(ret = ~ (. / dplyr::lag(.,4)) - 1)) %>% 
+  rowwise() %>% 
+  mutate(Fin_ret = mean(c(!!!syms(grep("ret$",names(.),
+                                       value = TRUE))))) %>% 
+  arrange(Country) %>% 
+  filter(!is.na(Fin_ret))
+
+country_df = country_df %>%
+  filter(quarters(Date) == "Q4") %>%
+  mutate(Date = format(Date, "%Y")) %>%
+  left_join(.,raw_data$GDP_current %>% 
+              deflate.data(vars_to_deflate = "GDP") %>% 
+              select(Country, Date, GDP_real),
+            by = c("Country","Date"))
+
+```
+
+
+```{r add_trilemma_data}
+
+country_df = left_join(country_df, raw_data$trilemma_data,
+                       by = c("Country","Date"))
+
+```
+
+
+```{r Import_fin_development_data}
+
+country_df = left_join(country_df, raw_data$fin_dev_data,
+                       by = c("Country","Date"))
+
+
+
+```
+
+
+<!-- Construct Country pair level data frame -->
+
+
+```{r make_bank_list}
+
+bank_list = list()
+
+raw_data$bank_balance_real_norm = raw_data$bis_lbs %>% 
+  deflate.data(.,vars_to_deflate = "Balance",
+               cpi = raw_data$cpi) %>%
+  select(Date, CountryPair,Balance_Pos, Balance_real) %>%
+  filter(quarters(Date) == "Q4") %>% 
+  mutate(Date = format(Date, "%Y")) %>% 
+  normalize.bis.data(norm_df = country_df[,c("Date","Country", "GDP_real")],
+                     norm_val = "GDP_real")
+
+bank_list$bank_gdp = raw_data$bank_balance_real_norm %>% 
+  group_by(Date, CountryPair) %>%
+  summarise(bank_gdp = mean(log(Balance_real), na.rm = TRUE)) %>%
+  filter(!is.na(bank_gdp))
+
+
+```
+
+
+```{r Import_IMF_Data}
+
+trade_list = list()
+
+export_df = lapply(list.files(paste0("C:\\Users\\Misha\\Documents\\Data",
+                                     "\\IMF\\Export-Import\\Export"),
+                              full.names = TRUE),
+                   import_imf_df,
+                   countries_vec = countries_list$oecd_countries) %>%
+  bind_rows() %>%
+  mutate(Exports = as.numeric(Exports)) %>%
+  group_by(Date, CountryPair) %>%
+  summarise(Exports = sum(Exports, na.rm = TRUE))
+
+
+import_df = lapply(list.files(paste0("C:\\Users\\Misha\\Documents\\Data",
+                                     "\\IMF\\Export-Import\\Import"),
+                              full.names = TRUE),
+                   import_imf_df,
+                   countries_vec = countries_list$oecd_countries) %>%
+  bind_rows() %>%
+  mutate(Imports = as.numeric(Imports)) %>%
+  group_by(Date, CountryPair) %>%
+  summarise(Imports = sum(Imports, na.rm = TRUE))
+
+trade_df = full_join(export_df,import_df, by = c("Date", "CountryPair")) %>%
+  gather(.,key = Balance_Pos, value = Trade, -Date, - CountryPair) %>%
+  deflate.data(.,vars_to_deflate = "Trade") %>%
+  select(-Trade)
+
+
+trade_list$trade_gdp = trade_df %>%
+  ungroup() %>%
+  normalize.imf.data(.,wdi_df = country_df[,c("Date","Country", "GDP_real")],
+                     norm_val = "GDP_real") %>%
+  group_by(Date, CountryPair) %>%
+  summarise(trade_gdp = mean(log(Trade_real), na.rm = TRUE)) %>%
+  filter(!is.na(trade_gdp)) %>%
+  filter(is.finite(trade_gdp))
+
+rm(export_df, import_df, trade_df)
+
+
+
+```
+
+
+```{r make_indicators_list}
+
+ind_list = list()
+
+ind_list$EU_both = raw_data$EU_both
+
+ind_list$EU_one =  raw_data$EU_one
+
+ind_list$Euro_both =  raw_data$Euro_both
+
+ind_list$Euro_one = raw_data$Euro_one
+
+
+```
+
+
+
+```{r make_countrypair_df}
+
+bank_gdp = raw_data$bis_lbs %>% 
+  deflate.data(.,vars_to_deflate = "Balance",
+               cpi = raw_data$cpi) %>%
+  select(Date, CountryPair,Balance_Pos, Balance_real) %>%
+  filter(quarters(Date) == "Q4") %>% 
+  mutate(Date = format(Date, "%Y")) %>% 
+  normalize.bis.data(norm_df = country_df[,c("Date","Country",
+                                             "GDP_real")],
+                     norm_val = "GDP_real") %>% 
+  group_by(Date, CountryPair) %>%
+  summarise(bank_gdp = mean(log(Balance_real), na.rm = TRUE)) %>%
+  filter(!is.na(bank_gdp))
+
+trade_gdp = raw_data$trade %>%
+  ungroup()  %>% 
+  deflate.data(.,vars_to_deflate = "Trade") %>% 
+  select(Date, CountryPair, Trade_real) %>% 
+  normalize.imf.data(.,wdi_df = country_df[,c("Date","Country",
+                                              "GDP_real")],
+                     norm_val = "GDP_real") %>%
+  group_by(Date, CountryPair) %>%
+  summarise(trade_gdp = mean(log(Trade_real),na.rm = TRUE)) %>%
+  filter(!is.na(trade_gdp)) %>%
+  filter(is.finite(trade_gdp))
+
+country_pair_df = list(bank_gdp,trade_gdp) %>%
+  reduce(left_join, by = c("Date","CountryPair")) %>% 
+  ungroup() %>% 
+  filter(complete.cases(.))
+
+rm(bank_gdp, trade_gdp)
+
+
+```
+
+
+```{r country_pair_df_add_crises_indicator}
+
+country_pair_df = country_pair_df %>%
+  separate(col = CountryPair,into = c("Country_A","Country_B"),
+           sep = "-", remove = FALSE) %>%
+  group_by(Country_A) %>%
+  mutate(Country_A_crises = classify_crises_dates(
+    Target_Country = Country_A[1],
+    dates_vec = Date,
+    crises_df = raw_data$crises_df[,1:3])) %>%
+  group_by(Country_B) %>%
+  mutate(Country_B_crises = classify_crises_dates(
+    Target_Country = Country_B[1],
+    dates_vec = Date,
+    crises_df = raw_data$crises_df[,1:3])) %>%
+  ungroup() %>%
+  rowwise() %>%
+  mutate(Crises_tot = sum(Country_A_crises, Country_B_crises)) %>%
+  mutate(Crises_one = as.numeric(Crises_tot ==1)) %>%
+  mutate(Crises_both = as.numeric(Crises_tot ==2)) %>%
+  mutate(Crises = min(Crises_tot,1)) %>%
+  ungroup() %>%
+  select(-Country_A,-Country_B)
+
+```
+
+
+```{r country_pair_df_add_geodist}
+
+country_pair_df = country_pair_df %>%
+  left_join(.,raw_data$geodist %>%
+              select(CountryPair, comlang_ethno) %>%
+              rename(Common_Lang = comlang_ethno) %>%
+              distinct(), by = "CountryPair")
+```
+
+
+```{r country_pair_df_add_controls}
+
+controls =  c("FX_stab","MI_ind","FO_ind","FD","GDP_real")
+
+country_pair_df = append.countrypair.dataframe(
+  country_pair_df,
+  country_df %>%
+    select(Date,Country,controls) %>%
+    mutate(GDP_real = log(GDP_real))) %>%
+  collapse_pair_controls(controls,collapse_funcs = "sum")
+
+rm(controls)
+
+
+```
+
+
+<!-- Construct regression dataset -->
+
+```{r make_fin_df}
+
+fin_reg_df = list(country_pair_df,
+                  get.neg.abs.diff(country_df[, c("Date","Country",
+                                                  "Fin_ret")]) %>%
+                    rename(Fin_synch = Fin_ret)) %>%
+  reduce(left_join, by = c("CountryPair","Date")) %>%
+  group_by(CountryPair) %>%
+  mutate(Time_Trend = seq_along(Date)) %>%
+  ungroup() %>%
+  mutate(Fin_synch = 100 * Fin_synch)
+
+
+#Filter outliers
+
+fin_reg_df = fin_reg_df %>% 
+  filter(bank_gdp >= quantile(bank_gdp,0.05) &
+           bank_gdp <= quantile(bank_gdp,0.99))
+
+fin_reg_df = fin_reg_df %>% 
+  filter(Date < 2018)
+
+
+```
+

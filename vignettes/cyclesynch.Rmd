@@ -35,6 +35,8 @@ devtools::load_all()
 
 library(tidyverse)
 
+library(tidyselect)
+
 library(plm)
 
 library(stargazer)
@@ -58,7 +60,7 @@ countries_list = list(
                      "Slovak_Republic","Slovenia","Spain","Sweden",
                      "Switzerland","Turkey","United_Kingdom"
                      ,"United_States"),
-  strong_countries = c("Australia","Austria","Belgium","Canada",
+  kpp_countries = c("Australia","Austria","Belgium","Canada",
                        "Switzerland","Germany","Denmark","Spain",
                        "Finland","France","United_Kingdom","Ireland",
                        "Italy","Japan","Netherlands","Portugal",
@@ -79,8 +81,6 @@ countries_list = list(
                      "Netherlands","Portugal","Slovak_Republic",
                      "Slovenia","Spain"))
 
-countries_list$weak_countries = countries_list$oecd_countries[!countries_list$oecd_countries %in% countries_list$strong_countries]
-
 
 pairs_list = lapply(names(countries_list),
                     function(temp_name){
@@ -98,12 +98,9 @@ countries_list = c(countries_list, pairs_list)
 
 rm(pairs_list)
 
-countries_list$cross_country_pairs = countries_list$oecd_countries_pairs[!countries_list$oecd_countries_pairs %in% countries_list$strong_countries_pairs & !countries_list$oecd_countries_pairs %in% countries_list$weak_countries_pairs]
-
 reg_list = list()
 
 hyp_test_list = list()
-
 
 control_vars = c("trade_gdp","FX_stab_tot","FO_ind_tot","MI_ind_tot",
                  "GDP_real_tot")
@@ -170,9 +167,23 @@ notes_str_ctrl = paste0(notes_str,
 ```
 
 
-```{r child="Import_Data.Rmd"}
+```{r child="Import_Data.Rmd", eval=FALSE}
 
 ```
+
+
+```{r}
+
+raw_data = readRDS(paste0("C:\\Users\\Misha\\Documents\\SandBox",
+                          "\\FinSynchRawData.rds"))
+
+```
+
+
+```{r child="Process_Data.Rmd"}
+
+```
+
 
 
 <!-- Regression analysis -->
@@ -360,9 +371,6 @@ star = sub("FD\\_tot","Financial development",star,fixed = TRUE)
 
 # star = sub("−0.0000","0.00",star,fixed = TRUE)
 
-
-rm(temp_df, df_list)
-
 ```
 
 
@@ -396,7 +404,6 @@ ggplot() +
             fill = "lightgray", alpha = 0.1) +
   theme_bw() + 
   theme(axis.text.x = element_text(angle = 45, vjust = 0,size = 7),
-        axis.text.y = element_blank(),axis.ticks.y = element_blank(),
         legend.position = "bottom", plot.title = element_text(hjust = 0.5),
         axis.title.x = element_blank())
 
@@ -474,8 +481,6 @@ star = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
                     "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
                     star,fixed = TRUE)
 
-rm(temp_se_list, temp_reg_list)
-
 
 ```
 
@@ -528,7 +533,7 @@ This paper studies the effect of banking integration on the synchronization of f
 
 \section{Appendix}
 
-```{r child="Appendix.Rmd"}
+```{r child="Appendix.Rmd", eval=FALSE}
 
 ```
 
@@ -538,9 +543,6 @@ This paper studies the effect of banking integration on the synchronization of f
 \textbf{Total credit}
 Importantly, the data account for credit from all sources, not only that extended by domestic banks. Total credit from financial accounts, domestic bank credit, and cross-border bank credit are the three main building blocks underlying the construction of the total credit series. Trade credit (as well as other accounts payable and receivable) is excluded from the new total credit series because the quality of the underlying data is globally poor. In principle, nominal values are used for loans, corresponding to the origination price (historical cost) plus the interest that has accrued but not been paid if there has not been a default.  All other financial assets, including debt securities, are in principle valued at market prices. In practice, though, debt securities are often reported at nominal value. This may affect international comparability in cases of large volumes of debt securities and large price swings but is impossible to adjust for. As a rule, the total credit series are not adjusted for exchange rate movements. This correction is only possible for the international banking statistics where a currency breakdown is available but would be highly artificial for the long-run series.
 
-
-\textbf{Property prices}
-I use data about residential property prices (RPP) from BIS selected residential property prices data set. The selected residential property prices are harmonized as much as possible with recommendations in the Handbook on residential property prices, an internationally agreed framework for classifying property price issues.
 
 \textbf{Bank linkages}
 This variable is based on bilateral cross-border holdings (stocks) of banks. Data on banks’ cross-border bilateral stocks of assets and liabilities come from BIS’s Locational Banking Statistics. For each country-pair and year there are up to four observations: i) asset holdings (stocks) of banks located in country i in all sectors of the economy in country j, ii) asset holdings (stocks) of banks located in country j in all sectors of the economy in country i, iii) liabilities (stocks) of banks located in country i to country j, and iv) liabilities (stocks) of banks located in country j to country i. The data are originally expressed in (millions) current U.S. dollars. I normalize the data with the following steps:
@@ -558,6 +560,7 @@ Development Indicators).
   Take the average of the log value of real bilateral assets and liabilities in each year.
 
 \end{enumerate}
+
 
 
 \textbf{Trading linkages} The measure is the log of bilateral real (deflated with the U.S. CPI) exports and imports as a share of the two countries’ GDP. Source: IMF Direction of Trade Database (2008).
@@ -593,6 +596,8 @@ MI = 1 - \frac{corr(i_{i},i_{j}) - (-1)}{1 - (-1)}
 where \textit{i} refers to home countries and \textit{j} to the base country. By construction, the maximum value is 1, and the minimum value is 0.
 Higher values of the index mean more monetary policy independence
 
+\textbf{Asset prices}
+I use data about house and share prices from OECD database.
 
 \textbf{GDP} - Source: World Development Index. Current US dollars
 

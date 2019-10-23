@@ -1,0 +1,45 @@
+
+<!-- Correlations -->
+
+```{r plot_correlations}
+
+ggplot(country_df %>% 
+  select(Country,Total_Credit_real_ret, HousePrice_real_ret) %>% 
+  group_by(Country) %>% 
+  summarise(Cor = cor(Total_Credit_real_ret, HousePrice_real_ret)),
+  aes(x = reorder(Country, Cor), y = Cor)) + 
+  geom_bar(stat = "identity") + 
+  labs(x = "", y = "",
+       title = "Correlation between credit and house growth rates") + 
+  coord_flip() + 
+  theme_bw() + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+ggplot(country_df %>% 
+  select(Country,Total_Credit_real_ret, SharePrice_real_ret) %>% 
+  group_by(Country) %>% 
+  summarise(Cor = cor(Total_Credit_real_ret, SharePrice_real_ret)),
+  aes(x = reorder(Country, Cor), y = Cor)) + 
+  geom_bar(stat = "identity") + 
+  labs(x = "", y = "",
+       title = "Correlation between credit and share growth rates") + 
+  coord_flip() + 
+  theme_bw() + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+ggplot(country_df %>% 
+  select(Country,HousePrice_real_ret, SharePrice_real_ret) %>% 
+  group_by(Country) %>% 
+  summarise(Cor = cor(HousePrice_real_ret, SharePrice_real_ret)),
+  aes(x = reorder(Country, Cor), y = Cor)) + 
+  geom_bar(stat = "identity") + 
+  labs(x = "", y = "",
+       title = "Correlation between house and share growth rates") + 
+  coord_flip() + 
+  theme_bw() + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
