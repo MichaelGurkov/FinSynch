@@ -1,65 +1,3 @@
-#' This helper function imports export import data from
-#' IMF Direction of Trade data base
-#'
-#' The function returns country pairs formatted in:
-#' small (namewise) country first order
-#'
-#' @import readxl
-#'
-#' @import dplyr
-#'
-#' @import stringr
-#'
-#' @export
-#'
-
-
-import_imf_df = function(filepath, countries_vec = NULL){
-
-  category = str_extract(filepath,"-\\s?(\\w*?)_") %>%
-    str_replace_all(.,pattern = "[-_\\s]","")
-
-  country = str_extract(filepath,"(\\w*?)\\s-") %>%
-    str_replace_all(.,pattern = "[-\\s]","")
-
-  # my_range = ifelse(country == "Belgium","B7:W219","B7:AP215")
-
- if(country == "Belgium"){
-
-   my_range = "B7:W219"
-
- } else if(country == "Czech_Republic"){
-
-   my_range = "B7:AB219"
-
- } else if(country == "Luxemburg"){
-
-   my_range = "B7:X217"
-
- } else {my_range ="B7:AP215"}
-
-
-  temp = suppressMessages(read_xlsx(filepath,range = my_range))
-
-  names(temp)[1] = "Counter_Country"
-
-  temp = temp %>%
-    mutate(Counter_Country = gsub("\\s","_",Counter_Country)) %>%
-    {if(!is.null(countries_vec)) filter(.,Counter_Country %in% countries_vec) else .} %>%
-    gather(.,key = Date, value = !!quo_name(category),
-           -Counter_Country) %>%
-    mutate(CountryPair = ifelse(Counter_Country < country,
-                                paste(Counter_Country,
-                                      country, sep = "-"),
-                                paste(country,Counter_Country,
-                                      sep = "-"))) %>%
-    select(Date, CountryPair, !!quo_name(category)) %>%
-    mutate(!!quo_name(category) := str_remove(!!quo(!!sym(category)),"e"))
-
-  return(temp)
-
-
-}
 
 
 
@@ -109,7 +47,8 @@ import.bis.cpi.data = function(filepath =
     filter(Country == "United_States") %>%
     mutate(Date = gsub("X","",Date)) %>%
     filter(!is.na(US_CPI)) %>%
-    select(Date,US_CPI)
+    select(Date,US_CPI) %>%
+    mutate(US_CPI = US_CPI / 100)
 
 
   return(cpi)
