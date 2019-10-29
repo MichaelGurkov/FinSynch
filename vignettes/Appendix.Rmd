@@ -1,232 +1,114 @@
 
-<!-- House synchronization as depended variable -->
+<!-- \subsection{Financial cycle components} -->
 
-```{r estimation_house}
+<!-- ```{r get_components_reg} -->
 
-house_synch = get.neg.abs.diff(country_df[,c("Date","Country",
-                                             "HousePrice_ret")]) %>% 
-  rename(House_synch = HousePrice_ret) %>% 
-  mutate(House_synch = House_synch * 100)
+<!-- components_list = list(Credit = "Total_Credit_real_ret", -->
+<!--                        HousePrice = "HousePrice_real_ret", -->
+<!--                        SharePrice = "SharePrice_real_ret", -->
+<!--                        FinCycle = "FinCycle_ret") -->
 
+<!-- if("FinCycle" %in% names(components_list)){ -->
+<!--   country_df = country_df %>%  -->
+<!--   rowwise() %>%  -->
+<!--   mutate("FinCycle_ret" = mean(Total_Credit_real_ret, HousePrice_real_ret)) -->
+<!--   } -->
 
-reg_list$house = plm(formula = formula(sub("Fin_synch","House_synch",
-                                           reg_formula, fixed = TRUE)),
-                     data = left_join(fin_reg_df, house_synch,
-                                       by = c("Date","CountryPair")),
-                     model = "within",effect = "twoways",
-                     index = c("CountryPair","Date"))
+<!-- res_list = lapply(names(components_list), function(temp_name){ -->
 
+<!--   source_name = components_list[[temp_name]] -->
 
+<!--   target_name = paste0(temp_name,"_synch") -->
 
-```
-
-
-```{r output_house, include=FALSE}
-
-
-star_house = stargazer(reg_list$house, header = FALSE,digits = 2,
-          label = "house",table.placement = "H",
-          title = paste0("House price synchronization and banking integration: ",
-                         "panel specification"),
-          dep.var.caption = "House cycles synch",
-          model.numbers = FALSE,
-          dep.var.labels.include = FALSE,
-          notes = paste0("\\parbox[t]{8cm}{",
-                         paste0("The table presents panel estimation that ",
-                                "includes twoway fixed effects and country-pair ",
-                                " specific linear time trend. ",
-                               notes_str_ctrl %>% 
-                                 sub(pattern = "Financial cycles",
-                                     replacement = "House price",
-                                     fixed = TRUE) %>% 
-                                 sub(pattern = "financial cycle",
-                                     replacement = "house price",
-                                     fixed = TRUE),"}")),
-          notes.align = "l",
-          notes.append = FALSE,
-          se = list(sqrt(diag(vcovHC(reg_list$house,cluster = "group")))),
-          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
-          covariate.labels = temp_labels,
-          omit.stat = c("f","adj.rsq"))
-
-star_house = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
-                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
-                    star_house,fixed = TRUE)
+<!--   temp_df = country_df %>%  -->
+<!--   select(Date, Country, source_name) %>%  -->
+<!--   get.neg.abs.diff() %>%  -->
+<!--   rename(!!sym(target_name) := !!sym(source_name)) -->
 
 
-```
+<!--   return(plm(formula = gsub("Fin_synch",target_name,reg_formula, -->
+<!--                             fixed = TRUE) %>%  -->
+<!--                formula(), -->
+<!--              data = fin_reg_df %>%  -->
+<!--                left_join(.,temp_df, by = c("Date","CountryPair")), -->
+<!--              model = "within",effect = "twoways", -->
+<!--              index = c("CountryPair","Date"))) -->
 
-<!-- Cross credit synchronization as depended variable -->
 
-```{r estimation_credit}
+<!-- }) -->
 
-credit_synch = get.neg.abs.diff(country_df[,c("Date","Country",
-                                              "Total_Credit_real_ret")]) %>% 
-  rename(Credit_synch = Total_Credit_real_ret) %>% 
-  mutate(Credit_synch = Credit_synch * 100)
-
-reg_list$credit = plm(formula = formula(sub("Fin_synch","Credit_synch",
-                                           reg_formula, fixed = TRUE)),
-                      data = left_join(fin_reg_df, credit_synch,
-                                       by = c("Date","CountryPair")),
-                      model = "within",effect = "twoways",
-                      index = c("CountryPair","Date"))
+<!-- names(res_list) = names(components_list) -->
 
 
 
-
-```
-
-
-```{r output_credit, include=FALSE}
+<!-- ``` -->
 
 
-star_credit = stargazer(reg_list$credit, header = FALSE,digits = 2,
-          label = "credit",table.placement = "H",
-          title = paste0("Credit synchronization and banking integration: ",
-                         "panel specification"),
-          dep.var.caption = "Credit cycles synch",
-          model.numbers = FALSE,
-          dep.var.labels.include = FALSE,
-          notes = paste0("\\parbox[t]{8cm}{",
-                         paste0("The table presents panel estimation that ",
-                                "includes twoway fixed effects and country-pair ",
-                                " specific linear time trend. ",
-                               notes_str_ctrl %>% 
-                                 sub(pattern = "Financial cycles",
-                                     replacement = "Credit price",
-                                     fixed = TRUE) %>% 
-                                 sub(pattern = "financial cycle",
-                                     replacement = "credit",
-                                     fixed = TRUE),"}")),
-          notes.align = "l",
-          notes.append = FALSE,
-          se = list(sqrt(diag(vcovHC(reg_list$credit,cluster = "group")))),
-          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
-          covariate.labels = temp_labels,
-          omit.stat = c("f","adj.rsq"))
+<!-- ```{r get_components_tables, include=FALSE} -->
 
-star_credit = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
-                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
-                    star_credit,fixed = TRUE)
+<!-- tables_list = lapply(names(res_list), function(temp_name){ -->
 
+<!--   star = stargazer(res_list[[temp_name]], header = FALSE,digits = 2, -->
+<!--           label = temp_name,table.placement = "H", -->
+<!--           title = paste0("Financial synchronization and banking integration: ", -->
+<!--                          "panel specification"), -->
+<!--           dep.var.caption = paste(temp_name,"cycle synch"), -->
+<!--           model.numbers = FALSE, -->
+<!--           dep.var.labels.include = FALSE, -->
+<!--           notes = paste0("\\parbox[t]{8cm}{", -->
+<!--                          paste0("The table presents panel estimation that ", -->
+<!--                                 "includes twoway fixed effects", -->
+<!--                                 " and country-pair ", -->
+<!--                                 " specific linear time trend. ", -->
+<!--                                 notes_str_ctrl,"}")), -->
+<!--           notes.align = "l", -->
+<!--           notes.append = FALSE, -->
+<!--           se = list(sqrt(diag(vcovHC(res_list[[temp_name]], -->
+<!--                                      cluster = "group")))), -->
+<!--           keep = paste0("^",temp_names,"$"), -->
+<!--           order = paste0("^",temp_names,"$"), -->
+<!--           covariate.labels = temp_labels, -->
+<!--           omit.stat = c("f","adj.rsq")) -->
 
-```
+<!--   star = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{", -->
+<!--              "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ", -->
+<!--              star,fixed = TRUE) -->
 
-
-<!-- Average synchronization -->
-
-```{r average_synch_estimation}
-
-avg_synch = full_join(credit_synch, house_synch,
-                      by = c("Date","CountryPair")) %>% 
-  filter_at(.vars = vars(Credit_synch, House_synch),
-            any_vars(!is.na(.))) %>% 
-  rowwise() %>% 
-  mutate(Avg_synch = mean(c(Credit_synch, House_synch), na.rm = TRUE)) %>% 
-  ungroup() %>% 
-  select(Date,CountryPair, Avg_synch)
-
-
-reg_list$avg_synch = plm(formula = formula(sub("Fin_synch","Avg_synch",
-                                           reg_formula, fixed = TRUE)),
-                     data = left_join(fin_reg_df, avg_synch,
-                                       by = c("Date","CountryPair")),
-                     model = "within",effect = "twoways",
-                     index = c("CountryPair","Date"))
-
-```
-
-
-```{r output_average_synch, include=FALSE}
-
-
-star_avg_synch = stargazer(reg_list$avg_synch, header = FALSE,digits = 2,
-          label = "avg_synch",table.placement = "H",
-          title = paste0("Average synchronization and banking integration: ",
-                         "panel specification"),
-          dep.var.caption = "Average cycles synch",
-          model.numbers = FALSE,
-          dep.var.labels.include = FALSE,
-          notes = paste0("\\parbox[t]{8cm}{",
-                         paste0("The table presents panel estimation that ",
-                                "includes twoway fixed effects and country-pair ",
-                                " specific linear time trend. ",
-                               notes_str_ctrl %>% 
-                                 sub(pattern = "Financial cycles",
-                                     replacement = "Average",
-                                     fixed = TRUE) %>% 
-                                 sub(pattern = "financial cycle",
-                                     replacement = paste0("each component of",
-                                                          " financial cycle"),
-                                     fixed = TRUE),"}")),
-          notes.align = "l",
-          notes.append = FALSE,
-          se = list(sqrt(diag(vcovHC(reg_list$house,cluster = "group")))),
-          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
-          covariate.labels = temp_labels,
-          omit.stat = c("f","adj.rsq"))
-
-star_avg_synch = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
-                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
-                    star_avg_synch,fixed = TRUE)
-
-
-```
+<!--   return(star) -->
 
 
 
-<!-- All independend variables lagged by one period -->
+<!-- }) -->
 
-```{r estimation_lag}
-
-
-reg_list$lag = plm(
-  formula = formula(paste("Fin_synch ~ lag(bank_gdp,1) * lag(Crises,1)",
-                                  "lag(bank_gdp,1) * lag(FD_tot,1)",
-                                  "lag(bank_gdp,1) * lag(EU_both,1)",
-                                  # "lag(bank_gdp,1) * lag(Euro_both,1)",
-                                  "lag(bank_gdp,1) * lag(Common_Lang,1)",
-                                  paste(paste0("lag(",control_vars,",1)"),
-                                        collapse = "+"),
-                                  "CountryPair:Time_Trend",
-                                  sep = "+")),data = fin_reg_df,
-          model = "within",effect = "twoways",
-          index = c("CountryPair","Date"))
+<!-- ``` -->
 
 
-```
+<!-- ```{r output_credit_table, results="asis"} -->
 
-
-```{r output_reg_lag, include=FALSE}
+<!-- cat(tables_list[[1]],sep = "\n")   -->
 
 
 
-star_lag = stargazer(reg_list$lag, header = FALSE,digits = 2,
-          label = "lagged",table.placement = "H",
-          title = "Panel specification with controls, lagged",
-          dep.var.caption = "Fin cycles synch",
-          model.numbers = FALSE,
-          dep.var.labels.include = FALSE,
-          notes = paste0("\\parbox[t]{8cm}{",
-                         paste0("The table presents panel estimation that ",
-                                "includes twoway fixed effects and country-pair ",
-                                " specific linear time trend. ",
-                                notes_str_ctrl),"}"),
-          notes.align = "l",
-          notes.append = FALSE,
-          se = list(sqrt(diag(vcovHC(reg_list$lag,cluster = "group")))),
-          column.sep.width = "1pt",
-          keep = paste0("^",temp_names_lag,"$"),
-          order = paste0("^",temp_names_lag,"$"),
-          covariate.labels = temp_labels,
-          omit.stat = c("f","adj.rsq"))
+<!-- ``` -->
 
-star_lag = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
-                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
-                    star_lag,fixed = TRUE)
 
-```
+<!-- ```{r output_house_table, results="asis"} -->
+
+<!-- cat(tables_list[[2]],sep = "\n")   -->
+
+
+
+<!-- ``` -->
+
+
+<!-- ```{r output_shares_table, results="asis"} -->
+
+<!-- cat(tables_list[[3]],sep = "\n")   -->
+
+
+
+<!-- ``` -->
+
 
 
 <!-- Regression analysis no trend-->
@@ -234,15 +116,22 @@ star_lag = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
 
 ```{r estimation_no_trend}
 
-reg_no_trend_formula = paste("Fin_synch ~ lag(bank_gdp,1) * Crises",
-                             "lag(bank_gdp,1) * FD_tot",
-                             "lag(bank_gdp,1) * Euro_both",
-                             "lag(bank_gdp,1) * Common_Lang",
-                             paste(control_vars, collapse = "+"),
-                             sep = "+")
+# reg_no_trend_formula = paste("Fin_synch ~ lag(bank_gdp,1) * Crises",
+#                              "lag(bank_gdp,1) * FD_tot",
+#                              "lag(bank_gdp,1) * Euro_both",
+#                              "lag(bank_gdp,1) * Common_Lang",
+#                              paste(control_vars, collapse = "+"),
+#                              sep = "+")
 
 
-reg_list$no_trend = plm(formula = formula(reg_no_trend_formula),
+# reg_list$no_trend = plm(formula = formula(reg_no_trend_formula),
+#                    data = fin_reg_df,
+#                    model = "within",effect = "twoways",
+#                    index = c("CountryPair","Date"))
+
+
+reg_list$no_trend = plm(formula = sub("+CountryPair:Time_Trend","",
+                                      reg_formula, fixed = TRUE),
                    data = fin_reg_df,
                    model = "within",effect = "twoways",
                    index = c("CountryPair","Date"))
@@ -279,33 +168,6 @@ star_no_trend = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
 
 ```
 
-\subsection{Structural breaks in timeseries}
-
-The two main components of financial cycle are total credit and property prices. 
-The financial cycle is then calculated as a simple average of the percentage changes of the two variables. Unfortunately both timeseries have missing values and are not available for all countries in all years. Due to this data availability constrain the simple average calculation takes both (credit and property price) data points where available and only one data point if the other is unavailable. This calculation can produce a "structural break" problem where part of the series is calculated based on say just credit changes while the other part averages credit and property price changes. From econometric point of view we can think of both series as measuring the financial cycle with some noise. If this is the case then this "structural break" leads to heteroscedasticity problem (part of the series is based on more accurate data relative to other part). To test for robustness I run two separate regression with only the credit (or the property price) synchronization as the depended variables. The results of credit or property price synchronization presented in tables \ref{credit} and \ref{house} respectively. The results are consistent with nosier estimation behavior. In both tables the signs of banking linkages and crises effect are aligned with the main results but the statistical significance is now parted : banking integration is significant in property price specification while the crises effect is significant in credit specification.
-
-
-
-```{r output_avg_synch_table, results="asis"}
-
-cat(star_avg_synch,sep = "\n")
-
-```
-
-
-```{r output_house_table, results="asis"}
-
-cat(star_house,sep = "\n")
-
-```
-
-
-```{r output_credit_table, results="asis"}
-
-cat(star_credit,sep = "\n")
-
-```
-
 
 \subsection{No trend}
 
@@ -319,12 +181,77 @@ cat(star_no_trend,sep = "\n")
 ```
 
 
+<!-- Regression analysis lagged regression-->
+
+
+```{r estimation_reg_lag}
+
+reg_lag_formula = paste("Fin_synch ~ lag(bank_gdp,1) * lag(Crises, 1)",
+                             "lag(bank_gdp,1) * lag(FD_tot, 1)",
+                             "lag(bank_gdp,1) * lag(Euro_both, 1)",
+                             "lag(bank_gdp,1) * lag(Common_Lang, 1)",
+                             paste(control_vars, collapse = "+"),
+                             sep = "+")
+
+
+reg_list$reg_lag = plm(formula = reg_formula %>% 
+                         gsub(pattern = "Crises",
+                              replacement = "lag\\(Crises, 1\\)") %>% 
+                         gsub(pattern = "FD_tot",
+                              replacement = "lag\\(FD_tot, 1\\)") %>% 
+                         gsub(pattern = "Common_Lang",
+                              replacement = "lag\\(Common_Lang, 1\\)"),
+                   data = fin_reg_df,
+                   model = "within",effect = "twoways",
+                   index = c("CountryPair","Date"))
+
+
+```
+
+
+```{r output_reg_lag, include=FALSE}
+
+
+star_reg_lag = stargazer(reg_list$reg_lag, header = FALSE,digits = 2,
+          label = "lagged",table.placement = "H",
+          title = paste0("Financial synchronization and banking integration: ",
+                         "lagged regression"),
+          dep.var.caption = "Fin cycles synch",
+          model.numbers = FALSE,
+          dep.var.labels.include = FALSE,
+          notes = paste0("\\parbox[t]{8cm}{",
+                         paste0("The table presents panel estimation that ",
+                                "includes twoway fixed effects. ",
+                                notes_str_ctrl),"}"),
+          notes.align = "l",
+          notes.append = FALSE,
+          se = list(sqrt(diag(vcovHC(reg_list$reg_lag,cluster = "group")))),
+          keep = paste0("^",temp_names %>% 
+                          gsub(pattern = "Crises",
+                               replacement = "lag\\\\(Crises, 1\\\\)") %>% 
+                          gsub(pattern = "FD_tot",
+                               replacement = "lag\\\\(FD_tot, 1\\\\)") %>% 
+                          gsub(pattern = "Common_Lang",
+                               replacement = "lag\\\\(Common_Lang, 1\\\\)"),
+                        "$"),
+          order = paste0("^",temp_names,"$"),
+          covariate.labels = temp_labels,
+          omit.stat = c("f","adj.rsq"))
+
+star_reg_lag = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
+                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
+                    star_reg_lag,fixed = TRUE)
+
+
+```
+
+
 \subsection{Lagged regression}
 To test for another specification issue I run a regression where every independend variable is lagged one period. This is done in order to align the lagged banking linkages (that were lagged to address endogeneity) and other variables. The results are presented in table \ref{lagged}, all the results are quantitatively similiar to the main results.
 
 ```{r output_reg_lag_table, results="asis"}
 
-cat(star_lag,sep = "\n")
+cat(star_reg_lag,sep = "\n")
 
 ```
 

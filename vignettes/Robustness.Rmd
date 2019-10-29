@@ -1,0 +1,60 @@
+
+
+\subsection{Rolling correlation}
+
+```{r rol_cor_estimation}
+
+roll_cor = get.roll.cor(country_df %>% 
+                            select(Date, Country,Fin_ret), win_len = 5) %>% 
+  rename(Fin_roll_cor = Fin_ret)
+
+reg_list$roll_cor_reg = plm(formula = gsub("Fin_synch","Fin_roll_cor",
+                                           reg_formula, fixed = TRUE),
+                            data = fin_reg_df %>% 
+                              left_join(roll_cor) %>% 
+                              select(-Fin_synch),
+                            model = "within",effect = "twoways",
+                            index = c("CountryPair","Date"))
+
+rm(roll_cor)
+
+```
+
+
+```{r output_rol_cor_reg, include=FALSE}
+
+star_rol_cor_reg = stargazer(reg_list$roll_cor_reg, header = FALSE,digits = 2,
+          label = "roll_cor_reg",table.placement = "H",
+          title = paste0("Financial synchronization and banking integration: ",
+                         "panel specification"),
+          dep.var.caption = "Fin cycles synch (rolling correlation)",
+          model.numbers = FALSE,
+          dep.var.labels.include = FALSE,
+          notes = paste0("\\parbox[t]{8cm}{",
+                         paste0("The table presents panel estimation that ",
+                                "includes twoway fixed effects and country-pair ",
+                                " specific linear time trend. ",
+                                sub("negative of the absolute difference",
+                                    "rolling (10 year) correlation",
+                                    notes_str_ctrl), "}")),
+          notes.align = "l",
+          notes.append = FALSE,
+          se = list(sqrt(diag(vcovHC(reg_list$roll_cor_reg,cluster = "group")))),
+          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
+          covariate.labels = temp_labels,
+          omit.stat = c("f","adj.rsq"))
+
+star_rol_cor_reg = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
+                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
+                    star_rol_cor_reg,fixed = TRUE)
+
+
+```
+
+
+```{r output_rol_cor_reg_table, results="asis"}
+
+cat(star_rol_cor_reg,sep = "\n")
+
+```
+

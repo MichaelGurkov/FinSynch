@@ -38,7 +38,8 @@ raw_data$GDP_constant = import.wdi.gdp(
     filter(Country %in% countries_list$oecd_countries) %>% 
     select(Code) %>% 
     unlist()) %>% 
-  mutate(GDP = GDP * 10 ^ (-6))
+  mutate(GDP = GDP * 10 ^ (-6)) %>% 
+  mutate(Country = gsub("\\s","_",Country))
 
 raw_data$GDP_current = import.wdi.gdp(
   filepath = paste0("C:\\Users\\Misha\\Documents\\Data\\World ",
@@ -48,7 +49,8 @@ raw_data$GDP_current = import.wdi.gdp(
     filter(Country %in% countries_list$oecd_countries) %>% 
     select(Code) %>% 
     unlist()) %>% 
-  mutate(GDP = GDP * 10 ^ (-6))
+  mutate(GDP = GDP * 10 ^ (-6)) %>% 
+  mutate(Country = gsub("\\s","_",Country))
 
 raw_data$HousePrice = import.oecd.houseprice() %>% 
   rename(Code = Country) %>% 

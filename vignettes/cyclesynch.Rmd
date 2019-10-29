@@ -172,7 +172,7 @@ notes_str_ctrl = paste0(notes_str,
 ```
 
 
-```{r}
+```{r temp_import}
 
 raw_data = readRDS(paste0("C:\\Users\\Misha\\Documents\\SandBox",
                           "\\FinSynchRawData.rds"))
@@ -180,10 +180,20 @@ raw_data = readRDS(paste0("C:\\Users\\Misha\\Documents\\SandBox",
 ```
 
 
-```{r child="Process_Data.Rmd"}
+```{r child="Process_Data.Rmd",eval=FALSE}
 
 ```
 
+
+```{r temp_fin_reg}
+
+fin_reg_df = readRDS(paste0("C:\\Users\\Misha\\Documents\\SandBox",
+                           "\\FinSynchFinReg.rds"))
+
+country_df = readRDS(paste0("C:\\Users\\Misha\\Documents\\SandBox",
+                           "\\FinSynchCountryDF.rds"))
+
+```
 
 
 <!-- Regression analysis -->
@@ -225,7 +235,7 @@ The theory provides ambiguous predictions regarding the effect of financial inte
 
 <!-- How do you do it (methodology) -->
 
-To this end, I follow the methodology suggested by @Kalemli-Ozcan2013JF. Specifically, I use their measures of cycles synchronization and banking linkages and run a panel regression controlling for common and time-invariant unobservable factors. I also control for (as much as possible) other economic factors that can affect both financial cycle synchronization and banking integration. The authors focus on 18 countries (all members of the OECD), I expand my sample to all current OECD countries.
+To this end, I follow the methodology suggested by @Kalemli-Ozcan2013JF. Specifically, I use their measures of cycles synchronization and banking linkages and run a panel regression controlling for common and time-invariant unobservable factors. I also control for (as much as possible) other economic factors that can affect both financial cycle synchronization and banking integration. The authors focus on 18 countries (all members of the OECD), I expand my sample to 30 current OECD countries.
 
 <!-- What do you find -->
 I find evidence that financial integration is negatively associated with cycles synchronization thus acting as a shock absorbent. My results show that the relationship is state dependent: I find that during financial crises financial integration is associated with more synchronized financial cycles relative to normal times. In a highly developed financial market, integration is also associated with more synchronized cycles relative to a low level of financial development. 
@@ -270,7 +280,8 @@ This specification includes time and country-pair fixed effect in order to contr
 The estimation results can be subject to endogeneity problem for reasons of omitting relevant variable or reverse causality. In order to address this issue, I take several steps: first, I augment the specified regression with a set of variables in order to control for other economic factors that can affect both financial cycle synchronization and banking integration. @Chinn2010 suggest that the most important factors for monetary policy are foreign exchange stability, monetary independence, and financial openness. The authors construct indexes of the relevant measures and I include them in the control variables set. I also include trading linkages and gravity measure\footnote{All the variables are explained in the Appendix.} in the controlling variables set. Second, bank linkages enter in my specification in a lagged form (again following @Kalemli-Ozcan2013JF), that should attenuate the reverse causality problem.
 
 @Kalemli-Ozcan2013JF focused on 18 members of OECD for 1978-2006 years.
-I expand the sample to include all the OECD countries for `r paste(range(fin_reg_df$Date), collapse = "-")` period.
+I expand the sample to include 30 OECD countries for
+`r paste(range(fin_reg_df$Date), collapse = "-")` period.
 
 
 \subsection{Crisis effect}
@@ -288,15 +299,9 @@ In order to account for those findings, I introduce an indicator variable for ba
 
 @Fisman2004 analyze the role of financial development in allocating resources. They argue that global (productivity) shocks will induce comovement of growth rates among countries with a high level of financial development since undeveloped countries will not be able to react to the shocks of other countries. Thus, financial development at a high level can transmit global shocks and induce comovement in economic activity.
 
-I hypothesize that this phenomenon (financial development at high level inducing comovement) holds with respect to financial activity as well. An example is given in @Acharya2010. The authors analyze an investment strategy of large commercial banks that set up asset back commercial paper (ABCP) conduits. This strategy involved selling to investors short-term asset-backed commercial paper and investing the proceeds mainly in US asset back longer-term securities. Once negative news about US assets emerged, all the banks suffered significant losses, thus inducing comovement. This investment strategy required a highly developed domestic financial market (financing through commercial paper instruments), and it is not surprising that the list of countries whose banks were pursuing this strategy includes US, UK, Germany, France, Belgium, and Portugal - highly developed countries.
+I hypothesize that this phenomenon (comovement induced by high level of financial development) holds with respect to financial activity as well. An example is given in @Acharya2010. The authors analyze an investment strategy of large commercial banks that set up asset back commercial paper (ABCP) conduits. This strategy involved selling to investors short-term asset-backed commercial paper and investing the proceeds mainly in US asset back longer-term securities. Once negative news about US assets emerged, all the banks suffered significant losses, thus inducing comovement. This investment strategy required a highly developed domestic financial market (financing through commercial paper instruments), and it is not surprising that the list of countries whose banks were pursuing this strategy includes US, UK, Germany, France, Belgium, and Portugal - highly developed countries.
 
 To account for the fact that the effect of financial integration depends on the level of domestic financial development I include an index of financial development (the sum of financial development index of each country in the country-pair) and an interaction term between financial development and banking integration. Data on financial development index comes from @Sviry2016 and includes an index of financial development of all the countries in my sample for `r paste(range(fin_reg_df$Date[!is.na(fin_reg_df$FD_tot)]), collapse = "-")` period.
-
-
-\subsection{Cultural Similarities}
-
-@Grinblatt2001 documents the importance of cultural similarities like distance, language and culture for financial decisions. The authors show that investors prefer to invest in firms that issue reports in their mother tongue and have chief executives of the same cultural background. @Altug2013 show that business cycle features are related to institutional and cultural characteristics, and that cultural features matter for cycles synchronization.
-@Frankel1998 analyze business cycles synchronization and find that countries that share common language tend to exhibit greater synchronization. The financial counterpart of this finding is the hypothesis that common language is associated with higher financial synchronization. In order to test this hypothesis I add an interaction term between common language indicator and banking integration\footnote{Country-pair fixed effects absorb the unconditional effect of common language}.
 
 
 \section{Data} \label{Data}
@@ -321,7 +326,7 @@ The BIS statistics have possibly the most extensive time coverage from all simil
 
 \subsection{Financial cycles synchronization}
 
-Credit and property prices are considered as the most fundamental components of the financial cycle and are extensively used in the literature (see @Drehmann2012, @Grinderslev2017). @Borio2014 argues that the most parsimonious description of the financial cycle can be made in terms of credit and property prices. Following this literature, I use total credit and property prices data to estimate the financial cycle. Importantly, total credit account for credit from all sources, namely credit from financial accounts, domestic bank credit, and cross-border bank credit are the three main building blocks underlying the construction of the total credit series. Property prices come from BIS selected residential property prices data set. The selected residential property prices are harmonized as much as possible with recommendations in the Handbook on residential property prices, an internationally agreed framework for classifying property price issues.
+Credit and assets prices are considered as the most fundamental components of the financial cycle and are extensively used in the literature (see @Drehmann2012, @Grinderslev2017). @Borio2014 argues that the most parsimonious description of the financial cycle can be made in terms of credit and property prices. @Rey2015 and @MirandaRey2015 expand the definition of financial cycle to include both house and share prices. Following this literature, I use total credit and asset (property and shares) prices data to estimate the financial cycle. Importantly, total credit account for credit from all sources, namely credit from financial accounts, domestic bank credit, and cross-border bank credit are the three main building blocks underlying the construction of the total credit series. The credit data come frome BIS database while property and shares prices come from OECD data.
 
 
 I calculate the percentage difference of each variable and then take a simple average to obtain the growth of the financial cycle. As a measure of synchronization of financial cycles, I use the negative of divergence in growth rates defined as the absolute value of financial cycle growth differences between country \textit{i} and country \textit{j} in period \textit{t}.
@@ -333,8 +338,9 @@ FinSynch_{i,j,i} = -\lvert FinRet_{i,t}  - FinRet_{j,t} \rvert
 where:
 
 \begin{equation*}
-FinRet_{i,t} = 0.5 \cdot ln \left(  \frac{TotalCredit_{t}}{TotalCredit_{t-1}} \right) 
-+0.5 \cdot ln\left( \frac{HousePrice_{t}}{HousePrice_{t-1}} \right) 
+FinRet_{i,t} = \frac{1}{3} \cdot ln \left(  \frac{TotalCredit_{t}}{TotalCredit_{t-1}} \right) 
++\frac{1}{3} \cdot ln\left( \frac{HousePrice_{t}}{HousePrice_{t-1}} \right) 
++\frac{1}{3} \cdot ln\left( \frac{SharePrice_{t}}{SharePrice_{t-1}} \right)
 \end{equation*}	
 
 This index is simple and quite popular (for example @Kalemli-Ozcan2013, @Giannone2010). In contrast to the correlation measures, it is not sensitive to the various filtering methods that have been criticized on many grounds (e.g.,@Canova1998).
@@ -508,18 +514,19 @@ A change of one standard deviation in banking integration is associated with a c
 ```
 
 
-\section{Robustness} \label{Robust}
 
-<!-- Before crisis period -->
+\section{Israel} \label{Israel}
 
-```{r , child="Before_Crisis.Rmd",eval=FALSE}
+```{r, child="Israel.Rmd"}
 
 ```
 
 
-\section{Israel} \label{Israel}
 
-```{r, child="Israel.Rmd",eval=FALSE}
+\section{Robustness} \label{Robust}
+
+
+```{r child="Robustness.Rmd"}
 
 ```
 
@@ -533,7 +540,7 @@ This paper studies the effect of banking integration on the synchronization of f
 
 \section{Appendix}
 
-```{r child="Appendix.Rmd", eval=FALSE}
+```{r child="Appendix.Rmd"}
 
 ```
 
@@ -560,6 +567,13 @@ Development Indicators).
   Take the average of the log value of real bilateral assets and liabilities in each year.
 
 \end{enumerate}
+
+\textbf{HousePrices}
+
+The housing prices indicator shows indices of residential property prices over time. The real house price is given by the ratio of nominal price to the consumers’ expenditure deflator in each country, both seasonally adjusted, from the OECD national accounts database. This indicator is an index with base year 2015. The source is OECD (2019), Housing prices (indicator).
+
+\textbf{SharePrices}
+Share price indices are calculated from the prices of common shares of companies traded on national or foreign stock exchanges. They are usually determined by the stock exchange, using the closing daily values for the monthly data, and normally expressed as simple arithmetic averages of the daily data. The source is OECD (2019), Share prices (indicator).
 
 
 

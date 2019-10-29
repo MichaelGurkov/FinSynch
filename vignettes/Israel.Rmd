@@ -1,12 +1,16 @@
 For illustration purpose I present in this section the result of the analysis for the case of Israel.
 
 
-```{r plot_israel_vars, fig.height=7, fig.height=7, eval=FALSE}
+```{r plot_israel_vars, fig.height=7, fig.height=7}
 
 ggplot(country_df %>%
          filter(Country == "Israel") %>%
-         select(Date, Total_Credit_real, HousePrice, GDP_real, FD) %>%
-         rename(Credit = Total_Credit_real, GDP = GDP_real) %>%
+         select(Date, Total_Credit_real, HousePrice_real,
+                SharePrice_real,GDP_real, FD) %>%
+         rename_all(.funs = list(~gsub(pattern = "_real",
+                                       replacement = "",
+                                       x = .,
+                                       fixed = TRUE))) %>%
          mutate(GDP = GDP * 10 ^ (-3)) %>%
          gather(key = Indicator, value = Val, -Date),
        aes(x = Date, y = Val, group = Indicator)) +
