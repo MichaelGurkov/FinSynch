@@ -108,35 +108,36 @@ control_vars = c("trade_gdp","FX_stab_tot","FO_ind_tot","MI_ind_tot",
 
 reg_formula = paste("Fin_synch ~ lag(bank_gdp,1) * Crises",
                     "lag(bank_gdp,1) * FD_tot",
-                    "lag(bank_gdp,1) * Common_Lang",
+                    "lag(bank_gdp,1) * Euro_both",
                     paste(control_vars,
                           collapse = "+"),
                     "CountryPair:Time_Trend",
                     sep = "+")
 
-
-
 temp_names = c("lag\\(bank_gdp, 1\\)",
                "Crises",
                "FD_tot",
+               "Euro_both",
                "lag\\(bank_gdp, 1\\):Crises",
                "lag\\(bank_gdp, 1\\):FD_tot",
-               "lag\\(bank_gdp, 1\\):Common_Lang")
+               "lag\\(bank_gdp, 1\\):Euro_both")
 
 temp_names_lag = c("lag\\(bank_gdp, 1\\)",
                    "lag\\(Crises, 1\\)",
                    "lag\\(FD_tot, 1\\)",
+                   "lag\\(Euro_both, 1\\)",
                    "lag\\(bank_gdp, 1\\):lag\\(Crises, 1\\)",
                    "lag\\(bank_gdp, 1\\):lag\\(FD_tot, 1\\)",
-                   "lag\\(bank_gdp, 1\\):lag\\(Common_Lang, 1\\)")
+                   "lag\\(bank_gdp, 1\\):lag\\(Euro_both, 1\\)")
 
 
 temp_labels = c("Bank linkages (lag)",
                 "Crises",
                 "FD",
-                 "Bank linkages (lag) * Crises",
+                "Euro",
+                "Bank linkages (lag) * Crises",
                 "Bank linkages (lag) * FD",
-                 "Bank linkages (lag) * Commong Lang")
+                "Bank linkages (lag) * Euro")
 
 
 notes_str = paste0(" Financial cycles synchronization",
@@ -198,7 +199,6 @@ country_df = readRDS(paste0("C:\\Users\\Misha\\Documents\\SandBox",
 
 <!-- Regression analysis -->
 
-
 ```{r estimation}
 
 reg_list$baseline = plm(formula = formula(reg_formula),data = fin_reg_df,
@@ -221,8 +221,6 @@ sd_ratio_isr = sd(fin_reg_df$bank_gdp[isr_ind]) / sd(fin_reg_df$Fin_synch[isr_in
 
 
 ```
-
-
 
 \section{Introduction} 
 
@@ -285,7 +283,7 @@ I expand the sample to include 30 OECD countries for
 
 
 \subsection{Crisis effect}
-Several papers (see @Kalemli-Ozcan2013, @Aysun2019, @Fratzscher2012) find that during financial crises times the effect of global ("push") factors in cross border bank lending increases. If during financial crises times common (global) shocks are prevalent that should induce more synchronized financial cycles. That means that the crisis effect should be positive and the "shock propagator" role of banking integration should increase during crisis times.
+Several papers (see @Kalemli-Ozcan2013, @Aysun2019, @Fratzscher2012) find that during financial crises times the effect of global ("push") factors in cross border bank lending increases. If during financial crises times common (global) shocks are prevalent that should induce more synchronized financial cycles. That means that the crisis effect should be positive and the "shock propagator" role of banking integration should increase during crisis times. @Stremmel2015 analyze financial cycles of 21 EU economies and find that during stress periods the similarity of financial cycles increases.
 
 In order to account for those findings, I introduce an indicator variable for banking crises periods. The variable equals 1 if at least one country of the country-pair is going through banking crises at period \textit{t}. The data comes from an updated version of @Laeven2013 and includes the start and end year of banking crises in the OECD countries for the entire sample period. I expect that the effect of banking integration will be different in crises vs normal times and in order to capture this difference I add an interaction variable between bank linkages and crisis indicator to the estimation equation.
 
@@ -326,7 +324,7 @@ The BIS statistics have possibly the most extensive time coverage from all simil
 
 \subsection{Financial cycles synchronization}
 
-Credit and assets prices are considered as the most fundamental components of the financial cycle and are extensively used in the literature (see @Drehmann2012, @Grinderslev2017). @Borio2014 argues that the most parsimonious description of the financial cycle can be made in terms of credit and property prices. @Rey2015 and @MirandaRey2015 expand the definition of financial cycle to include both house and share prices. Following this literature, I use total credit and asset (property and shares) prices data to estimate the financial cycle. Importantly, total credit account for credit from all sources, namely credit from financial accounts, domestic bank credit, and cross-border bank credit are the three main building blocks underlying the construction of the total credit series. The credit data come frome BIS database while property and shares prices come from OECD data.
+Credit and assets prices are considered as the most fundamental components of the financial cycle and are extensively used in the literature (see @Drehmann2012, @Grinderslev2017). @Borio2014 argues that the most parsimonious description of the financial cycle can be made in terms of credit and property prices. @Rey2015 and @MirandaRey2015 expand the definition of financial cycle to include both house and share prices. Following this literature, I use total credit and assets (property and shares) price data to estimate the financial cycle. Importantly, total credit account for credit from all sources, namely credit from financial accounts, domestic bank credit, and cross-border bank credit are the three main building blocks underlying the construction of the total credit series. The credit data come frome BIS database while property and shares prices come from OECD data.
 
 
 I calculate the percentage difference of each variable and then take a simple average to obtain the growth of the financial cycle. As a measure of synchronization of financial cycles, I use the negative of divergence in growth rates defined as the absolute value of financial cycle growth differences between country \textit{i} and country \textit{j} in period \textit{t}.
@@ -349,114 +347,9 @@ It also does not contain estimation error that emerges, for example, from self-s
 
 \subsection{Descriptive Statistics} \label{DescStat}
 
-Summary statistics of the data are presented in table \ref{summary_table}.
-
-```{r countrypair_table_summary, include=FALSE}
-
-
-star = stargazer(fin_reg_df %>% 
-                   select(Fin_synch, bank_gdp, FD_tot) %>% 
-                   as.data.frame(),
-                 title = "Summary statistics of the main variables",
-                 table.placement = "H",
-                 label = "summary_table",
-          header =FALSE, summary = TRUE,
-          digits = 2,digits.extra = 2,
-          summary.stat = c("max","min","mean","median","sd","n"),
-          notes = paste0("\\parbox[t]{16cm}{",
-                         paste0("Note: The table reports summary statistics of ",
-                                "the main variables used in the empirical ",
-                                "analysis.",notes_str ,"}")))
-
-
-star = sub("Fin\\_synch","Fin cycles synch",star,fixed = TRUE)
-
-star = sub("bank\\_gdp","Banking linkages",star,fixed = TRUE)
-
-star = sub("FD\\_tot","Financial development",star,fixed = TRUE)
-
-# star = sub("−0.0000","0.00",star,fixed = TRUE)
+```{r child="Descriptive_Stats.Rmd"}
 
 ```
-
-
-```{r output_summary_table, results="asis"}
-
-cat(star, sep = "\n")
-
-```
-
-
-Figure \ref{plot_bank_gdp} shows the average cross border (bilateral) bank linkages of the countries in my sample. We can see that financial integration had increased since the 1980s until 2007-2008 (the Global Financial Crises)  and then a sharp drop followed, dropping below initial levels. The shaded area in the figure refer to dates of banking crises in the sample countries and it seems that those are associated with a decrease in financial integration.
-
-
-```{r plot_bank_gdp,fig.cap="Average real cross border bank claims \\label{plot_bank_gdp}",fig.height=5}
-
-ggplot() + 
-  labs(title = "Average bank linkages \n (real, normalized by gdp)",
-       y = "", x = "") + 
-  geom_line(fin_reg_df %>% 
-              select(Date, bank_gdp) %>% 
-              group_by(Date) %>% 
-              summarise(Avg_bank = mean(bank_gdp,
-                                        na.rm = TRUE)) %>% 
-              ungroup() %>% 
-              filter(complete.cases(.)),
-            mapping = aes(x = Date, y = Avg_bank, group = 1)) + 
-  geom_rect(data = raw_data$crises_df %>% 
-              select(Start,End),
-            mapping = aes(xmin = Start,xmax = End,
-                          ymin = -Inf, ymax = Inf),
-            fill = "lightgray", alpha = 0.1) +
-  theme_bw() + 
-  theme(axis.text.x = element_text(angle = 45, vjust = 0,size = 7),
-        legend.position = "bottom", plot.title = element_text(hjust = 0.5),
-        axis.title.x = element_blank())
-
-
-```
-
-
-```{r plot_bank_gdp_strata,fig.cap="Average real cross border bank by claims country-pair group \\label{plot_bank_gdp_strata}",fig.height=3, eval=FALSE}
-
-ggplot(fin_reg_df %>% 
-         mutate(FSAP = as.numeric(CountryPair %in% countries_list$fsap_countries_pairs)) %>% 
-         group_by(Date,FSAP) %>% 
-         summarise(avg_bank_gdp = mean(bank_gdp)),
-       aes(x = Date, y = avg_bank_gdp, group = 1)) + 
-  geom_line() + 
-  labs(y = "", x = "") + 
-  theme_bw() + 
-  labs(title = "Bank linkages by country groups") + 
-  theme(axis.ticks = element_blank(),
-        axis.text = element_blank(),
-        panel.grid = element_blank(), plot.title = element_text(hjust = 0.5)) + 
-  facet_grid(~FSAP)
-
-```
-
-
-```{r plot_average_cycle_synch,fig.cap="Average financial cycle synchronization \\label{plot_Fin_synch}",fig.pos="H"}
-
-ggplot(fin_reg_df %>% 
-         select(Date, Fin_synch) %>% 
-         group_by(Date) %>% 
-         summarise(Avg_Fin_synch = mean(Fin_synch, na.rm = TRUE)) %>% 
-         ungroup() %>% 
-         filter(complete.cases(.)) %>% 
-         filter(is.finite(Avg_Fin_synch)),
-       aes(x = Date, y = Avg_Fin_synch, group = 1)) + 
-  labs(title = "Average financial cycle synchronization",y = "", x = "") + 
-  geom_line() + 
-  theme_bw() + 
-  theme(axis.text.x = element_text(angle = 45, vjust = 0),
-        legend.position = "bottom", plot.title = element_text(hjust = 0.5))
-
-
-```
-
-
-Figure \ref{plot_Fin_synch} shows the average synchronization (measured as the difference between credit and house price growth rates for each country-pair). The synchronization seems to be quite volatile with no specific trend until 2007-2008 (the global financial crises) and trending upward since. 
 
 
 \section{Estimation and results} \label{results}
@@ -499,17 +392,16 @@ cat(star,sep = "\n")
 
 
 Estimation results are shown in table \ref{baseline}. Banking integration enters
-the equation with a negative sign, meaning that integration is associated with less synchronized cycles. We can see that this effect is state depended: the interaction terms suggest that during banking crises periods or in highly developed financial markets integration is associated with higher synchronization. This is also the case for cultural similar countries, banking integration in
-those countries increases financial synchronization.
+the equation with a negative sign, meaning that integration is associated with less synchronized cycles. We can see that this effect is state depended: the interaction terms suggest that during banking crises periods or in highly developed financial markets integration is associated with higher synchronization. 
 
 Coefficient analysis shows that the effect is economicaly significant.
 A change of one standard deviation in banking integration is associated with a change of `r abs(round(coef_vec[names(coef_vec) == "lag(bank_gdp, 1)"] * sd_ratio,2))` standard deviations in financial synchronization. During banking crises one standard deviation change in integration contributes `r abs(round(coef_vec[names(coef_vec) == "lag(bank_gdp, 1):Crises"] * sd_ratio,2))` standard deviations to the synchronization. 
 
 
-<!-- \section{Instrumental variable estimation} -->
+\section{Instrumental variable estimation}
 
 
-```{r child="IV_estimation.Rmd",eval=FALSE}
+```{r child="IV_estimation.Rmd", eval=FALSE}
 
 ```
 

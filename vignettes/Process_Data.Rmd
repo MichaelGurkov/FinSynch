@@ -147,7 +147,6 @@ ind_list$Euro_one = raw_data$Euro_one
 ```
 
 
-
 ```{r make_countrypair_df}
 
 bank_gdp = raw_data$bis_lbs %>% 
@@ -209,6 +208,19 @@ country_pair_df = country_pair_df %>%
   mutate(Crises = min(Crises_tot,1)) %>%
   ungroup() %>%
   select(-Country_A,-Country_B)
+
+```
+
+
+```{r country_pair_df_add_eu_indicators}
+
+country_pair_df = country_pair_df %>%
+  left_join(.,raw_data$EU_both,
+            by = c("Date","CountryPair"))
+
+country_pair_df = country_pair_df %>%
+  left_join(.,raw_data$Euro_both,
+            by = c("Date","CountryPair"))
 
 ```
 

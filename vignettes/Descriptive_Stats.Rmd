@@ -1,0 +1,177 @@
+
+```{r define_fig_captions}
+
+bank_gdp_cap = paste0("Average real cross border bank claims.",
+                      " Shaded areas are banking crises periods",
+                      " \\label{plot_bank_gdp}")
+
+```
+
+
+
+
+Summary statistics of the data are presented in table \ref{summary_table}.
+
+```{r countrypair_table_summary, include=FALSE}
+
+
+star = stargazer(fin_reg_df %>% 
+                   select(Fin_synch, bank_gdp, FD_tot,Crises) %>% 
+                   as.data.frame(),
+                 title = "Summary statistics of the main variables",
+                 table.placement = "H",
+                 label = "summary_table",
+          header =FALSE, summary = TRUE,
+          digits = 2,digits.extra = 2,
+          summary.stat = c("max","min","mean","median","sd","n"),
+          notes = paste0("\\parbox[t]{16cm}{",
+                         paste0("Note: The table reports summary statistics of ",
+                                "the main variables used in the empirical ",
+                                "analysis.",notes_str ,"}")))
+
+star = star %>% 
+  sub(pattern = "Fin\\_synch",replacement = "Fin cycles synch",
+      fixed = TRUE) %>% 
+  sub(pattern = "bank\\_gdp",replacement = "Banking linkages",
+      fixed = TRUE) %>% 
+  sub(pattern = "FD\\_tot",replacement = "Financial development",
+      fixed = TRUE) %>% 
+  sub(pattern = "Crises\\_tot",replacement = "Crises",
+      fixed = TRUE)
+
+
+# star = sub("Fin\\_synch","Fin cycles synch",star,fixed = TRUE)
+# 
+# star = sub("bank\\_gdp","Banking linkages",star,fixed = TRUE)
+# 
+# star = sub("FD\\_tot","Financial development",star,fixed = TRUE)
+
+
+
+```
+
+
+```{r output_summary_table, results="asis"}
+
+cat(star, sep = "\n")
+
+```
+
+
+Figure \ref{plot_bank_gdp} shows the average cross border (bilateral) bank linkages of the countries in my sample. We can see that financial integration had increased since the 1980s until 2007-2008 (the Global Financial Crises)  and then a sharp drop followed, dropping below initial levels. The shaded area in the figure refer to dates of banking crises in the sample countries and it seems that those are associated with a decrease in financial integration.
+
+
+```{r plot_bank_gdp,fig.cap=bank_gdp_cap,fig.height=5}
+
+ggplot() + 
+  labs(title = "Average bank linkages \n (real, normalized by gdp)",
+       y = "", x = "") + 
+  geom_line(fin_reg_df %>% 
+              select(Date, bank_gdp) %>% 
+              group_by(Date) %>% 
+              summarise(Avg_bank = mean(bank_gdp,
+                                        na.rm = TRUE)) %>% 
+              ungroup() %>% 
+              filter(complete.cases(.)),
+            mapping = aes(x = Date, y = Avg_bank, group = 1)) + 
+  geom_rect(data = raw_data$crises_df %>% 
+              select(Start,End),
+            mapping = aes(xmin = Start,xmax = End,
+                          ymin = -Inf, ymax = Inf),
+            fill = "lightgray", alpha = 0.1) +
+  theme_bw() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 0,size = 7),
+        legend.position = "bottom", plot.title = element_text(hjust = 0.5),
+        axis.title.x = element_blank())
+
+
+```
+
+
+```{r plot_bank_gdp_strata,fig.cap="Average real cross border bank by claims country-pair group \\label{plot_bank_gdp_strata}",fig.height=3, eval=FALSE}
+
+ggplot(fin_reg_df %>% 
+         mutate(FSAP = as.numeric(CountryPair %in% countries_list$fsap_countries_pairs)) %>% 
+         group_by(Date,FSAP) %>% 
+         summarise(avg_bank_gdp = mean(bank_gdp)),
+       aes(x = Date, y = avg_bank_gdp, group = 1)) + 
+  geom_line() + 
+  labs(y = "", x = "") + 
+  theme_bw() + 
+  labs(title = "Bank linkages by country groups") + 
+  theme(axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        panel.grid = element_blank(), plot.title = element_text(hjust = 0.5)) + 
+  facet_grid(~FSAP)
+
+```
+
+
+```{r plot_average_cycle_synch,fig.cap="Average financial cycle synchronization \\label{plot_Fin_synch}",fig.pos="H"}
+
+ggplot(fin_reg_df %>% 
+         select(Date, Fin_synch) %>% 
+         group_by(Date) %>% 
+         summarise(Avg_Fin_synch = mean(Fin_synch, na.rm = TRUE)) %>% 
+         ungroup() %>% 
+         filter(complete.cases(.)) %>% 
+         filter(is.finite(Avg_Fin_synch)),
+       aes(x = Date, y = Avg_Fin_synch, group = 1)) + 
+  labs(title = "Average financial cycle synchronization",y = "", x = "") + 
+  geom_line() + 
+  theme_bw() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 0),
+        legend.position = "bottom", plot.title = element_text(hjust = 0.5))
+
+
+```
+
+
+Figure \ref{plot_Fin_synch} shows the average synchronization (measured as the difference between credit and house price growth rates for each country-pair). The synchronization seems to be quite volatile with no specific trend until 2007-2008 (the global financial crises) and trending upward since. 
+
+
+
+<!-- Correlations -->
+
+```{r plot_correlations, eval=FALSE}
+
+ggplot(country_df %>% 
+  select(Country,Total_Credit_real_ret, HousePrice_real_ret) %>% 
+  group_by(Country) %>% 
+  summarise(Cor = cor(Total_Credit_real_ret, HousePrice_real_ret)),
+  aes(x = reorder(Country, Cor), y = Cor)) + 
+  geom_bar(stat = "identity") + 
+  labs(x = "", y = "",
+       title = "Correlation between credit and house growth rates") + 
+  coord_flip() + 
+  theme_bw() + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+ggplot(country_df %>% 
+  select(Country,Total_Credit_real_ret, SharePrice_real_ret) %>% 
+  group_by(Country) %>% 
+  summarise(Cor = cor(Total_Credit_real_ret, SharePrice_real_ret)),
+  aes(x = reorder(Country, Cor), y = Cor)) + 
+  geom_bar(stat = "identity") + 
+  labs(x = "", y = "",
+       title = "Correlation between credit and share growth rates") + 
+  coord_flip() + 
+  theme_bw() + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+ggplot(country_df %>% 
+  select(Country,HousePrice_real_ret, SharePrice_real_ret) %>% 
+  group_by(Country) %>% 
+  summarise(Cor = cor(HousePrice_real_ret, SharePrice_real_ret)),
+  aes(x = reorder(Country, Cor), y = Cor)) + 
+  geom_bar(stat = "identity") + 
+  labs(x = "", y = "",
+       title = "Correlation between house and share growth rates") + 
+  coord_flip() + 
+  theme_bw() + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+

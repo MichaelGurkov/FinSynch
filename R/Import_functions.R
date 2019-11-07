@@ -114,8 +114,8 @@ import_wdi_df = function(filepath_list = NULL,
   return(wdi_data)
 
 }
-
-
+#'
+#'
 #' This helper function imports credit data from BIS  data base
 #'
 #' @import dplyr
@@ -168,8 +168,8 @@ import_bis_fin_cycle_df = function(filepath_list = NULL,
   return(bis_data)
 
 }
-
-
+#'
+#'
 #' This helper function imports cross border banking from BIS  data base
 #'
 #' @import dplyr
@@ -211,15 +211,15 @@ import_cross_border_balance = function(filepath = NULL,
 
 
 }
-
-
+#'
+#'
 #' This function imports indexes of financial trilemma (capital openess)
 #'
 #'  @import readxl
 #'
 #'  @import dplyr
 #'
-#'  @import stringi
+#'  @import stringr
 #'
 
 import.trilemma.ind = function(filepath = paste0(
@@ -244,7 +244,7 @@ import.trilemma.ind = function(filepath = paste0(
 
 }
 
-
+#'
 #' This function imports macroprudential (Cerutti) data
 #'
 #'  @import readxl
@@ -274,8 +274,8 @@ import.macropru.ind = function(filepath = paste0(
 
 
 }
-
-
+#'
+#'
 #' This function imports capital account openess (Chinn Ito) data
 #'
 #'  @import readxl
@@ -302,8 +302,8 @@ import.kaopen.ind = function(filepath = paste0(
 
 
 }
-
-
+#'
+#'
 #' This function imports financial development data
 #'
 #'  @import readxl
@@ -330,8 +330,8 @@ import.fin.dev.ind = function(filepath = paste0(
 
 
 }
-
-
+#'
+#'
 #' This function imports harmon data
 #'
 #'  @import dplyr
@@ -397,10 +397,10 @@ import.harmon.data = function(filepath = paste0(
 
 
 }
-
-
-
-
+#'
+#'
+#'
+#'
 #' This function calculates absolute GDP values given growth rates
 #' The growth rates are at quarterly frequency and the gdp balance is at
 
@@ -428,15 +428,15 @@ calculate.gdp.df = function(growth_rates, gdp_balance){
                         mutate(Country = gdp_balance$Country)
 
 }
-
-
-#' This function imports BIS LBS from scratch
 #'
-#' @import dplyr
 #'
-#' @import readr
-
-
+#' #' This function imports BIS LBS from scratch
+#' #'
+#' #' @import dplyr
+#' #'
+#' #' @import readr
+#'
+#'
 import.bis.lbs.data = function(filepath = paste0(
   "C:\\Users\\Misha\\Documents\\Data\\BIS\\",
   "WEBSTATS_LBS_D_PUB_DATAFLOW_csv_col.csv"),
@@ -513,8 +513,8 @@ import.bis.lbs.data = function(filepath = paste0(
   return(res_df)
 
 }
-
-
+#'
+#'
 #' This function imports BIS total credit data from scratch
 #'
 #' @import dplyr
@@ -566,8 +566,8 @@ import.bis.tot.credit.data = function(filepath = paste0(
   return(long_df)
 
 }
-
-
+#'
+#'
 #' This function imports BIS house price data from scratch
 #'
 #' @import dplyr
@@ -612,13 +612,13 @@ import.bis.property.price.data = function(filepath = paste0(
   return(long_df)
 
 }
-
-
+#'
+#'
 #' This helper function imports Worldwide Governance Indicators data
 #'
 #' @import readr
 #'
-#'  @import dplyr
+#' @import dplyr
 #'
 
 import.wgi.ind = function(filepath = paste0(
@@ -640,13 +640,13 @@ import.wgi.ind = function(filepath = paste0(
 
 
 }
-
-
+#'
+#'
 #' This helper function imports banking crises dates data
 #'
 #' @import readxl
 #'
-#'  @import dplyr
+#' @import dplyr
 #'
 
 import.crises.dates.df = function(filepath = paste0(
@@ -675,8 +675,8 @@ import.crises.dates.df = function(filepath = paste0(
 
 
 }
-
-
+#'
+#'
 #' This function imports geo dist data from cepii
 #'
 #' @import readxl
@@ -701,8 +701,8 @@ import.geodist.data = function(filepath = paste0("C:\\Users\\Misha\\Documents",
 
   return(df)
 }
-
-
+#'
+#'
 #' This function imports ISO codes for country names
 #'
 
@@ -736,5 +736,5 @@ import.iso.codes = function(filepath = NULL, type = "3-digits"){
 
 
 }
-
-
+#'
+#'

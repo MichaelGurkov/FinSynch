@@ -1,5 +1,4 @@
 
-
 ```{r import_harmon_data}
 
 raw_data$Harmon_both_quarter = import.harmon.data() %>%
@@ -41,4 +40,58 @@ reg_list$iv_reg =  plm(formula = formula(paste0(reg_formula,
                        index = c("CountryPair","Date"))
 
 ```
+
+
+The Financial Services Action Plan (FSAP) was a package of financial reforms
+launched by the EU in 1998 aiming to integrate the EU financial markets and 
+reduce the costs of cross-border financial intermediation. The FSAP included 27
+EU Directives in banking, capital markets, corporate law, payment systems, and corporate governance. Examples include the Directive on Money Laundering, the Directive on Financial Collateral Arrangements, the Directive on Prospectuses,
+and the Directive on Insider Trading and Market Manipulation. EU Directives are
+acts that become enforceable only after each EU member country passes domestic legislation adopting the Directive. In practice the legal adoption
+(so called transposition into law) of the EU Directives takes several years
+and differs considerably across EU member states. Using information  on the
+adoption timing of each of the Directives of the FSAP across EU countries, I reconstruct (following @Kalemli-Ozcan2013JF) a bilateral time-varying index that reflects the degree of similarity between the legal-regulatory structures
+governing the functioning of financial intermediation across each country pair
+in each year.
+
+This index is than used as an instrumental variable in an attempt to mitigate possible endogeneity (such as reversed causation) problem. The results are
+presented in table \ref{iv},  all the signs corresponed to signs identified in the main analysis however 
+
+
+```{r output_iv_reg, include=FALSE}
+
+star_iv = stargazer(reg_list$iv_reg, header = FALSE,digits = 2,
+          label = "iv",table.placement = "H",
+          title = paste0("Financial synchronization and banking integration: ",
+                         "instrumental variable"),
+          dep.var.caption = "Fin cycles synch",
+          model.numbers = FALSE,
+          dep.var.labels.include = FALSE,
+          notes = paste0("\\parbox[t]{8cm}{",
+                         paste0("The table presents panel estimation that ",
+                                "includes twoway fixed effects and country-pair ",
+                                " specific linear time trend. ",notes_str_ctrl,
+                                "}")),
+          notes.align = "l",
+          notes.append = FALSE,
+          se = list(sqrt(diag(vcovHC(reg_list$iv_reg,cluster = "group")))),
+          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
+          covariate.labels = temp_labels,
+          omit.stat = c("f","adj.rsq"))
+
+star_iv = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
+                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
+                    star_iv,fixed = TRUE)
+
+
+```
+
+
+```{r output_iv_table, results="asis"}
+
+cat(star_iv,sep = "\n")
+
+```
+
+
 

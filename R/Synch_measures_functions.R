@@ -248,7 +248,7 @@ get.roll.cor = function(df, win_len){
 #' The function takes a data frame with
 #' Date, Country, VarName(s) columns
 #'
-#' @import  dplyr
+#' @import dplyr
 #' @import tidyr
 #'
 #' @export
@@ -302,7 +302,7 @@ get.synch2.list = function(df){
 #' The function takes a data frame with
 #' Date, Country, VarName(s) columns
 #'
-#' @import  dplyr
+#' @import dplyr
 #' @import tidyr
 #'
 #' @export
