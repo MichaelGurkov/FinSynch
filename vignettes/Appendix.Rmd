@@ -109,9 +109,9 @@
 
 <!-- ``` -->
 
+\subsection{No trend}
 
-
-<!-- Regression analysis no trend-->
+In this section, I exclude the country-pair specific linear trend in order to test the robustness of my estimation. Table \ref{no_trend} presents the results.
 
 
 ```{r estimation_no_trend}
@@ -169,11 +169,6 @@ star_no_trend = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
 ```
 
 
-\subsection{No trend}
-
-In this section, I exclude the country-pair specific linear trend in order to test the robustness of my estimation. Table \ref{no_trend} presents the results.
-
-
 ```{r output_no_trend_table, results="asis"}
 
 cat(star_no_trend,sep = "\n")
@@ -181,10 +176,12 @@ cat(star_no_trend,sep = "\n")
 ```
 
 
+
+
 <!-- Regression analysis lagged regression-->
 
 
-```{r estimation_reg_lag}
+```{r estimation_reg_lag, eval=FALSE}
 
 reg_lag_formula = paste("Fin_synch ~ lag(bank_gdp,1) * lag(Crises, 1)",
                              "lag(bank_gdp,1) * lag(FD_tot, 1)",
@@ -209,7 +206,7 @@ reg_list$reg_lag = plm(formula = reg_formula %>%
 ```
 
 
-```{r output_reg_lag, include=FALSE}
+```{r output_reg_lag, include=FALSE, eval=FALSE}
 
 
 star_reg_lag = stargazer(reg_list$reg_lag, header = FALSE,digits = 2,
@@ -246,10 +243,10 @@ star_reg_lag = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
 ```
 
 
-\subsection{Lagged regression}
-To test for another specification issue I run a regression where every independend variable is lagged one period. This is done in order to align the lagged banking linkages (that were lagged to address endogeneity) and other variables. The results are presented in table \ref{lagged}, all the results are quantitatively similiar to the main results.
+<!-- \subsection{Lagged regression} -->
+<!-- To test for another specification issue I run a regression where every independend variable is lagged one period. This is done in order to align the lagged banking linkages (that were lagged to address endogeneity) and other variables. The results are presented in table \ref{lagged}, all the results are quantitatively similiar to the main results. -->
 
-```{r output_reg_lag_table, results="asis"}
+```{r output_reg_lag_table, results="asis", eval=FALSE}
 
 cat(star_reg_lag,sep = "\n")
 

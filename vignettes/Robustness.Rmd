@@ -1,11 +1,74 @@
+\subsection{Excluding GFC}
 
+The Great Financial Crises was an extraordinary event that significantly
+affected the synchronization of financial activity all over the world.
+To ensure that my results are not driven by this effect I exclude the period
+of the GFC (2008-2009) from my sample. The results are presented in column 1 in table \ref{robust_table}. This exercise leaves all the results practically unchanged (concerning coefficients and statistical significance).
+
+```{r estimation_no_GFC}
+
+reg_list$no_GFC = plm(formula = formula(reg_formula),
+                        data = fin_reg_df %>% 
+                          filter(!Date %in% c(2007,2008,2009)),
+          model = "within",effect = "twoways",
+          index = c("CountryPair","Date"))
+
+```
+
+
+```{r output_reg_no_GFC, include=FALSE, eval=FALSE}
+
+star_no_GFC = stargazer(reg_list$no_GFC,
+                               header = FALSE,digits = 2,
+          label = "no_GFC",table.placement = "H",
+          title = paste0("Financial synchronization and banking integration: ",
+                         "excluding GFC period"),
+          dep.var.caption = "Fin cycles synch",
+          model.numbers = FALSE,
+          dep.var.labels.include = FALSE,
+          add.lines = lines_str,
+          notes = paste0("\\parbox[t]{8cm}{",
+                         paste0("The table presents panel estimation that ",
+                                "includes twoway fixed effects and country-pair ",
+                                " specific linear time trend. ",notes_str_ctrl,
+                                "}")),
+          notes.align = "l",
+          notes.append = FALSE,
+          se = list(sqrt(diag(vcovHC(reg_list$no_GFC,
+                                     cluster = "group")))),
+          keep = paste0("^",temp_names,"$"),
+          order = paste0("^",temp_names,"$"),
+          covariate.labels = temp_labels,
+          omit.stat = c("f","adj.rsq"))
+
+star_no_GFC = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
+                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
+                    star_no_GFC,fixed = TRUE)
+
+
+```
+
+
+```{r output_no_GFC_table, results="asis", eval=FALSE}
+
+cat(star_no_GFC,sep = "\n")
+
+```
+
+
+<!-- Regression analysis rolling correlation-->
 
 \subsection{Rolling correlation}
+
+In this section, I use a rolling window correlation as the synchronization measure
+to test the robustness of my analysis. The results are presented in column 2 in table \ref{robust_table}. I find that the main result (negative association of banking integration and financial activity) holds as well as the effect of financial development. However, the crisis effect becomes insignificant
+in this setting.
 
 ```{r rol_cor_estimation}
 
 roll_cor = get.roll.cor(country_df %>% 
-                            select(Date, Country,Fin_ret), win_len = 5) %>% 
+                            select(Date, Country,Fin_ret),
+                        win_len = roll_cor_len) %>% 
   rename(Fin_roll_cor = Fin_ret)
 
 reg_list$roll_cor_reg = plm(formula = gsub("Fin_synch","Fin_roll_cor",
@@ -21,21 +84,24 @@ rm(roll_cor)
 ```
 
 
-```{r output_rol_cor_reg, include=FALSE}
+```{r output_rol_cor_reg, include=FALSE, eval=FALSE}
 
 star_rol_cor_reg = stargazer(reg_list$roll_cor_reg, header = FALSE,digits = 2,
           label = "roll_cor_reg",table.placement = "H",
           title = paste0("Financial synchronization and banking integration: ",
-                         "panel specification"),
+                         "rolling regression specification"),
           dep.var.caption = "Fin cycles synch (rolling correlation)",
           model.numbers = FALSE,
           dep.var.labels.include = FALSE,
+          add.lines = lines_str,
           notes = paste0("\\parbox[t]{8cm}{",
                          paste0("The table presents panel estimation that ",
                                 "includes twoway fixed effects and country-pair ",
                                 " specific linear time trend. ",
                                 sub("negative of the absolute difference",
-                                    "rolling (10 year) correlation",
+                                    paste0("rolling (",
+                                           roll_cor_len,
+                                           " year) correlation"),
                                     notes_str_ctrl), "}")),
           notes.align = "l",
           notes.append = FALSE,
@@ -45,16 +111,153 @@ star_rol_cor_reg = stargazer(reg_list$roll_cor_reg, header = FALSE,digits = 2,
           omit.stat = c("f","adj.rsq"))
 
 star_rol_cor_reg = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
-                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
+                    "\\multicolumn{2}{l}{\\parbox[t]{12cm}{\\textit{Note:} ",
                     star_rol_cor_reg,fixed = TRUE)
 
 
 ```
 
 
-```{r output_rol_cor_reg_table, results="asis"}
+```{r output_rol_cor_reg_table, results="asis", eval=FALSE}
 
 cat(star_rol_cor_reg,sep = "\n")
 
 ```
+
+
+
+\subsection{Flow vs Stock measures}
+
+My measure of banking integration is a stock measure (the balance of normalized
+cross border credit). It may be the case the flow measures will capture a
+different aspect of the banking integration, for example during crises the
+credit flows will presumably drop due to a credit crunch while the credit
+balance will stay the same. To capture this aspect of banking integration I run
+a change my measure of integration to be credit flows instead od credit stocks
+by differencing the cross border credit balance. Column 3 in table \ref{robust_table} shows the
+results of this exercise. Similarly to the case of rolling correlation test
+I find that the main result holds as well as the effect of financial
+development. The crisis effect is insignificant in this setting as well and the
+Euro indicator variable changes sign suggesting the increased credit flows in
+Eurozone country pairs decrease financial synchronization.
+
+```{r delta_estimation}
+
+reg_list$delta_reg = plm(formula = reg_formula,
+                         data = fin_reg_df %>% 
+                           group_by(CountryPair) %>% 
+                           mutate(bank_gdp = c(NA, diff(bank_gdp))) %>% 
+                           ungroup(),
+                         model = "within",effect = "twoways",
+                         index = c("CountryPair","Date"))
+
+```
+
+
+```{r output_delta_reg, include=FALSE, eval=FALSE}
+
+
+ temp_names_delta = temp_names %>% 
+  gsub(pattern = "lag\\(bank_gdp, 1\\)",
+       replacement = "diff\\(lag\\(bank_gdp, 1\\)\\)",
+       fixed = TRUE)
+
+star_delta_reg = stargazer(reg_list$delta_reg, header = FALSE,digits = 2,
+          label = "delta_reg",table.placement = "H",
+          title = paste0("Financial synchronization and banking integration: ",
+                         "differences specification"),
+          dep.var.caption = "Fin cycles synch ",
+          model.numbers = FALSE,
+          dep.var.labels.include = FALSE,
+          add.lines = lines_str,
+          notes = paste0("\\parbox[t]{8cm}{",
+                         paste0("The table presents panel estimation that ",
+                                "includes twoway fixed effects and country-pair",
+                                " specific linear time trend. ", "}")),
+          notes.align = "l",
+          notes.append = FALSE,
+          se = list(sqrt(diag(vcovHC(reg_list$delta_reg,cluster = "group")))),
+          keep = paste0("^",temp_names_delta,"$"),
+          order = paste0("^",temp_names_delta,"$"),
+          covariate.labels = temp_labels %>% 
+            gsub(pattern = "Bank linkages (lag)",
+                 replacement = "Bank linkages flows (lag)",
+                 fixed = TRUE),
+          omit.stat = c("f","adj.rsq"))
+
+star_delta_reg = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
+                    "\\multicolumn{2}{l}{\\parbox[t]{12cm}{\\textit{Note:} ",
+                    star_delta_reg,fixed = TRUE)
+
+
+```
+
+
+```{r output_delta_table, results="asis", eval=FALSE}
+
+cat(star_delta_reg,sep = "\n")
+
+```
+
+
+```{r output_all_reg, include=FALSE}
+
+se_list = list(sqrt(diag(vcovHC(reg_list$no_GFC,
+                                cluster = "group"))),
+               sqrt(diag(vcovHC(reg_list$roll_cor_reg,
+                                cluster = "group"))),
+               sqrt(diag(vcovHC(reg_list$delta_reg,
+                                cluster = "group"))))
+
+all_star_reg = stargazer(reg_list[c("no_GFC","roll_cor_reg", "delta_reg")],
+                         header = FALSE,digits = 2,
+                         title = "Robustness specifications",
+                         dep.var.labels = c("GFC","Roll","Delta"),
+                         label = "robust_table",table.placement = "H",
+                         dep.var.caption = "",
+                         add.lines = lapply(lines_str,
+                                            function(temp_line){c(temp_line,
+                                                                  rep("Yes",2))}),
+                         notes = paste0("\\parbox[t]{8cm}{",
+                         paste0("The table presents three robustness",
+                                " specifications. Column 1 is the baseline",
+                                " specification excluding Global Financial",
+                                " Crises (2007-2009)."," Column 2 presents",
+                                " a specification wich uses rolling correlation",
+                                " as alternative measure",
+                                " of financial synchronization",
+                                " and Column 3 uses differenced bank linkages",
+                                " in order to capture flow nature of cross",
+                                " border credit instead of stock.",
+                                "}")),
+                         notes.align = "l",
+                         notes.append = FALSE,
+                         se = se_list,
+          keep = paste0("^",temp_names,"$"),
+          order = paste0("^",temp_names,"$"),
+          covariate.labels = temp_labels,
+          omit.stat = c("f","adj.rsq"))
+
+all_star_reg = all_star_reg %>% 
+  sub(pattern = "\\textit{Note:}  & \\multicolumn{3}{l}{\\parbox[t]{8cm}{",
+      replacement = "\\multicolumn{4}{l}{\\parbox[t]{15cm}{\\textit{Note:} ",
+      fixed = TRUE) %>% 
+  sub(pattern = "& GFC & \\multicolumn{2}{c}{Roll}",
+      replacement = "& Excluding GFC & Roll Corr & Diff specification",
+      fixed = TRUE)
+
+
+
+```
+
+
+```{r output_all_reg_table, results="asis"}
+
+cat(all_star_reg,sep = "\n")
+
+```
+
+Overall the robustness test show that the main result (negative association of banking linkages and financial synchronization) holds. The financial development
+effect is also consistent across all the specifications. However the crises
+effect turns insignificant in specifications that use alternative variable definitions (rolling correlation as measure of financial synchronization or differenced banking linkages).
 
