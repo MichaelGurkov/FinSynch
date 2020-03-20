@@ -1,0 +1,310 @@
+---
+title: "Financial Cycle synchronization and cross border credit"
+institute: "Bank of Israel \\newline Research Department, Finance Division"
+author: "Michael Gurkov"
+classoption: t
+output:
+  beamer_presentation:
+    keep_tex: true
+    includes:
+      in_header: GlobalFinCyclePreamble.tex
+    latex_engine: xelatex
+vignette: >
+  %\VignetteIndexEntry{GlobalFinCycle-Presentation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,echo = FALSE,
+  message = FALSE,warning = FALSE,
+  comment = "#>"
+)
+```
+
+
+```{r load_package}
+
+devtools::load_all()
+
+# library(car)
+
+library(tidyverse)
+
+library(plm)
+
+library(stargazer)
+ 
+library(purrr)
+
+library(scales)
+
+```
+
+
+```{r params_setup}
+
+countries_list = list(
+  oecd_countries = c("Australia","Austria","Belgium","Canada","Chile",
+                     "Czech_Republic","Denmark","Estonia","Finland","France",
+                     "Germany","Greece","Hungary", "Iceland","Ireland",
+                     "Israel","Italy","Japan","Korea","Latvia",
+                     "Lithuania","Luxembourg","Mexico","Netherlands",
+                     "New_Zealand","Norway","Poland","Portugal",
+                     "Slovak_Republic","Slovenia","Spain","Sweden",
+                     "Switzerland","Turkey","United_Kingdom"
+                     ,"United_States"),
+  strong_countries = c("Australia","Austria","Belgium","Canada",
+                       "Switzerland","Germany","Denmark","Spain",
+                       "Finland","France","United_Kingdom","Ireland",
+                       "Italy","Japan","Netherlands","Portugal",
+                       "Sweden","United_States"),
+  fsap_countries = c("Austria","Belgium","Germany","Denmark","Spain",
+                     "France","Finland","Greece","Ireland","Italy",
+                     "Luxembourg","Netherlands","Portugal",
+                     "Sweden","United_Kingdom"),
+  eu_countries = c("Austria","Belgium","Bulgaria","Croatia","Cyprus",
+                   "Czech_Republic","Denmark","Estonia","Finland","France",
+                   "Germany","Greece","Hungary","Ireland","Italy",
+                   "Latvia","Lithuania","Luxembourg", "Malta","Netherlands",
+                   "Poland","Portugal","Romania","Slovak_Republic",
+                   "Slovenia","Spain","Sweden","United_Kingdom"),
+  euro_countries = c("Austria","Belgium","Cyprus","Estonia","Finland",
+                     "France","Germany","Greece","Ireland","Italy",
+                     "Latvia","Lithuania","Luxembourg", "Malta",
+                     "Netherlands","Portugal","Slovak_Republic",
+                     "Slovenia","Spain"))
+
+countries_list$weak_countries = countries_list$oecd_countries[!countries_list$oecd_countries %in% countries_list$strong_countries]
+
+
+pairs_list = lapply(names(countries_list),
+                    function(temp_name){
+                      apply(combn(countries_list[[temp_name]],2), 2,
+                            function(temp_col){
+                              ifelse(temp_col[1]<temp_col[2],
+                                     paste(temp_col[1],temp_col[2],sep = "-"),
+                                     paste(temp_col[2],temp_col[1],sep = "-"))})
+
+                    })
+
+names(pairs_list) = paste(names(countries_list), "pairs", sep = "_")
+
+countries_list = c(countries_list, pairs_list)
+
+rm(pairs_list)
+
+countries_list$cross_country_pairs = countries_list$oecd_countries_pairs[!countries_list$oecd_countries_pairs %in% countries_list$strong_countries_pairs & !countries_list$oecd_countries_pairs %in% countries_list$weak_countries_pairs]
+
+reg_list = list()
+
+hyp_test_list = list()
+
+
+control_vars = c("trade_gdp","FX_stab_tot","FO_ind_tot","MI_ind_tot",
+                 "GDP_real_tot")
+
+
+reg_formula = paste("Fin_synch ~ lag(bank_gdp,1) * Crises",
+                    "lag(bank_gdp,1) * FD_tot",
+                    "lag(bank_gdp,1) * Common_Lang",
+                    paste(control_vars,
+                          collapse = "+"),
+                    "CountryPair:Time_Trend",
+                    sep = "+")
+
+
+
+temp_names = c("lag\\(bank_gdp, 1\\)",
+               "Crises",
+               "FD_tot",
+               "lag\\(bank_gdp, 1\\):Crises",
+               "lag\\(bank_gdp, 1\\):FD_tot",
+               "lag\\(bank_gdp, 1\\):Common_Lang")
+
+temp_names_lag = c("lag\\(bank_gdp, 1\\)",
+                   "lag\\(Crises, 1\\)",
+                   "lag\\(FD_tot, 1\\)",
+                   "lag\\(bank_gdp, 1\\):lag\\(Crises, 1\\)",
+                   "lag\\(bank_gdp, 1\\):lag\\(FD_tot, 1\\)",
+                   "lag\\(bank_gdp, 1\\):lag\\(Common_Lang, 1\\)")
+
+
+temp_labels = c("Bank linkages (lag)",
+                "Crises",
+                "FD",
+                 "Bank linkages (lag) * Crises",
+                "Bank linkages (lag) * FD",
+                 "Bank linkages (lag) * Commong Lang")
+
+
+notes_str = paste0(" Financial cycles synchronization",
+                                " is the ",
+                                "negative of the absolute difference of ",
+                                "financial cycle growth between country",
+                                " \\textit{i}",
+                                " and country \\textit{j} in year \\textit{t}. ",
+                                "Bank linkages are the total bilateral ",
+                                "cross border banking claims normalized",
+                                " by total GDP. ",
+                                "Financial development is the sum of the ",
+                                "level of each country financial development ",
+                                "index. ","Crises is an indicator variable ",
+                                "that equals 1 if at least one country ",
+                                "undergoes ",
+                                "banking crises at that year. ")
+
+notes_str_ctrl = paste0(notes_str,
+                       "Controls include foreign exchange ",
+                       "stability, monetary independence, financial ",
+                       "openness, trade linkages and GDP (log). ",
+                       "The standard errors are clustered ",
+                       "at country-pair level and ",
+                       "heteroscedasticity robust.")
+
+
+```
+
+
+```{r child="Import_Data.Rmd"}
+
+```
+
+
+<!-- Regression analysis -->
+
+
+```{r estimation}
+
+reg_list$baseline = plm(formula = formula(reg_formula),data = fin_reg_df,
+          model = "within",effect = "twoways",
+          index = c("CountryPair","Date"))
+
+
+coef_vec = coefficients(reg_list$baseline)
+
+coef_vec = coef_vec[names(coef_vec) %in% c("lag(bank_gdp, 1)",
+                                           "lag(bank_gdp, 1):Crises",
+                                           "lag(bank_gdp, 1):FD_tot")]
+
+sd_ratio = sd(fin_reg_df$bank_gdp) / sd(fin_reg_df$Fin_synch)
+
+isr_ind = grepl("Israel",fin_reg_df$CountryPair)
+
+sd_ratio_isr = sd(fin_reg_df$bank_gdp[isr_ind]) / sd(fin_reg_df$Fin_synch[isr_ind])
+
+
+
+```
+
+# Motivation
+
+\begin{itemize}
+
+\setlength\itemsep{1.5em}
+
+  \item
+  Kalemi-Ozcan et all (Journal of Finance, 2013) find \textbf{negative}
+  association between financial integration and business cycles synchronization
+
+  \item
+  The authors use data of 18 ("strong OECD" such as Australia,Sweden,
+  United Kingdom, etc..) countries for 1978-2006 period.
+  They construct panel of 153 country pairs in each year.
+
+  \item
+  Possible economic mechanism: money moves from bad productivity shock to other   places and that results productivity divergency
+
+\end{itemize}
+
+
+
+
+
+
+# Motivation
+
+The general finding is \textbf{negative} association between financial integration and business cycles synchronization
+
+
+\begin{itemize}
+
+\setlength\itemsep{2em}
+
+  \item
+  The \textit{cross country} (between model) association is significantly
+  \textit{positive}.
+
+  \item
+  The \textit{panel} (within model with time and country pair fixed effects)
+  association is significantly \textit{negative}.
+
+  \item
+  Authors suggest that common global time shocks and specific country pair characterisitcs explain the difference
+
+\end{itemize}
+
+
+
+
+
+# Banking linkages
+
+```{r plot_bank_gdp,fig.cap="Average real cross border bank claims}",fig.height=5}
+
+ggplot() + 
+  labs(title = "Average bank linkages \n (real, normalized by gdp)",
+       y = "", x = "") + 
+  geom_line(fin_reg_df %>% 
+              select(Date, bank_gdp) %>% 
+              group_by(Date) %>% 
+              summarise(Avg_bank = mean(bank_gdp,
+                                        na.rm = TRUE)) %>% 
+              ungroup() %>% 
+              filter(complete.cases(.)),
+            mapping = aes(x = Date, y = Avg_bank, group = 1)) + 
+  geom_rect(data = raw_data$crises_df %>% 
+              select(Start,End),
+            mapping = aes(xmin = Start,xmax = End,
+                          ymin = -Inf, ymax = Inf),
+            fill = "lightgray", alpha = 0.1) +
+  theme_bw() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 0,size = 7),
+        axis.text.y = element_blank(),axis.ticks.y = element_blank(),
+        legend.position = "bottom", plot.title = element_text(hjust = 0.5),
+        axis.title.x = element_blank())
+
+
+```
+
+
+
+
+
+# Financial synchronization
+
+
+```{r plot_average_cycle_synch,fig.cap="Average financial cycle synchronization \\label{plot_Fin_synch}",fig.pos="H"}
+
+ggplot(fin_reg_df %>% 
+         select(Date, Fin_synch) %>% 
+         group_by(Date) %>% 
+         summarise(Avg_Fin_synch = mean(Fin_synch, na.rm = TRUE)) %>% 
+         ungroup() %>% 
+         filter(complete.cases(.)) %>% 
+         filter(is.finite(Avg_Fin_synch)),
+       aes(x = Date, y = Avg_Fin_synch, group = 1)) + 
+  labs(title = "Average financial cycle synchronization",y = "", x = "") + 
+  geom_line() + 
+  theme_bw() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 0),
+        legend.position = "bottom", plot.title = element_text(hjust = 0.5))
+
+
+```
+
+
+
+
+

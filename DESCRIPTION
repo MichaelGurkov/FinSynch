@@ -10,9 +10,19 @@ License: What license is it under?
 Encoding: UTF-8
 LazyData: true
 Imports:
-    purrr, mFilter, zoo, dplyr
+    dplyr,
+    mFilter,
+    plm,
+    purrr,
+    readr,
+    readxl,
+    rlang,
+    stringr,
+    tidyr,
+    zoo
 Suggests: 
     knitr,
-    rmarkdown
+    rmarkdown,
+    testthat
 VignetteBuilder: knitr
 RoxygenNote: 6.1.1

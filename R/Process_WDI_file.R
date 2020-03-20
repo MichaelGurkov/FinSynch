@@ -1,7 +1,9 @@
 
-#' This function process the data files from
+#' @description This function process the data files from
 #' World Development Indicators and converts
 #' the data to tidy format
+#'
+#' @title Format WDI data
 #'
 #' @import dplyr
 #' @import tidyr

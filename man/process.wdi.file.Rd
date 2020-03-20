@@ -2,9 +2,7 @@
 % Please edit documentation in R/Process_WDI_file.R
 \name{process.wdi.file}
 \alias{process.wdi.file}
-\title{This function process the data files from
-World Development Indicators and converts
-the data to tidy format}
+\title{Format WDI data}
 \usage{
 process.wdi.file(temp_file, var_name)
 }
