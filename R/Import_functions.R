@@ -1,6 +1,4 @@
 
-
-
 #' This helper function imports BIS cpi data and converts it to tidy format
 #'
 #' @import dplyr
@@ -9,12 +7,16 @@
 #'
 
 
-import.bis.cpi.data = function(filepath =
-                                 paste0("C:\\Users\\Misha\\",
-                                        "Documents\\Data\\BIS",
-                                        "\\WEBSTATS_LONG_",
-                                        "CPI_DATAFLOW_csv_col.csv"),
+import.bis.cpi.data = function(filepath = NULL,
                                annual_freq = TRUE){
+
+  if(is.null(filepath)){filepath = paste0(
+    file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
+    "\\Documents\\Data\\BIS",
+    "\\WEBSTATS_LONG_",
+    "CPI_DATAFLOW_csv_col.csv")}
+
+
 
   if(annual_freq){
 
@@ -75,13 +77,19 @@ import_wdi_df = function(filepath_list = NULL,
 
   if(is.null(filepath_list)){
 
-    filepath_list = list(GDP_per_Capita =
-                           paste0("C:\\Users\\Misha\\Documents\\Data\\",
-                                  "World Bank\\GDP_per_capita_panel.csv"),
-                         GDP = paste0("C:\\Users\\Misha\\Documents\\",
-                                      "Data\\World Bank\\GDP_panel.csv"),
-                         Pop = paste0("C:\\Users\\Misha\\Documents\\",
-                                      "Data\\World Bank\\Population.csv"))
+    dir_path = file.path(Sys.getenv("USERPROFILE"),fsep = "\\")
+
+
+    filepath_list = list(
+      GDP_per_Capita = paste0(
+        dir_path,"\\Documents\\Data\\",
+        "World Bank\\GDP_per_capita_panel.csv"),
+      GDP = paste0(
+        dir_path,"\\Documents\\",
+        "Data\\World Bank\\GDP_panel.csv"),
+      Pop = paste0(
+        dir_path,"\\Documents\\",
+        "Data\\World Bank\\Population.csv"))
 
 
   }
@@ -129,22 +137,24 @@ import_bis_fin_cycle_df = function(filepath_list = NULL,
 
   if(is.null(filepath_list)){
 
-    filepath_list = list(Credit_GDP =
-                           paste0("C:\\Users\\Misha\\Documents\\Data\\",
-                                  "BIS\\temp_credit_gdp_BIS.rds"),
-                         Total_credit =
-                           paste0("C:\\Users\\Misha\\Documents\\Data\\",
-                                  "BIS\\temp_tot_credit_BIS.rds"),
-                         House =
-                           paste0("C:\\Users\\Misha\\Documents\\Data\\",
-                                  "BIS\\temp_house_bis.rds"),
-                         FX =
-                           paste0("C:\\Users\\Misha\\Documents\\Data\\",
-                                  "BIS\\temp_FX_USD.rds"),
-                         Rate =
-                           paste0("C:\\Users\\Misha\\Documents\\Data\\",
-                                  "BIS\\temp_Policy_Rates.rds"))
+    dir_path = file.path(Sys.getenv("USERPROFILE"),fsep = "\\")
 
+    filepath_list = list(
+      Credit_GDP = paste0(
+        dir_path,"\\Documents\\Data\\",
+        "BIS\\temp_credit_gdp_BIS.rds"),
+      Total_credit = paste0(
+        dir_path,"\\Documents\\Data\\",
+        "BIS\\temp_tot_credit_BIS.rds"),
+      House = paste0(
+        dir_path,"\\Documents\\Data\\",
+        "BIS\\temp_house_bis.rds"),
+      FX = paste0(
+        dir_path,"\\Documents\\Data\\",
+        "BIS\\temp_FX_USD.rds"),
+      Rate = paste0(
+        dir_path,"\\Documents\\Data\\",
+        "BIS\\temp_Policy_Rates.rds"))
 
   }
 
@@ -183,15 +193,19 @@ import_cross_border_balance = function(filepath = NULL,
                                 annual_freq = TRUE){
 
   if(is.null(filepath)){
-    filepath = paste0("C:\\Users\\Misha\\Documents\\Data\\BIS",
-                                          "\\temp_credit_flows.rds")
+
+    filepath = paste0(
+      file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
+      "\\Documents\\Data\\BIS",
+      "\\temp_credit_flows.rds")
     }
 
 
   credit_flows_df = readRDS(filepath)
 
   credit_balance_df = credit_flows_df %>%
-    {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec) %>%
+    {if(!is.null(countries_vec)) filter(.,
+                                        Country %in% countries_vec) %>%
         filter(.,Counter_Country %in% countries_vec) else .} %>%
     rename(Balance_Pos = Balance.sheet.position) %>%
     {if(annual_freq) mutate(.,Date = format(Date,"%Y")) %>%
@@ -200,7 +214,8 @@ import_cross_border_balance = function(filepath = NULL,
         ungroup(.) else rename(.,Balance = Flow_Val) %>%
         mutate(.,Date = as.yearqtr(Date))} %>%
     mutate(.,CountryPair = ifelse(Country < Counter_Country,
-                                paste(Country, Counter_Country, sep = "-"),
+                                paste(Country, Counter_Country,
+                                      sep = "-"),
                                 paste(Counter_Country,Country,
                                       sep = "-"))) %>%
     ungroup(.)
@@ -223,7 +238,8 @@ import_cross_border_balance = function(filepath = NULL,
 #'
 
 import.trilemma.ind = function(filepath = paste0(
-  "C:\\Users\\Misha\\Documents\\Data",
+  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
+  "\\Documents\\Data",
   "\\AizenmanChinnIto\\trilemma_indexes_update2018.xlsx")){
 
   temp_df = read_xlsx(filepath)
@@ -253,7 +269,8 @@ import.trilemma.ind = function(filepath = paste0(
 #'
 
 import.macropru.ind = function(filepath = paste0(
-  "C:\\Users\\Misha\\Documents",
+  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
+  "\\Documents",
   "\\Data\\Cerutti\\prudential_ind_3.xlsx"),
   countries_vec = NULL){
 
@@ -284,7 +301,8 @@ import.macropru.ind = function(filepath = paste0(
 #'
 
 import.kaopen.ind = function(filepath = paste0(
-  "C:\\Users\\Misha\\Documents\\Data\\Chin-Ito\\kaopen_2016.xls"),
+  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
+  "\\Documents\\Data\\Chin-Ito\\kaopen_2016.xls"),
   countries_vec = NULL){
 
   temp_df = read_xls(filepath)
@@ -312,7 +330,8 @@ import.kaopen.ind = function(filepath = paste0(
 #'
 
 import.fin.dev.ind = function(filepath = paste0(
-  "C:\\Users\\Misha\\Documents\\Data\\Svirydzenka\\FinDev.xlsx"),
+  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
+  "\\Documents\\Data\\Svirydzenka\\FinDev.xlsx"),
   countries_vec = NULL){
 
   temp_df = read_xlsx(filepath)
@@ -341,11 +360,14 @@ import.fin.dev.ind = function(filepath = paste0(
 #'  @import zoo
 
 import.harmon.data = function(filepath = paste0(
-  "C:\\Users\\Misha\\Documents\\Data\\",
+  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
+  "\\Documents\\Data\\",
   "Kalemli_Ozcan_Papaionnou_Peydro\\harmon.xlsx"),
   myrange = "B4:AF32",
-  codes_filepath = paste0("C:\\Users\\Misha\\Documents\\Data\\ISO\\",
-                          "iso_2digit_alpha_country_codes.csv"),
+  codes_filepath = paste0(
+    file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
+    "\\Documents\\Data\\ISO\\",
+    "iso_2digit_alpha_country_codes.csv"),
   convert_country_names = TRUE){
 
   harmon = read_xlsx(path = filepath,range = myrange)
@@ -406,25 +428,32 @@ import.harmon.data = function(filepath = paste0(
 
 calculate.gdp.df = function(growth_rates, gdp_balance){
 
-  before_ind = growth_rates$Date <= as.yearqtr(paste(gdp_balance$Year, "Q4"))
+  before_ind = growth_rates$Date <= as.yearqtr(
+    paste(gdp_balance$Year, "Q4"))
 
-  after_ind = growth_rates$Date > as.yearqtr(paste(gdp_balance$Year, "Q4"))
+  after_ind = growth_rates$Date > as.yearqtr(
+    paste(gdp_balance$Year, "Q4"))
 
-  gdp_balance_before_vec = rev(cumprod(c(gdp_balance$Value,
-                                         rev((1 + 0.01 * growth_rates$Value[
-                                           before_ind]) ^ -1))))
+  gdp_balance_before_vec = rev(
+    cumprod(c(gdp_balance$Value,
+              rev((1 + 0.01 * growth_rates$Value[
+                                           before_ind]) ^ -1)))
+    )
 
   dates_before_vec = growth_rates$Date[before_ind]
 
-  dates_before_vec = c(as.yearqtr(dates_before_vec[1]-0.25),dates_before_vec)
+  dates_before_vec = c(as.yearqtr(dates_before_vec[1]-0.25),
+                       dates_before_vec)
 
-  gdp_balance_after_vec = cumprod(c(gdp_balance$Value,
-                                    1 + 0.01 * growth_rates$Value[after_ind]))
+  gdp_balance_after_vec = cumprod(
+    c(gdp_balance$Value,1 + 0.01 * growth_rates$Value[after_ind])
+    )
 
   dates_after_vec = growth_rates$Date[after_ind]
 
   gdp_df = data.frame(Date = c(dates_before_vec, dates_after_vec),
-                      GDP = c(gdp_balance_before_vec, gdp_balance_after_vec[-1])) %>%
+                      GDP = c(gdp_balance_before_vec,
+                              gdp_balance_after_vec[-1])) %>%
                         mutate(Country = gdp_balance$Country)
 
 }
@@ -438,20 +467,21 @@ calculate.gdp.df = function(growth_rates, gdp_balance){
 #'
 #'
 import.bis.lbs.data = function(filepath = paste0(
-  "C:\\Users\\Misha\\Documents\\Data\\BIS\\",
+  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
+  "\\Documents\\Data\\BIS\\",
   "WEBSTATS_LBS_D_PUB_DATAFLOW_csv_col.csv"),
-                               my_instruments = "All instruments",
-                               my_measure = "Amounts outstanding / Stocks",
-                               my_currency = "All currencies",
-                               my_report_currency = "All currencies (=D+F+U)",
-                               my_lending_position = "Cross-border",
-                               my_reporting_institutions = paste0(
-                                 "All reporting"," banks/institutions ",
-                                 "(domestic, foreign, consortium and ",
-                                 "unclassified)"),
-                               my_counter_sector = "All sectors",
-                               countries_vec = NULL,
-                               collapse_countrypair = TRUE){
+  my_instruments = "All instruments",
+  my_measure = "Amounts outstanding / Stocks",
+  my_currency = "All currencies",
+  my_report_currency = "All currencies (=D+F+U)",
+  my_lending_position = "Cross-border",
+  my_reporting_institutions = paste0(
+    "All reporting"," banks/institutions ",
+    "(domestic, foreign, consortium and ",
+    "unclassified)"),
+  my_counter_sector = "All sectors",
+  countries_vec = NULL,
+  collapse_countrypair = TRUE){
 
   raw_df = read_csv(filepath, col_types = cols(), progress = FALSE)
 
@@ -523,7 +553,8 @@ import.bis.lbs.data = function(filepath = paste0(
 
 
 import.bis.tot.credit.data = function(filepath = paste0(
-  "C:\\Users\\Misha\\Documents\\Data\\BIS\\",
+  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
+  "\\Documents\\Data\\BIS\\",
   "WEBSTATS_TOTAL_CREDIT_DATAFLOW_csv_col.csv"),
   my_lending_sector = "All sectors",
   my_unit_type = "US Dollar",
@@ -576,7 +607,8 @@ import.bis.tot.credit.data = function(filepath = paste0(
 
 
 import.bis.property.price.data = function(filepath = paste0(
-  "C:\\Users\\Misha\\Documents\\Data\\BIS\\",
+  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
+  "\\Documents\\Data\\BIS\\",
   "WEBSTATS_SELECTED_PP_DATAFLOW_csv_col.csv"),
   my_value = "Real",
   my_measure = "Index, 2010 = 100",
@@ -622,7 +654,8 @@ import.bis.property.price.data = function(filepath = paste0(
 #'
 
 import.wgi.ind = function(filepath = paste0(
-  "C:\\Users\\Misha\\Documents\\Data\\World Bank\\WGIData.csv"),
+  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
+  "\\Documents\\Data\\World Bank\\WGIData.csv"),
   countries_vec = NULL){
 
   temp_df = read_csv(filepath, col_types = NULL)
@@ -650,7 +683,8 @@ import.wgi.ind = function(filepath = paste0(
 #'
 
 import.crises.dates.df = function(filepath = paste0(
-  "C:\\Users\\Misha\\Documents\\Data\\LavaenValencia\\SYSTEMIC BANKING ",
+  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
+  "\\Documents\\Data\\LavaenValencia\\SYSTEMIC BANKING ",
   "CRISES DATABASE_2018.xlsx"),
   countries_vec = NULL){
 
@@ -684,11 +718,13 @@ import.crises.dates.df = function(filepath = paste0(
 #' @import dplyr
 #'
 
-import.geodist.data = function(filepath = paste0("C:\\Users\\Misha\\Documents",
-                                                 "\\Data\\CEPII\\",
-                                                 "dist_cepii.xls")){
+import.geodist.data = function(filepath = paste0(
+  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
+  "\\Documents\\Data\\CEPII\\",
+  "dist_cepii.xls")){
 
-  df = read_xls(filepath, col_types = c(rep("text",2), rep("numeric",12)))
+  df = read_xls(filepath, col_types = c(rep("text",2),
+                                        rep("numeric",12)))
 
   codes = import.iso.codes()
 
@@ -715,22 +751,29 @@ import.iso.codes = function(filepath = NULL, type = "3-digits"){
 
     } else if(type == "3-digits"){
 
-      df = read.csv(paste0("C:\\Users\\Misha\\Documents\\Data\\ISO\\",
-                           "iso_3digit_alpha_country_codes.csv"))
+      df = read.csv(paste0(
+        file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
+        "\\Documents\\Data\\ISO\\",
+        "iso_3digit_alpha_country_codes.csv"))
 
     } else if(type == "2-digits"){
 
-    df = read.csv(paste0("C:\\Users\\Misha\\Documents\\Data\\ISO\\",
-                         "iso_2digit_alpha_country_codes.csv"))
+    df = read.csv(paste0(
+      file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
+      "\\Documents\\Data\\ISO\\",
+      "iso_2digit_alpha_country_codes.csv"))
     }
 
 
   df = df %>%
    setNames(c("Code","Country")) %>%
     mutate(Country = gsub("\\s","_",Country)) %>%
-    mutate(Country = sub("Korea,_Republic_of","Korea",Country,fixed = TRUE)) %>%
-    mutate(Country = sub("Czechia","Czech_Republic",Country,fixed = TRUE)) %>%
-    mutate(Country = sub("Slovakia","Slovak_Republic",Country,fixed = TRUE))
+    mutate(Country = sub("Korea,_Republic_of","Korea",
+                         Country,fixed = TRUE)) %>%
+    mutate(Country = sub("Czechia","Czech_Republic",
+                         Country,fixed = TRUE)) %>%
+    mutate(Country = sub("Slovakia","Slovak_Republic",
+                         Country,fixed = TRUE))
 
   return(df)
 
