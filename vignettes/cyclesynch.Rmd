@@ -334,7 +334,6 @@ It also does not contain estimation error that emerges, for example, from self-s
 
 ```
 
-\textcolor{red}{short description of table results}
 
 \section{Empirical specification} \label{EmpSpec}
 

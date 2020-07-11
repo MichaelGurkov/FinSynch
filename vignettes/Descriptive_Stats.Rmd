@@ -8,12 +8,9 @@ bank_gdp_cap = paste0("Average real cross border bank claims.",
 ```
 
 
-
-
-Summary statistics of the data are presented in table \ref{summary_table}.
+Summary statistics of the data are presented in table \ref{summary_table}. The average divergence in financial cycle growth over the sample period is `r round(mean(fin_reg_df$Fin_synch, na.rm = TRUE),2)` (Fin cycles synch), with significant variation (the standard deviation is `r round(sd(fin_reg_df$Fin_synch, na.rm = TRUE),2)`). Banking linkages are characterized by similiar average level (`r round(mean(fin_reg_df$bank_gdp),2)`) with much smaller variation (the stadandard deviation is `r round(sd(fin_reg_df$bank_gdp),2)`).
 
 ```{r countrypair_table_summary, include=FALSE}
-
 
 star = stargazer(fin_reg_df %>% 
                    select(Fin_synch, bank_gdp, FD_tot,Crises) %>% 
