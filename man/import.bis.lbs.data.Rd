@@ -8,18 +8,21 @@
 #'
 #' @import readr}
 \usage{
-
-  import.bis.lbs.data(filepath = paste0("C:\\\\Users\\\\Misha\\\\Documents\\\\Data\\\\BIS\\\\",
-  "WEBSTATS_LBS_D_PUB_DATAFLOW_csv_col.csv"),
+import.bis.lbs.data(
+  filepath = paste0(file.path(Sys.getenv("USERPROFILE"), fsep = "\\\\"),
+    "\\\\OneDrive - Bank Of Israel\\\\Data\\\\BIS\\\\",
+    "WEBSTATS_LBS_D_PUB_DATAFLOW_csv_col.csv"),
   my_instruments = "All instruments",
   my_measure = "Amounts outstanding / Stocks",
   my_currency = "All currencies",
   my_report_currency = "All currencies (=D+F+U)",
   my_lending_position = "Cross-border",
-  my_reporting_institutions = paste0("All reporting",
-  " banks/institutions ", "(domestic, foreign, consortium and ",
-  "unclassified)"), my_counter_sector = "All sectors",
-  countries_vec = NULL, collapse_countrypair = TRUE)
+  my_reporting_institutions = paste0("All reporting", " banks/institutions ",
+    "(domestic, foreign, consortium and ", "unclassified)"),
+  my_counter_sector = "All sectors",
+  countries_vec = NULL,
+  collapse_countrypair = TRUE
+)
 }
 \description{
 #' This function imports BIS LBS from scratch

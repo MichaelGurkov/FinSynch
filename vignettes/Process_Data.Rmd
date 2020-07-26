@@ -88,8 +88,10 @@ bank_list$bank_gdp = raw_data$bank_balance_real_norm %>%
 
 trade_list = list()
 
-export_df = lapply(list.files(paste0("C:\\Users\\Misha\\Documents\\Data",
-                                     "\\IMF\\Export-Import\\Export"),
+export_df = lapply(list.files(paste0(
+  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
+  "\\OneDrive - Bank Of Israel\\Data",
+  "\\IMF\\Export-Import\\Export"),
                               full.names = TRUE),
                    import_imf_df,
                    countries_vec = countries_list$oecd_countries) %>%
@@ -99,8 +101,10 @@ export_df = lapply(list.files(paste0("C:\\Users\\Misha\\Documents\\Data",
   summarise(Exports = sum(Exports, na.rm = TRUE))
 
 
-import_df = lapply(list.files(paste0("C:\\Users\\Misha\\Documents\\Data",
-                                     "\\IMF\\Export-Import\\Import"),
+import_df = lapply(list.files(paste0(
+  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
+  "\\OneDrive - Bank Of Israel\\Data",
+  "\\IMF\\Export-Import\\Import"),
                               full.names = TRUE),
                    import_imf_df,
                    countries_vec = countries_list$oecd_countries) %>%

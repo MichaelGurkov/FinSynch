@@ -12,7 +12,7 @@ import.bis.cpi.data = function(filepath = NULL,
 
   if(is.null(filepath)){filepath = paste0(
     file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-    "\\Documents\\Data\\BIS",
+    "\\OneDrive - Bank Of Israel\\Data\\BIS",
     "\\WEBSTATS_LONG_",
     "CPI_DATAFLOW_csv_col.csv")}
 
@@ -82,13 +82,13 @@ import_wdi_df = function(filepath_list = NULL,
 
     filepath_list = list(
       GDP_per_Capita = paste0(
-        dir_path,"\\Documents\\Data\\",
+        dir_path,"\\OneDrive - Bank Of Israel\\Data\\",
         "World Bank\\GDP_per_capita_panel.csv"),
       GDP = paste0(
-        dir_path,"\\Documents\\",
+        dir_path,"\\OneDrive - Bank Of Israel\\",
         "Data\\World Bank\\GDP_panel.csv"),
       Pop = paste0(
-        dir_path,"\\Documents\\",
+        dir_path,"\\OneDrive - Bank Of Israel\\",
         "Data\\World Bank\\Population.csv"))
 
 
@@ -141,19 +141,19 @@ import_bis_fin_cycle_df = function(filepath_list = NULL,
 
     filepath_list = list(
       Credit_GDP = paste0(
-        dir_path,"\\Documents\\Data\\",
+        dir_path,"\\OneDrive - Bank Of Israel\\Data\\",
         "BIS\\temp_credit_gdp_BIS.rds"),
       Total_credit = paste0(
-        dir_path,"\\Documents\\Data\\",
+        dir_path,"\\OneDrive - Bank Of Israel\\Data\\",
         "BIS\\temp_tot_credit_BIS.rds"),
       House = paste0(
-        dir_path,"\\Documents\\Data\\",
+        dir_path,"\\OneDrive - Bank Of Israel\\Data\\",
         "BIS\\temp_house_bis.rds"),
       FX = paste0(
-        dir_path,"\\Documents\\Data\\",
+        dir_path,"\\OneDrive - Bank Of Israel\\Data\\",
         "BIS\\temp_FX_USD.rds"),
       Rate = paste0(
-        dir_path,"\\Documents\\Data\\",
+        dir_path,"\\OneDrive - Bank Of Israel\\Data\\",
         "BIS\\temp_Policy_Rates.rds"))
 
   }
@@ -196,7 +196,7 @@ import_cross_border_balance = function(filepath = NULL,
 
     filepath = paste0(
       file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-      "\\Documents\\Data\\BIS",
+      "\\OneDrive - Bank Of Israel\\Data\\BIS",
       "\\temp_credit_flows.rds")
     }
 
@@ -239,7 +239,7 @@ import_cross_border_balance = function(filepath = NULL,
 
 import.trilemma.ind = function(filepath = paste0(
   file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-  "\\Documents\\Data",
+  "\\OneDrive - Bank Of Israel\\Data",
   "\\AizenmanChinnIto\\trilemma_indexes_update2018.xlsx")){
 
   temp_df = read_xlsx(filepath)
@@ -270,7 +270,7 @@ import.trilemma.ind = function(filepath = paste0(
 
 import.macropru.ind = function(filepath = paste0(
   file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-  "\\Documents",
+  "\\OneDrive - Bank Of Israel",
   "\\Data\\Cerutti\\prudential_ind_3.xlsx"),
   countries_vec = NULL){
 
@@ -302,7 +302,7 @@ import.macropru.ind = function(filepath = paste0(
 
 import.kaopen.ind = function(filepath = paste0(
   file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-  "\\Documents\\Data\\Chin-Ito\\kaopen_2016.xls"),
+  "\\OneDrive - Bank Of Israel\\Data\\Chin-Ito\\kaopen_2016.xls"),
   countries_vec = NULL){
 
   temp_df = read_xls(filepath)
@@ -331,7 +331,7 @@ import.kaopen.ind = function(filepath = paste0(
 
 import.fin.dev.ind = function(filepath = paste0(
   file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-  "\\Documents\\Data\\Svirydzenka\\FinDev.xlsx"),
+  "\\OneDrive - Bank Of Israel\\Data\\Svirydzenka\\FinDev.xlsx"),
   countries_vec = NULL){
 
   temp_df = read_xlsx(filepath)
@@ -361,12 +361,12 @@ import.fin.dev.ind = function(filepath = paste0(
 
 import.harmon.data = function(filepath = paste0(
   file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-  "\\Documents\\Data\\",
+  "\\OneDrive - Bank Of Israel\\Data\\",
   "Kalemli_Ozcan_Papaionnou_Peydro\\harmon.xlsx"),
   myrange = "B4:AF32",
   codes_filepath = paste0(
     file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-    "\\Documents\\Data\\ISO\\",
+    "\\OneDrive - Bank Of Israel\\Data\\ISO\\",
     "iso_2digit_alpha_country_codes.csv"),
   convert_country_names = TRUE){
 
@@ -468,7 +468,7 @@ calculate.gdp.df = function(growth_rates, gdp_balance){
 #'
 import.bis.lbs.data = function(filepath = paste0(
   file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-  "\\Documents\\Data\\BIS\\",
+  "\\OneDrive - Bank Of Israel\\Data\\BIS\\",
   "WEBSTATS_LBS_D_PUB_DATAFLOW_csv_col.csv"),
   my_instruments = "All instruments",
   my_measure = "Amounts outstanding / Stocks",
@@ -554,7 +554,7 @@ import.bis.lbs.data = function(filepath = paste0(
 
 import.bis.tot.credit.data = function(filepath = paste0(
   file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-  "\\Documents\\Data\\BIS\\",
+  "\\OneDrive - Bank Of Israel\\Data\\BIS\\",
   "WEBSTATS_TOTAL_CREDIT_DATAFLOW_csv_col.csv"),
   my_lending_sector = "All sectors",
   my_unit_type = "US Dollar",
@@ -608,7 +608,7 @@ import.bis.tot.credit.data = function(filepath = paste0(
 
 import.bis.property.price.data = function(filepath = paste0(
   file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-  "\\Documents\\Data\\BIS\\",
+  "\\OneDrive - Bank Of Israel\\Data\\BIS\\",
   "WEBSTATS_SELECTED_PP_DATAFLOW_csv_col.csv"),
   my_value = "Real",
   my_measure = "Index, 2010 = 100",
@@ -655,7 +655,7 @@ import.bis.property.price.data = function(filepath = paste0(
 
 import.wgi.ind = function(filepath = paste0(
   file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-  "\\Documents\\Data\\World Bank\\WGIData.csv"),
+  "\\OneDrive - Bank Of Israel\\Data\\World Bank\\WGIData.csv"),
   countries_vec = NULL){
 
   temp_df = read_csv(filepath, col_types = NULL)
@@ -684,7 +684,7 @@ import.wgi.ind = function(filepath = paste0(
 
 import.crises.dates.df = function(filepath = paste0(
   file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-  "\\Documents\\Data\\LavaenValencia\\SYSTEMIC BANKING ",
+  "\\OneDrive - Bank Of Israel\\Data\\LavaenValencia\\SYSTEMIC BANKING ",
   "CRISES DATABASE_2018.xlsx"),
   countries_vec = NULL){
 
@@ -720,7 +720,7 @@ import.crises.dates.df = function(filepath = paste0(
 
 import.geodist.data = function(filepath = paste0(
   file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-  "\\Documents\\Data\\CEPII\\",
+  "\\OneDrive - Bank Of Israel\\Data\\CEPII\\",
   "dist_cepii.xls")){
 
   df = read_xls(filepath, col_types = c(rep("text",2),
@@ -753,14 +753,14 @@ import.iso.codes = function(filepath = NULL, type = "3-digits"){
 
       df = read.csv(paste0(
         file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-        "\\Documents\\Data\\ISO\\",
+        "\\OneDrive - Bank Of Israel\\Data\\ISO\\",
         "iso_3digit_alpha_country_codes.csv"))
 
     } else if(type == "2-digits"){
 
     df = read.csv(paste0(
       file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-      "\\Documents\\Data\\ISO\\",
+      "\\OneDrive - Bank Of Israel\\Data\\ISO\\",
       "iso_2digit_alpha_country_codes.csv"))
     }
 

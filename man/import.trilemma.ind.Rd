@@ -4,9 +4,11 @@
 \alias{import.trilemma.ind}
 \title{This function imports indexes of financial trilemma (capital openess)}
 \usage{
-
-  import.trilemma.ind(filepath = paste0("C:\\\\Users\\\\Misha\\\\Documents\\\\Data",
-  "\\\\AizenmanChinnIto\\\\trilemma_indexes_update2018.xlsx"))
+import.trilemma.ind(
+  filepath = paste0(file.path(Sys.getenv("USERPROFILE"), fsep = "\\\\"),
+    "\\\\OneDrive - Bank Of Israel\\\\Data",
+    "\\\\AizenmanChinnIto\\\\trilemma_indexes_update2018.xlsx")
+)
 }
 \description{
 @import readxl
@@ -14,5 +16,5 @@
 \details{
 @import dplyr
 
-@import stringr
+ @import stringr
 }

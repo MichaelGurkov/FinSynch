@@ -4,9 +4,11 @@
 \alias{import.oecd.gdp}
 \title{Import OECD GDP dataframe}
 \usage{
-
-  import.oecd.gdp(filepath = "C:\\\\Users\\\\Misha\\\\Documents\\\\Data\\\\OECD\\\\GDP.csv",
-  my_measure = "MLN_USD")
+import.oecd.gdp(
+  filepath = paste0(file.path(Sys.getenv("USERPROFILE"), fsep = "\\\\"),
+    "\\\\OneDrive - Bank Of Israel\\\\Data\\\\OECD\\\\GDP.csv"),
+  my_measure = "MLN_USD"
+)
 }
 \arguments{
 \item{my_measure}{filters the required measure

@@ -4,8 +4,13 @@
 \alias{make_strata_reg_list}
 \title{This function runs panel regression for each strata separately}
 \usage{
-make_strata_reg_list(reg_df, reg_formula, my_effect = "twoways",
-  my_model = "within", criteria_list = NULL)
+make_strata_reg_list(
+  reg_df,
+  reg_formula,
+  my_effect = "twoways",
+  my_model = "within",
+  criteria_list = NULL
+)
 }
 \description{
 This function runs panel regression for each strata separately

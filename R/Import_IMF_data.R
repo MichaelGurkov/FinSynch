@@ -66,10 +66,14 @@ import_imf_df = function(filepath, countries_vec = NULL){
 #'
 
 import.imf.trade.data = function(
-  export_dirpath = paste0("C:\\Users\\Misha\\Documents\\Data",
-                           "\\IMF\\Export-Import\\Export"),
-  import_dirpath = paste0("C:\\Users\\Misha\\Documents\\Data",
-                          "\\IMF\\Export-Import\\Import")){
+  export_dirpath = paste0(
+  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
+  "\\OneDrive - Bank Of Israel\\Data",
+  "\\IMF\\Export-Import\\Export"),
+  import_dirpath = paste0(
+    file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
+    "\\OneDrive - Bank Of Israel\\Data",
+    "\\IMF\\Export-Import\\Import")){
 
 
 

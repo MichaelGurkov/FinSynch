@@ -4,10 +4,13 @@
 \alias{construct_fin_reg}
 \title{This function constructs regression dataset}
 \usage{
-construct_fin_reg(df, countries_vec = NULL, control_vars = c("FD",
-  "FX_stab", "MI_ind", "FO_ind", "PruC", "PruC2", "FD", "FI"),
+construct_fin_reg(
+  df,
+  countries_vec = NULL,
+  control_vars = c("FD", "FX_stab", "MI_ind", "FO_ind", "PruC", "PruC2", "FD", "FI"),
   collapse_funcs = c("sum", "diff", "min"),
-  construct_func = "get.neg.abs.diff")
+  construct_func = "get.neg.abs.diff"
+)
 }
 \description{
 @import dplyr

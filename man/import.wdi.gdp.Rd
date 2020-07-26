@@ -4,8 +4,7 @@
 \alias{import.wdi.gdp}
 \title{Import World Bank GDP dataframe}
 \usage{
-import.wdi.gdp(filepath, countries_codes = NULL,
-  message_gdp_type = TRUE)
+import.wdi.gdp(filepath, countries_codes = NULL, message_gdp_type = TRUE)
 }
 \arguments{
 \item{countries_codes}{vector of codes of required countries}

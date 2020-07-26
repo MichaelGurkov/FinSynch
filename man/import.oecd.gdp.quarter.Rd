@@ -4,10 +4,13 @@
 \alias{import.oecd.gdp.quarter}
 \title{Import OECD GDP quarterly dataframe}
 \usage{
-
-  import.oecd.gdp.quarter(filepath = paste0("C:\\\\Users\\\\Misha\\\\Documents\\\\Data",
-  "\\\\OECD\\\\GDP_quarterly.csv"), my_subject = "TOT",
-  my_measure = "PC_CHGPP", my_frequency = "Q")
+import.oecd.gdp.quarter(
+  filepath = paste0(file.path(Sys.getenv("USERPROFILE"), fsep = "\\\\"),
+    "\\\\OneDrive - Bank Of Israel\\\\Data", "\\\\OECD\\\\GDP_quarterly.csv"),
+  my_subject = "TOT",
+  my_measure = "PC_CHGPP",
+  my_frequency = "Q"
+)
 }
 \arguments{
 \item{my_subject}{filters the required data type

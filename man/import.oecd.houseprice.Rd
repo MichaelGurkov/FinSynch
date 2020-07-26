@@ -4,23 +4,14 @@
 \alias{import.oecd.houseprice}
 \title{Import OECD house price dataframe}
 \usage{
-
-  import.oecd.houseprice(filepath = paste0("C:\\\\Users\\\\Misha\\\\Documents\\\\Data",
-  "\\\\OECD\\\\House_prices.csv"), my_frequency = "Q",
-  my_subject = "NOMINAL")
+import.oecd.houseprice(
+  filepath = paste0(file.path(Sys.getenv("USERPROFILE"), fsep = "\\\\"),
+    "\\\\OneDrive - Bank Of Israel\\\\Data", "\\\\OECD\\\\House_prices.csv"),
+  my_frequency = "Q",
+  my_subject = "NOMINAL"
+)
 }
 \arguments{
-\item{my_frequency}{filters the required frequency
-(annual - A or quarter - Q). The default is Q
-Import OECD share price dataframe
-
-
-This function imports share price data from OECD format.}
-
-\item{my_subject}{This parameter filters the required data type
-(nominal price, real price, price to rent, price to income or rent).
- The default is real price}
-
 \item{my_frequency}{filters the required frequency
 (annual - A , quarter - Q or monthly - M). The default is Q}
 

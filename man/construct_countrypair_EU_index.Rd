@@ -4,8 +4,12 @@
 \alias{construct_countrypair_EU_index}
 \title{This function constructs country pair EU index}
 \usage{
-construct_countrypair_EU_index(eu_df, dates_vec = NULL,
-  countries = NULL, index_status = "both")
+construct_countrypair_EU_index(
+  eu_df,
+  dates_vec = NULL,
+  countries = NULL,
+  index_status = "both"
+)
 }
 \description{
 @import dplyr
