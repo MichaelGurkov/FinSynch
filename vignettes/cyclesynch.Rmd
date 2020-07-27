@@ -9,7 +9,7 @@ output:
     number_sections: true
     includes:
             in_header: C:\\Users\\Misha\\Documents\\Financial-Cycle\\GlobalFinancialCycleSynch\\vignettes\\GlobalFinCyclePreambleDoc.tex
-abstract: "This paper studies the relationship between financial cycles synchronization and financial integration.I run panel regression of synchronization vs integration using data on 30 OECD countries. My results suggest that the relationship is state depended: While financial integration acts as \" shock absorber \" during normal times, I find that financial crises increase the \"shock propagation\" feature of banking integration. Overall the results suggest that while banking integration may be desired because it may facilitate risk diversification, additional macro prudential measures may be warranted to account for the risk exposure during crisis times."
+abstract: "This paper studies the relationship between financial cycles synchronization and financial integration using data on 30 OECD countries.The results suggest that the relationship is state depended: While financial integration acts as \" shock absorber \" during normal times, I find that financial crises increase the \"shock propagation\" feature of banking integration. Overall the findings show that while banking integration may be desired because it may facilitate risk diversification, additional macro prudential measures may be warranted to account for the risk exposure during crisis times."
 bibliography: C:\\Users\\Misha\\Documents\\References\\Financial_Cycle-Global_Financial_Cycle.bib
 
 vignette: >
@@ -382,18 +382,19 @@ The BIS statistics have possibly the most extensive time coverage from all simil
 my main measure is the average of (the logs of) real bilateral asset and liability holdings as a share of the two countries’ GDP.
 
 \begin{align*}
-    Banklinkages_{i,j,t} =& \frac{1}{4} \bigg[
-    log\left(\frac{Assets_{i,j,t}}{GDP_{i,t} + 
-    GDP_{j,t}}\right)  + log\left(\frac{Liabilities_{i,j,t}}{GDP_{i,t} + 
-    GDP_{j,t}}\right)  + \\ & log\left(\frac{Assets_{j,i,t}}{GDP_{i,t} +
-    GDP_{j,t}}\right)  + log\left(\frac{Liabilities_{j,i,t}}{GDP_{i,t} +
+    B_{i,j,t} =& \frac{1}{4} \bigg[
+    ln\left(\frac{A_{i,j,t}}{GDP_{i,t} + 
+    GDP_{j,t}}\right)  + ln\left(\frac{L_{i,j,t}}{GDP_{i,t} + 
+    GDP_{j,t}}\right)  + \\ & ln\left(\frac{A_{j,i,t}}{GDP_{i,t} +
+    GDP_{j,t}}\right)  + ln\left(\frac{L_{j,i,t}}{GDP_{i,t} +
     GDP_{j}}\right) \bigg]
 \end{align*}
 
 where:
+$B_{i,j,t}$ - Bank linkages between bank $i$ and bank $j$ in year $t$
+$A_{i,j,t}$ - total assets of banks in country $i$ in country $j$
+$L_{i,j,t}$ - total liabilities of banks in country $j$ in country $i$
 $i,j$ - country index
-$Assets_{i,j}$ - total assets of banks in country $i$ in country $j$
-$Liabilities_{i,j}$ - total liabilities of banks in country $j$ in country $i$
 
 This measure captures the financial integration between two countries.
 For example increase in bank linkages means that more capital is moving between the countries.
@@ -409,6 +410,10 @@ I calculate the percentage difference of each variable and then take a simple av
 FinSynch_{i,j,i} = -\lvert FinRet_{i,t}  - FinRet_{j,t} \rvert
 \end{equation*}
 
+\begin{equation*}
+FinSynch_{i,j,i} = -\lvert FinRet_{i,t}  - FinRet_{j,t} \rvert
+\end{equation*}
+
 where:
 
 \begin{equation*}
@@ -416,6 +421,13 @@ FinRet_{i,t} = \frac{1}{3} \cdot ln \left(  \frac{TotalCredit_{i,t}}{TotalCredit
 +\frac{1}{3} \cdot ln\left( \frac{HousePrice_{i,t}}{HousePrice_{i,t-1}} \right) 
 +\frac{1}{3} \cdot ln\left( \frac{SharePrice_{i,t}}{SharePrice_{i,t-1}} \right)
 \end{equation*}    
+
+
+\begin{equation*}
+FinRet_{i,t} = \frac{1}{3} \cdot ln \left(  \frac{TotalCredit_{i,t}}{TotalCredit_{i,t-1}} \right) 
++\frac{1}{3} \cdot ln\left( \frac{HousePrice_{i,t}}{HousePrice_{i,t-1}} \right) 
++\frac{1}{3} \cdot ln\left( \frac{SharePrice_{i,t}}{SharePrice_{i,t-1}} \right)
+\end{equation*}
 
 where:
 $i,j$ - country index
@@ -614,7 +626,7 @@ To measure exchange rate stability, annual standard deviations of the monthly ex
 between the home country and the base country are calculated and included in the following
 formula to normalize the index between 0 and 1:
 
-$ERS = \frac{0.01}{0.01 + SD(\Delta(log(FX)))}$
+$ERS = \frac{0.01}{0.01 + SD(\Delta(ln(FX)))}$
 
 Merely applying this formula can easily create a downward bias in the index, that is, it would exaggerate the “flexibility” of the exchange rate especially when the rate usually follows a narrow band, but is de- or revalued infrequently. To avoid such downward bias, a threshold to the exchange rate movement is applied. That is, if the rate of monthly change in the exchange rate stayed within +/-0.33 percent bands, the exchange rate is considered “fixed” and the value of one is assigned for the ERS index. Furthermore, single year pegs are dropped because they are quite possibly not intentional ones. Higher values of this index indicate more stable movement of the exchange rate against the currency of the base country.
 
