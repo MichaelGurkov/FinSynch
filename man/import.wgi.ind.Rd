@@ -4,9 +4,11 @@
 \alias{import.wgi.ind}
 \title{This helper function imports Worldwide Governance Indicators data}
 \usage{
-
-  import.wgi.ind(filepath = paste0("C:\\\\Users\\\\Misha\\\\Documents\\\\Data\\\\World Bank\\\\WGIData.csv"),
-  countries_vec = NULL)
+import.wgi.ind(
+  filepath = paste0(file.path(Sys.getenv("USERPROFILE"), fsep = "\\\\"),
+    "\\\\Documents\\\\Data\\\\World Bank\\\\WGIData.csv"),
+  countries_vec = NULL
+)
 }
 \description{
 This helper function imports Worldwide Governance Indicators data

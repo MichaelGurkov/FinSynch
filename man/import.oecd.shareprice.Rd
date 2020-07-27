@@ -4,9 +4,11 @@
 \alias{import.oecd.shareprice}
 \title{Import OECD share price dataframe}
 \usage{
-
-  import.oecd.shareprice(filepath = paste0("C:\\\\Users\\\\Misha\\\\Documents\\\\Data",
-  "\\\\OECD\\\\Share_prices.csv"), my_frequency = "Q")
+import.oecd.shareprice(
+  filepath = paste0(file.path(Sys.getenv("USERPROFILE"), fsep = "\\\\"),
+    "\\\\OneDrive - Bank Of Israel\\\\Data", "\\\\OECD\\\\Share_prices.csv"),
+  my_frequency = "Q"
+)
 }
 \arguments{
 \item{my_frequency}{filters the required frequency

@@ -4,9 +4,10 @@
 \alias{import.geodist.data}
 \title{This function imports geo dist data from cepii}
 \usage{
-
-  import.geodist.data(filepath = paste0("C:\\\\Users\\\\Misha\\\\Documents",
-  "\\\\Data\\\\CEPII\\\\", "dist_cepii.xls"))
+import.geodist.data(
+  filepath = paste0(file.path(Sys.getenv("USERPROFILE"), fsep = "\\\\"),
+    "\\\\Documents\\\\Data\\\\CEPII\\\\", "dist_cepii.xls")
+)
 }
 \description{
 This function imports geo dist data from cepii

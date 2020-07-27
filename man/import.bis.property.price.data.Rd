@@ -4,10 +4,13 @@
 \alias{import.bis.property.price.data}
 \title{This function imports BIS house price data from scratch}
 \usage{
-
-  import.bis.property.price.data(filepath = paste0("C:\\\\Users\\\\Misha\\\\Documents\\\\Data\\\\BIS\\\\",
-  "WEBSTATS_SELECTED_PP_DATAFLOW_csv_col.csv"), my_value = "Real",
-  my_measure = "Index, 2010 = 100", countries_vec = NULL)
+import.bis.property.price.data(
+  filepath = paste0(file.path(Sys.getenv("USERPROFILE"), fsep = "\\\\"),
+    "\\\\Documents\\\\Data\\\\BIS\\\\", "WEBSTATS_SELECTED_PP_DATAFLOW_csv_col.csv"),
+  my_value = "Real",
+  my_measure = "Index, 2010 = 100",
+  countries_vec = NULL
+)
 }
 \description{
 This function imports BIS house price data from scratch

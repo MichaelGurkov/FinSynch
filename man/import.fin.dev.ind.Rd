@@ -4,9 +4,11 @@
 \alias{import.fin.dev.ind}
 \title{This function imports financial development data}
 \usage{
-
-  import.fin.dev.ind(filepath = paste0("C:\\\\Users\\\\Misha\\\\Documents\\\\Data\\\\Svirydzenka\\\\FinDev.xlsx"),
-  countries_vec = NULL)
+import.fin.dev.ind(
+  filepath = paste0(file.path(Sys.getenv("USERPROFILE"), fsep = "\\\\"),
+    "\\\\Documents\\\\Data\\\\Svirydzenka\\\\FinDev.xlsx"),
+  countries_vec = NULL
+)
 }
 \description{
 @import readxl

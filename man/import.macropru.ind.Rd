@@ -4,9 +4,11 @@
 \alias{import.macropru.ind}
 \title{This function imports macroprudential (Cerutti) data}
 \usage{
-
-  import.macropru.ind(filepath = paste0("C:\\\\Users\\\\Misha\\\\Documents",
-  "\\\\Data\\\\Cerutti\\\\prudential_ind_3.xlsx"), countries_vec = NULL)
+import.macropru.ind(
+  filepath = paste0(file.path(Sys.getenv("USERPROFILE"), fsep = "\\\\"),
+    "\\\\Documents", "\\\\Data\\\\Cerutti\\\\prudential_ind_3.xlsx"),
+  countries_vec = NULL
+)
 }
 \description{
 @import readxl

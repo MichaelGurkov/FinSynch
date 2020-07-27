@@ -88,8 +88,10 @@ bank_list$bank_gdp = raw_data$bank_balance_real_norm %>%
 
 trade_list = list()
 
-export_df = lapply(list.files(paste0("C:\\Users\\Misha\\Documents\\Data",
-                                     "\\IMF\\Export-Import\\Export"),
+export_df = lapply(list.files(paste0(
+  file.path(Sys.getenv("USERPROFILE"), fsep = "\\"),
+  "\\OneDrive - Bank Of Israel\\Data",
+  "\\IMF\\Export-Import\\Export"),
                               full.names = TRUE),
                    import_imf_df,
                    countries_vec = countries_list$oecd_countries) %>%
@@ -99,8 +101,10 @@ export_df = lapply(list.files(paste0("C:\\Users\\Misha\\Documents\\Data",
   summarise(Exports = sum(Exports, na.rm = TRUE))
 
 
-import_df = lapply(list.files(paste0("C:\\Users\\Misha\\Documents\\Data",
-                                     "\\IMF\\Export-Import\\Import"),
+import_df = lapply(list.files(paste0(
+  file.path(Sys.getenv("USERPROFILE"), fsep = "\\"),
+  "\\OneDrive - Bank Of Israel\\Data",
+  "\\IMF\\Export-Import\\Import"),
                               full.names = TRUE),
                    import_imf_df,
                    countries_vec = countries_list$oecd_countries) %>%
@@ -109,7 +113,8 @@ import_df = lapply(list.files(paste0("C:\\Users\\Misha\\Documents\\Data",
   group_by(Date, CountryPair) %>%
   summarise(Imports = sum(Imports, na.rm = TRUE))
 
-trade_df = full_join(export_df,import_df, by = c("Date", "CountryPair")) %>%
+trade_df = full_join(export_df,import_df,
+                     by = c("Date", "CountryPair")) %>%
   gather(.,key = Balance_Pos, value = Trade, -Date, - CountryPair) %>%
   deflate.data(.,vars_to_deflate = "Trade") %>%
   select(-Trade)
@@ -117,10 +122,12 @@ trade_df = full_join(export_df,import_df, by = c("Date", "CountryPair")) %>%
 
 trade_list$trade_gdp = trade_df %>%
   ungroup() %>%
-  normalize.imf.data(.,wdi_df = country_df[,c("Date","Country", "GDP_real")],
+  normalize.imf.data(.,wdi_df = country_df[,c("Date","Country",
+                                              "GDP_real")],
                      norm_val = "GDP_real") %>%
   group_by(Date, CountryPair) %>%
-  summarise(trade_gdp = mean(log(Trade_real), na.rm = TRUE)) %>%
+  summarise(trade_gdp = mean(log(Trade_real), na.rm = TRUE),
+            .groups = "drop") %>%
   filter(!is.na(trade_gdp)) %>%
   filter(is.finite(trade_gdp))
 

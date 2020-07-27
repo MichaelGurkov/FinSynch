@@ -354,7 +354,8 @@ make.params.list = function(){
 
 
 collapse_pair_controls = function(fin_reg_df, control_vars,
-                                  collapse_funcs = c("sum","diff","min")){
+                                  collapse_funcs = c(
+                                    "sum","diff","min")){
 
 
  for(temp_var in control_vars){
@@ -803,7 +804,8 @@ make_strata_reg_list = function(reg_df,reg_formula,
 #' This function classifies for given country the crises dates
 #'
 
-classify_crises_dates = function(Target_Country, dates_vec, crises_df){
+classify_crises_dates = function(
+  Target_Country, dates_vec, crises_df){
 
   temp_crises_df = crises_df %>%
     filter(Country == Target_Country)
@@ -921,7 +923,8 @@ import.all.data= function(countries_list =NULL){
       to = as.Date(max(raw_data$bis_lbs$Date)),
       by = "quarter") %>% as.yearqtr(),index_status = "one")
 
-  raw_data$codes = read.csv(paste0("C:\\Users\\Misha\\Documents",
+  raw_data$codes = read.csv(paste0(
+    file.path(Sys.getenv("USERPROFILE"), fsep = "\\"),"\\Documents",
                                    "\\Data\\ISO\\",
                                    "iso_2digit_alpha_country",
                                    "_codes.csv")) %>%
@@ -930,8 +933,10 @@ import.all.data= function(countries_list =NULL){
   # Import EU membership
   #---------------------------------------------------------
 
-   eu_df = read.csv(paste0("C:\\Users\\Misha\\Documents\\",
-                          "Data\\Misc\\EU_membership.csv"),
+   eu_df = read.csv(paste0(
+     file.path(Sys.getenv("USERPROFILE"), fsep = "\\"),
+     "\\Documents\\",
+     "Data\\Misc\\EU_membership.csv"),
                    stringsAsFactors = FALSE) %>%
     setNames(c("Country","Euro_area","EU"))
 
@@ -1079,8 +1084,10 @@ import.all.data= function(countries_list =NULL){
 
   trade_list = list()
 
-  export_df = lapply(list.files(paste0("C:\\Users\\Misha\\Documents\\Data",
-                                       "\\IMF\\Export-Import\\Export"),
+  export_df = lapply(list.files(paste0(
+    file.path(Sys.getenv("USERPROFILE"), fsep = "\\"),
+    "\\OneDrive - Bank Of Israel\\Data",
+    "\\IMF\\Export-Import\\Export"),
                                 full.names = TRUE),
                      import_imf_df,
                      countries_vec = countries_list$oecd_countries) %>%
@@ -1090,8 +1097,10 @@ import.all.data= function(countries_list =NULL){
     summarise(Exports = sum(Exports, na.rm = TRUE))
 
 
-  import_df = lapply(list.files(paste0("C:\\Users\\Misha\\Documents\\Data",
-                                       "\\IMF\\Export-Import\\Import"),
+  import_df = lapply(list.files(paste0(
+    file.path(Sys.getenv("USERPROFILE"), fsep = "\\"),
+    "\\OneDrive - Bank Of Israel\\Data",
+    "\\IMF\\Export-Import\\Import"),
                                 full.names = TRUE),
                      import_imf_df,
                      countries_vec = countries_list$oecd_countries) %>%
@@ -1238,5 +1247,27 @@ import.all.data= function(countries_list =NULL){
 
 
   return(fin_reg_df_annual)
+
+}
+
+
+#' Extract country and category form imf data filepath
+#'
+#' @param filepath string
+
+extract_id_from_imf_trade_filepath = function(filepath){
+
+  category = str_extract(filepath,"-\\s?(\\w*?)_") %>%
+    str_replace_all(.,pattern = "[-_\\s]","")
+
+  country = str_extract(filepath,"[^\\\\\\/]+.xlsx$") %>%
+    str_remove_all("\\.xlsx") %>%
+    str_extract("([^\\s]+)")
+
+  return(list(category = category, country = country))
+
+
+
+
 
 }

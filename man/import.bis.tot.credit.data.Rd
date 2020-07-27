@@ -4,12 +4,16 @@
 \alias{import.bis.tot.credit.data}
 \title{This function imports BIS total credit data from scratch}
 \usage{
-
-  import.bis.tot.credit.data(filepath = paste0("C:\\\\Users\\\\Misha\\\\Documents\\\\Data\\\\BIS\\\\",
-  "WEBSTATS_TOTAL_CREDIT_DATAFLOW_csv_col.csv"),
-  my_lending_sector = "All sectors", my_unit_type = "US Dollar",
-  my_valuation = "Market value", my_adjustment = "Adjusted for breaks",
-  my_sector = "Private non-financial sector", countries_vec = NULL)
+import.bis.tot.credit.data(
+  filepath = paste0(file.path(Sys.getenv("USERPROFILE"), fsep = "\\\\"),
+    "\\\\Documents\\\\Data\\\\BIS\\\\", "WEBSTATS_TOTAL_CREDIT_DATAFLOW_csv_col.csv"),
+  my_lending_sector = "All sectors",
+  my_unit_type = "US Dollar",
+  my_valuation = "Market value",
+  my_adjustment = "Adjusted for breaks",
+  my_sector = "Private non-financial sector",
+  countries_vec = NULL
+)
 }
 \description{
 This function imports BIS total credit data from scratch

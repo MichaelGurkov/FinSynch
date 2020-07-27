@@ -4,8 +4,11 @@
 \alias{import_cross_border_balance}
 \title{This helper function imports cross border banking from BIS  data base}
 \usage{
-import_cross_border_balance(filepath = NULL, countries_vec = NULL,
-  annual_freq = TRUE)
+import_cross_border_balance(
+  filepath = NULL,
+  countries_vec = NULL,
+  annual_freq = TRUE
+)
 }
 \description{
 This helper function imports cross border banking from BIS  data base

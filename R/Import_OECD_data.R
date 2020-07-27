@@ -75,8 +75,10 @@
 
 
 import.oecd.houseprice = function(
-  filepath = paste0("C:\\Users\\Misha\\Documents\\Data",
-                    "\\OECD\\House_prices.csv"),
+  filepath = paste0(
+    file.path(Sys.getenv("USERPROFILE"), fsep = "\\"),
+    "\\OneDrive - Bank Of Israel\\Data",
+    "\\OECD\\House_prices.csv"),
   my_frequency = "Q",
   my_subject = "NOMINAL"){
 
@@ -124,8 +126,10 @@ import.oecd.houseprice = function(
 
 
 import.oecd.shareprice = function(
-  filepath = paste0("C:\\Users\\Misha\\Documents\\Data",
-                    "\\OECD\\Share_prices.csv"),
+  filepath = paste0(
+    file.path(Sys.getenv("USERPROFILE"), fsep = "\\"),
+    "\\OneDrive - Bank Of Israel\\Data",
+    "\\OECD\\Share_prices.csv"),
   my_frequency = "Q"){
 
   df = read.csv(file = filepath, stringsAsFactors = FALSE)
@@ -174,8 +178,10 @@ import.oecd.shareprice = function(
 #' (annual - A or quarter - Q). The default is Q
 
 import.oecd.gdp.quarter = function(
-  filepath = paste0("C:\\Users\\Misha\\Documents\\Data",
-                    "\\OECD\\GDP_quarterly.csv"),
+  filepath = paste0(
+    file.path(Sys.getenv("USERPROFILE"), fsep = "\\"),
+    "\\OneDrive - Bank Of Israel\\Data",
+    "\\OECD\\GDP_quarterly.csv"),
   my_subject = "TOT", my_measure = "PC_CHGPP", my_frequency = "Q"){
 
   df = read.csv(file = filepath, stringsAsFactors = FALSE)
@@ -218,7 +224,9 @@ import.oecd.gdp.quarter = function(
 
 
 import.oecd.gdp = function(
-  filepath ="C:\\Users\\Misha\\Documents\\Data\\OECD\\GDP.csv",
+  filepath = paste0(
+    file.path(Sys.getenv("USERPROFILE"), fsep = "\\"),
+    "\\OneDrive - Bank Of Israel\\Data\\OECD\\GDP.csv"),
   my_measure = "MLN_USD"){
 
   df = read.csv(file = filepath, stringsAsFactors = FALSE)

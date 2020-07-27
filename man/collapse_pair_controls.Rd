@@ -4,8 +4,11 @@
 \alias{collapse_pair_controls}
 \title{This function collapses (calculates sum, difference and min)}
 \usage{
-collapse_pair_controls(fin_reg_df, control_vars,
-  collapse_funcs = c("sum", "diff", "min"))
+collapse_pair_controls(
+  fin_reg_df,
+  control_vars,
+  collapse_funcs = c("sum", "diff", "min")
+)
 }
 \description{
 This function collapses (calculates sum, difference and min)

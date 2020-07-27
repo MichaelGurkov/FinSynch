@@ -4,9 +4,7 @@
 \alias{import.bis.cpi.data}
 \title{This helper function imports BIS cpi data and converts it to tidy format}
 \usage{
-import.bis.cpi.data(filepath = paste0("C:\\\\Users\\\\Misha\\\\",
-  "Documents\\\\Data\\\\BIS", "\\\\WEBSTATS_LONG_",
-  "CPI_DATAFLOW_csv_col.csv"), annual_freq = TRUE)
+import.bis.cpi.data(filepath = NULL, annual_freq = TRUE)
 }
 \description{
 This helper function imports BIS cpi data and converts it to tidy format

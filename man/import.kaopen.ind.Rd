@@ -4,9 +4,11 @@
 \alias{import.kaopen.ind}
 \title{This function imports capital account openess (Chinn Ito) data}
 \usage{
-
-  import.kaopen.ind(filepath = paste0("C:\\\\Users\\\\Misha\\\\Documents\\\\Data\\\\Chin-Ito\\\\kaopen_2016.xls"),
-  countries_vec = NULL)
+import.kaopen.ind(
+  filepath = paste0(file.path(Sys.getenv("USERPROFILE"), fsep = "\\\\"),
+    "\\\\Documents\\\\Data\\\\Chin-Ito\\\\kaopen_2016.xls"),
+  countries_vec = NULL
+)
 }
 \description{
 @import readxl

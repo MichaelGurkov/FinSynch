@@ -4,9 +4,12 @@
 \alias{import.crises.dates.df}
 \title{This helper function imports banking crises dates data}
 \usage{
-
-  import.crises.dates.df(filepath = paste0("C:\\\\Users\\\\Misha\\\\Documents\\\\Data\\\\LavaenValencia\\\\SYSTEMIC BANKING ",
-  "CRISES DATABASE_2018.xlsx"), countries_vec = NULL)
+import.crises.dates.df(
+  filepath = paste0(file.path(Sys.getenv("USERPROFILE"), fsep = "\\\\"),
+    "\\\\Documents\\\\Data\\\\LavaenValencia\\\\SYSTEMIC BANKING ",
+    "CRISES DATABASE_2018.xlsx"),
+  countries_vec = NULL
+)
 }
 \description{
 This helper function imports banking crises dates data

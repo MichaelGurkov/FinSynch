@@ -4,8 +4,7 @@
 \alias{construct_countrypair_harmon_index}
 \title{This function constructs country pair harmon index}
 \usage{
-construct_countrypair_harmon_index(df, dates_vec = NULL,
-  index_status = "both")
+construct_countrypair_harmon_index(df, dates_vec = NULL, index_status = "both")
 }
 \description{
 The function takes a data frame with "Directive","Country","Date"

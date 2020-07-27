@@ -4,11 +4,14 @@
 \alias{import.harmon.data}
 \title{This function imports harmon data}
 \usage{
-
-  import.harmon.data(filepath = paste0("C:\\\\Users\\\\Misha\\\\Documents\\\\Data\\\\",
-  "Kalemli_Ozcan_Papaionnou_Peydro\\\\harmon.xlsx"), myrange = "B4:AF32",
-  codes_filepath = paste0("C:\\\\Users\\\\Misha\\\\Documents\\\\Data\\\\ISO\\\\",
-  "iso_2digit_alpha_country_codes.csv"), convert_country_names = TRUE)
+import.harmon.data(
+  filepath = paste0(file.path(Sys.getenv("USERPROFILE"), fsep = "\\\\"),
+    "\\\\Documents\\\\Data\\\\", "Kalemli_Ozcan_Papaionnou_Peydro\\\\harmon.xlsx"),
+  myrange = "B4:AF32",
+  codes_filepath = paste0(file.path(Sys.getenv("USERPROFILE"), fsep = "\\\\"),
+    "\\\\Documents\\\\Data\\\\ISO\\\\", "iso_2digit_alpha_country_codes.csv"),
+  convert_country_names = TRUE
+)
 }
 \description{
 @import dplyr
@@ -16,5 +19,5 @@
 \details{
 @import readxl
 
-@import zoo
+ @import zoo
 }

@@ -14,11 +14,13 @@
 
 import_imf_df = function(filepath, countries_vec = NULL){
 
-  category = str_extract(filepath,"-\\s?(\\w*?)_") %>%
-    str_replace_all(.,pattern = "[-_\\s]","")
+  id_details = extract_id_from_imf_trade_filepath(filepath)
 
-  country = str_extract(filepath,"(\\w*?)\\s-") %>%
-    str_replace_all(.,pattern = "[-\\s]","")
+  category = id_details$category
+
+  country = id_details$country
+
+  if(str_detect(tolower(country),"export")){browser()}
 
   temp = suppressMessages(read_xlsx(filepath,
                                     range = cell_limits(c(7, 2),
@@ -34,7 +36,8 @@ import_imf_df = function(filepath, countries_vec = NULL){
 
   temp = temp %>%
     mutate(Counter_Country = gsub("\\s","_",Counter_Country)) %>%
-    {if(!is.null(countries_vec)) filter(.,Counter_Country %in% countries_vec) else .} %>%
+    {if(!is.null(countries_vec)) filter(
+      .,Counter_Country %in% countries_vec) else .} %>%
     gather(.,key = Date, value = !!quo_name(category),
            -Counter_Country) %>%
     mutate(CountryPair = ifelse(Counter_Country < country,
@@ -43,7 +46,8 @@ import_imf_df = function(filepath, countries_vec = NULL){
                                 paste(country,Counter_Country,
                                       sep = "-"))) %>%
     select(Date, CountryPair, !!quo_name(category)) %>%
-    mutate(!!quo_name(category) := str_remove(!!quo(!!sym(category)),"e"))
+    mutate(!!quo_name(category) := str_remove(
+      !!quo(!!sym(category)),"e"))
 
   return(temp)
 
@@ -66,10 +70,14 @@ import_imf_df = function(filepath, countries_vec = NULL){
 #'
 
 import.imf.trade.data = function(
-  export_dirpath = paste0("C:\\Users\\Misha\\Documents\\Data",
-                           "\\IMF\\Export-Import\\Export"),
-  import_dirpath = paste0("C:\\Users\\Misha\\Documents\\Data",
-                          "\\IMF\\Export-Import\\Import")){
+  export_dirpath = paste0(
+    file.path(Sys.getenv("USERPROFILE"), fsep = "\\"),
+    "\\OneDrive - Bank Of Israel\\Data",
+    "\\IMF\\Export-Import\\Export"),
+  import_dirpath = paste0(
+    file.path(Sys.getenv("USERPROFILE"), fsep = "\\"),
+    "\\OneDrive - Bank Of Israel\\Data",
+    "\\IMF\\Export-Import\\Import")){
 
 
 
