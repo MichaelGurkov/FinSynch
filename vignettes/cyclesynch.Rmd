@@ -24,7 +24,7 @@ vignette: >
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,echo = FALSE ,
-  message = FALSE,warning = FALSE,
+  message = FALSE,warning = FALSE,cache = TRUE,
   comment = "#>"
 )
 ```
@@ -553,7 +553,7 @@ During banking crises one standard deviation change in integration contributes
 \section{Israel} \label{Israel}
 
 
-```{r, child="Israel.Rmd"}
+```{r, child="Selected_countries.Rmd"}
 
 ```
 
@@ -562,7 +562,7 @@ During banking crises one standard deviation change in integration contributes
 \section{Robustness} \label{Robust}
 
 
-```{r child="Robustness.Rmd"}
+```{r child="Robustness.Rmd", eval=FALSE}
 
 ```
 
