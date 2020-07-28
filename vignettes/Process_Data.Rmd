@@ -249,7 +249,7 @@ controls =  c("FX_stab","MI_ind","FO_ind","FD","GDP_real")
 country_pair_df = append.countrypair.dataframe(
   country_pair_df,
   country_df %>%
-    select(Date,Country,controls) %>%
+    select(Date,Country,all_of(controls)) %>%
     mutate(GDP_real = log(GDP_real))) %>%
   collapse_pair_controls(controls,collapse_funcs = "sum")
 

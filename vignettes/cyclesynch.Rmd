@@ -8,9 +8,12 @@ output:
     latex_engine: xelatex
     number_sections: true
     includes:
-            in_header: C:\\Users\\Misha\\Documents\\Financial-Cycle\\GlobalFinancialCycleSynch\\vignettes\\GlobalFinCyclePreambleDoc.tex
+            in_header: C:\\Users\\internet\\Documents\\FinSynch\\vignettes\\GlobalFinCyclePreambleDoc.tex
+
 abstract: "This paper studies the relationship between financial cycles synchronization and financial integration using data on 30 OECD countries.The results suggest that the relationship is state depended: While financial integration acts as \" shock absorber \" during normal times, I find that financial crises increase the \"shock propagation\" feature of banking integration. Overall the findings show that while banking integration may be desired because it may facilitate risk diversification, additional macro prudential measures may be warranted to account for the risk exposure during crisis times."
-bibliography: C:\\Users\\Misha\\Documents\\References\\Financial_Cycle-Global_Financial_Cycle.bib
+
+bibliography: C:\\Users\\internet\\Desktop\\FinCycleBib.bib
+
 
 vignette: >
   %\VignetteIndexEntry{CycleSynch}

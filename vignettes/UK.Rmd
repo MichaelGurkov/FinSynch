@@ -1,6 +1,4 @@
 
-
-
 ```{r captions_setup}
 
 plot_israel_us_cap = paste0("Correlation of banking integration and ",
@@ -10,21 +8,19 @@ plot_israel_us_cap = paste0("Correlation of banking integration and ",
 
 ```
 
-For illustration purpose, I present in this section the result of the analysis
-for the case of Israel. The distribution of Israel's bilateral cross border credit is shown in figure \ref{plot_israel_bank_linkages}. Israel's cross border credit is quite concentrated: the United States is the largest counterparty followed by Switzerland and the United Kingdom.
 
-```{r plot_israel_bank_linkages,fig.cap="Israel's cross border credit\\label{plot_israel_bank_linkages}", fig.pos="h", out.extra=""}
+```{r plot_uk_bank_linkages,fig.cap="UK's cross border credit\\label{plot_uk_bank_linkages}", fig.pos="h", out.extra=""}
 
 net_df = raw_data$bis_lbs %>%
-  filter(grepl("Israel",CountryPair)) %>%
-  filter(Date == as.yearqtr("2018 Q4")) %>% 
+  filter(grepl("United_Kingdom",CountryPair)) %>%
+  filter(Date == as.yearqtr("2018 Q4")) %>%
   select(CountryPair, Balance) %>%
   group_by(CountryPair) %>%
   summarise(Balance = mean(Balance, na.rm = TRUE) * 10 ^ (-3)) %>%
   ungroup() %>%
-  mutate(CountryPair = gsub("Israel","",CountryPair)) %>%
-  mutate(CountryPair = gsub("-","",CountryPair)) %>%
-  mutate(CountryPair = gsub("\\s","",CountryPair)) %>%
+  mutate(CountryPair = str_remove_all(CountryPair,"United_Kingdom")) %>%
+  mutate(CountryPair = str_remove_all(CountryPair,"-")) %>%
+  mutate(CountryPair = str_replace_all(CountryPair,"_"," ")) %>%
   rename(Country = CountryPair)
 
 
@@ -32,7 +28,7 @@ ggplot(net_df, aes(x = reorder(Country, Balance), y = Balance)) +
   geom_bar(stat = "identity") +
   scale_y_continuous(label = comma) +
   labs(x = "", y = "Total cross border bilateral credit (USD billions)",
-       title = paste("Israel's total cross border bilateral credit",
+       title = paste("United Kingdoms total cross border bilateral credit",
                      " counterparties in 2018 Q4")) +
   theme_bw() +
   theme(plot.title = element_text(hjust = 0.5)) +
@@ -42,26 +38,23 @@ ggplot(net_df, aes(x = reorder(Country, Balance), y = Balance)) +
 ```
 
 
-<!-- The financial cycles of Israel and United States are -->
-<!-- plotted in figure \ref{plot_israel_us_cycles}. -->
 
+```{r plot_us_uk_cycles, fig.cap="Israel and US financial cycles\\label{plot_us_uk_cycles}", fig.pos="h", out.extra=""}
 
-```{r plot_israel_us_cycles, fig.cap="Israel and US financial cycles\\label{plot_israel_us_cycles}", fig.pos="h", out.extra=""}
-
-ggplot(country_df %>% 
-  select(Date, Country, Fin_ret) %>% 
-  filter(Country %in% c("Israel","United_States")) %>% 
-  filter(Date >= 1995),
-  aes(x = Date, y = Fin_ret * 100, color = Country, group = Country)) + 
-  geom_line() + 
+ggplot(country_df %>%
+         select(Date, Country, Fin_ret) %>%
+         filter(Country %in% c("United_Kingdom","United_States")) %>%
+         filter(Date >= 1995),
+       aes(x = Date, y = Fin_ret * 100, color = Country, group = Country)) +
+  geom_line() +
   labs(x = "", y = "Rate of change (YoY)",
-       title = "Synchronization of Israel and US financial activity") + 
-  theme_bw() + 
+       title = paste0("Synchronization of United_States and",
+                      " United_Kingdom financial activity")) +
+  theme_bw() +
   theme(legend.position = "bottom",
         legend.title = element_blank(),
         plot.title = element_text(hjust = 0.5),
         axis.text.x = element_text(angle = 45, vjust = 0.5))
-  
 
 ```
 
@@ -74,7 +67,7 @@ control for the effect of other factors I first regress financial
 synchronization and banking integration on control variables set (including
 fixed effect). The figure plots the residuals of this first step regressions, the trend line shows the negative association between financial synchronization and banking integration in the Israel-United States country pair.
 
-```{r plot_israel_us,fig.cap=plot_israel_us_cap, fig.pos="H", out.extra=""}
+```{r plot_us_uk,fig.cap=plot_israel_us_cap, fig.pos="H", out.extra=""}
 
 bank_clean = plm(sub("Fin_synch","bank_gdp",
                      gsub("lag(bank_gdp,1) *","",reg_formula, fixed = TRUE),
@@ -92,12 +85,12 @@ df_clean = list(bank_clean$model$CountryPair,
   setNames(c("CountryPair","Bank","FinSynch"))
 
 ggplot(df_clean %>%
-         filter(CountryPair == "Israel-United_States"),
+         filter(CountryPair == "United_Kingdom-United_States"),
        aes(x = Bank, y = FinSynch)) +
   geom_point() +
   labs(x = "Banking integration (log of bank credit to gdp)",
        y = "Financial synchronization (percent)",
-       title = "Israel-United States \n (netting fixed effects and controls)") +
+       title = "United States - United Kingdom \n (netting fixed effects and controls)") +
   geom_smooth(method = "lm", se = FALSE) +
   theme_bw() +
   theme(plot.title = element_text(hjust = 0.5))
