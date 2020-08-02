@@ -10,6 +10,10 @@ plot_correl_cap = paste0("Correlation of banking integration and ",
                             "(netting fixed effects and controls).",
                             " \\label{plot_israel_us}")
 
+
+plot_bank_linkages_cap = paste0(
+  "Top 5 counter parties with respect to cross border credit",
+  " \\label{plot_bank_linkages}")
 ```
 
 
@@ -58,23 +62,24 @@ correl_df = list(bank_clean$model$CountryPair,
 
 
 For illustration purpose, I present in this section the result of the analysis
-for two big financial centers (United States and United Kingdom) as well as small open market country (Israel).The distribution of the bilateral cross border credit is shown in figure \ref{plot_bank_linkages}. Interestingly United States and United Kingdom are the largest counterparty to each other, Unites States is also the largest cross border credit counterparty for Israel.
+for two big financial centers (United States and United Kingdom), as well as small open market country (Israel).The distribution of the bilateral cross border credit is shown in figure \ref{plot_bank_linkages}. Interestingly United States and United Kingdom are the largest counterparty to each other, Unites States is also the largest cross border credit counterparty for Israel.
 
-```{r plot_bank_linkages,fig.cap="Israel's cross border credit\\label{plot_bank_linkages}", fig.pos="h", out.extra=""}
+```{r plot_bank_linkages,fig.cap=plot_bank_linkages_cap, fig.pos="h", out.extra=""}
 
 plot_list = map(unique(net_df$Source),function(temp_name){
   
   net_df %>% 
     filter(Source == temp_name) %>% 
-    slice_max(Balance,n = 10) %>% 
+    slice_max(Balance,n = 5) %>% 
     ggplot(aes(x = reorder(Country, Balance), y = Balance)) + 
-    geom_col(width = 0.5) +
-    labs(title = temp_name) + 
+    geom_col(width = 0.3) +
+    labs(title = str_replace(temp_name,"_"," ")) + 
     xlab(NULL) + 
     ylab(NULL) + 
-    scale_y_continuous(labels = scales::comma_format()) +
     coord_flip() + 
-    theme(plot.title = element_text(hjust = 0.5))
+    scale_y_continuous(labels = scales::number_format(accuracy = 1)) + 
+    theme(plot.title = element_text(hjust = 0.5),
+          axis.text.x = element_text(size = 7))
   
   
   
@@ -90,17 +95,21 @@ plot_grid(plotlist = plot_list,ncol = 3)
 
 ggplot(country_df %>% 
   select(Date, Country, Fin_ret) %>% 
-  filter(Country %in% c("Israel","United_States","United_Kingdom")) %>% 
+  filter(Country %in% c("Israel","United_States",
+                        "United_Kingdom")) %>% 
   filter(Date >= 1995),
-  aes(x = Date, y = Fin_ret * 100, color = Country, group = Country)) + 
+  aes(x = Date, y = Fin_ret * 100, color = Country,
+      group = Country)) + 
   geom_line() + 
   labs(x = "", y = "Rate of change (YoY)",
-       title = "Synchronization of Israel and US financial activity") + 
+       title = paste0("Synchronization of Israel and",
+                      " US financial activity")) + 
   theme_bw() + 
   theme(legend.position = "bottom",
         legend.title = element_blank(),
         plot.title = element_text(hjust = 0.5),
-        axis.text.x = element_text(angle = 45, vjust = 0.5))
+        axis.text.x = element_text(angle = 45,
+                                   vjust = 0.5))
   
 
 ```
@@ -112,7 +121,7 @@ synchronization and banking integration for United Kingdom - United States and I
 synchronization and banking integration on control variables set (including
 fixed effect). The figure plots the residuals of this first step regressions, the trend line shows the (slightly) negative association between financial synchronization and banking integration in the all country pair.
 
-```{r plot_correl,fig.cap=plot_correl_cap, fig.pos="H", out.extra=""}
+```{r plot_correl,fig.cap="plot_correl_cap\\label{plot_correl}", fig.pos="H", out.extra=""}
 
 
 ggplot(correl_df %>%

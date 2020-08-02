@@ -8,8 +8,8 @@ output:
     latex_engine: xelatex
     number_sections: true
     includes:
-            in_header: C:\\Users\\internet\\Documents\\FinSynch\\vignettes\\GlobalFinCyclePreambleDoc.tex
-
+            in_header: GlobalFinCyclePreambleDoc.tex
+            
 abstract: "This paper studies the relationship between financial cycles synchronization and financial integration using data on 30 OECD countries.The results suggest that the relationship is state depended: While financial integration acts as \" shock absorber \" during normal times, I find that financial crises increase the \"shock propagation\" feature of banking integration. Overall the findings show that while banking integration may be desired because it may facilitate risk diversification, additional macro prudential measures may be warranted to account for the risk exposure during crisis times."
 
 bibliography: '`r stringr::str_replace_all(paste(file.path(Sys.getenv("USERPROFILE"),"\\OneDrive - Bank Of Israel\\References\\Financial_Cycle-Global_Financial_Cycle - Copy.bib")),"\\\\","\\\\\\\\\\")`'
@@ -24,7 +24,7 @@ vignette: >
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,echo = FALSE ,
-  message = FALSE,warning = FALSE,cache = TRUE,
+  message = FALSE,warning = FALSE,
   comment = "#>"
 )
 ```
@@ -335,7 +335,12 @@ sd_ratio_isr = sd(fin_reg_df$bank_gdp[isr_ind]) / sd(fin_reg_df$Fin_synch[isr_in
 
 <!-- What do you do -->
 
-This work studies the relationship between financial cycles synchronization and financial integration. A recent line of research studies the relationship between business synchronization and financial integration. For example, @Kalemli-Ozcan2013JF find that output synchronization is negatively affected by financial integration. The authors explain the connection as follows: if a country is hit with a negative productivity shock, global banks will reduce credit to that country and increase credit to another country, thus, exacerbating negative output effect in the former country and facilitating positive output effect in the latter. In this paper, I test whether the same mechanism applies to financial synchronization.
+This work analyzes the relationship between financial cycles synchronization and financial integration. I identify the 
+synchronization between cross border flows of 30 OECD countries
+and find that the level of the synchronization generally decreases with
+the increase in banking linkages between the countries. 
+
+A recent line of research studies the relationship between business synchronization and financial integration. For example, @Kalemli-Ozcan2013JF find that output synchronization is negatively affected by financial integration. The authors explain the connection as follows: if a country is hit with a negative productivity shock, global banks will reduce credit to that country and increase credit to another country, thus, exacerbating negative output effect in the former country and facilitating positive output effect in the latter. In this paper, I test whether the same mechanism applies to financial synchronization.
 
 <!-- Why is it important -->
 The theory provides ambiguous predictions regarding the effect of financial integration on financial cycles synchronization. On the one hand, financial integration can help diversify risk, redirect capital to more profitable investment opportunities and act as country-specific "shock absorber". In that case, the association between banking integration and financial synchronization should be negative. On the other hand, banking integration can induce contagion effects and act as a global "shock propagator". In that case, a positive association should be observed. This paper attempts to shed some light on the connection between banking integration and financial cycles synchronization.
@@ -529,7 +534,7 @@ We can see that this risk sharing effect is state depended: the interaction term
 periods or in highly developed financial markets integration is associated with higher synchronization (relative to baseline case). That finding is in line with the theory that suggests that the "risk propagator" feature is present in these settings and thus the synchronization should increase relative to base setting. Banking (and financial) crises are often contagious events that are being hard to contain in locally and thus produce common shocks that result in higher synchronization. 
 
 Another finding is that when both countries belong to the euro-zone the synchronization also increases perhaps due to absence of currency risk.
-One implication for the Euro block (that is charactarized by one currency and very developed financial markets) is that the sum of the coefficients suggest that during a financial crises European Union's banking ystem may have a cumulative effect of shock propagation and not
+One implication for the Euro block (that is characterized by one currency and very developed financial markets) is that the sum of the coefficients suggest that during a financial crises European Union's banking ystem may have a cumulative effect of shock propagation and not
 risk absorbency.
 
 Coefficient analysis shows that banking integration effect is economically significant. A change of one standard deviation in banking linkages is
@@ -550,7 +555,7 @@ During banking crises one standard deviation change in integration contributes
 
 \newpage
 
-\section{Israel} \label{Israel}
+\section{Graphical results} \label{Israel}
 
 
 ```{r, child="Selected_countries.Rmd"}
