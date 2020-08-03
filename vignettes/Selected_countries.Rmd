@@ -5,15 +5,20 @@ theme_set(theme_bw())
 
 library(cowplot)
 
-plot_correl_cap = paste0("Correlation of banking integration and ",
-                            "financial synchronization ",
-                            "(netting fixed effects and controls).",
-                            " \\label{plot_israel_us}")
+plot_cycles_cap = paste0(
+  "Financial cycles of US, UK and Israel",
+  "\\label{plot_cycles}")
+
+plot_correl_cap = paste0(
+  "Correlation of banking integration and ",
+  "financial synchronization ",
+  "(netting fixed effects and controls).",
+  "\\label{plot_correl}")
 
 
 plot_bank_linkages_cap = paste0(
   "Top 5 counter parties with respect to cross border credit",
-  " \\label{plot_bank_linkages}")
+  "\\label{plot_bank_linkages}")
 ```
 
 
@@ -62,7 +67,7 @@ correl_df = list(bank_clean$model$CountryPair,
 
 
 For illustration purpose, I present in this section the result of the analysis
-for two big financial centers (United States and United Kingdom), as well as small open market country (Israel).The distribution of the bilateral cross border credit is shown in figure \ref{plot_bank_linkages}. Interestingly United States and United Kingdom are the largest counterparty to each other, Unites States is also the largest cross border credit counterparty for Israel.
+for two big financial centers (United States and United Kingdom), as well as small open market country (Israel).The distribution of the bilateral cross border credit is shown in figure \ref{plot_bank_linkages}. United States and United Kingdom are the largest counterparty to each other, Unites States is also the largest cross border credit counterparty for Israel.
 
 ```{r plot_bank_linkages,fig.cap=plot_bank_linkages_cap, fig.pos="h", out.extra=""}
 
@@ -91,7 +96,7 @@ plot_grid(plotlist = plot_list,ncol = 3)
 
 
 
-```{r plot_cycles, fig.cap="Financial cycles of US, UK and Israel\\label{plot_cycles}", fig.pos="h", out.extra=""}
+```{r plot_cycles, fig.cap=plot_cycles_cap, fig.pos="h", out.extra=""}
 
 ggplot(country_df %>% 
   select(Date, Country, Fin_ret) %>% 
@@ -121,7 +126,7 @@ synchronization and banking integration for United Kingdom - United States and I
 synchronization and banking integration on control variables set (including
 fixed effect). The figure plots the residuals of this first step regressions, the trend line shows the (slightly) negative association between financial synchronization and banking integration in the all country pair.
 
-```{r plot_correl,fig.cap="plot_correl_cap\\label{plot_correl}", fig.pos="H", out.extra=""}
+```{r plot_correl,fig.cap=plot_correl_cap, fig.pos="H", out.extra=""}
 
 
 ggplot(correl_df %>%

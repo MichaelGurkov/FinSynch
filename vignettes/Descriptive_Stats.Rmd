@@ -1,9 +1,20 @@
 
 ```{r define_fig_captions}
 
-bank_gdp_cap = paste0("Average real cross border bank claims.",
-                      " Shaded areas are banking crises periods",
-                      " \\label{plot_bank_gdp}")
+bank_gdp_cap = paste0(
+  "Average real cross border bank claims.",
+  "\n Shaded areas are banking crises periods",
+  " \\label{plot_bank_gdp}"
+  )
+
+bank_gdp_strata_cap = paste0(
+  "Average real cross border bank by claims country-pair group",
+  " \\label{plot_bank_gdp_strata}"
+  )
+
+avg_cycle_synch_cap = paste0(
+  "Average financial cycle synchronization",
+  " \\label{plot_Fin_synch}")
 
 ```
 
@@ -85,7 +96,7 @@ ggplot() +
 ```
 
 
-```{r plot_bank_gdp_strata,fig.cap="Average real cross border bank by claims country-pair group \\label{plot_bank_gdp_strata}",fig.height=3, eval=FALSE}
+```{r plot_bank_gdp_strata,fig.cap=bank_gdp_strata_cap,fig.height=3, eval=FALSE}
 
 ggplot(fin_reg_df %>% 
          mutate(FSAP = as.numeric(CountryPair %in% countries_list$fsap_countries_pairs)) %>% 
@@ -104,7 +115,7 @@ ggplot(fin_reg_df %>%
 ```
 
 
-```{r plot_average_cycle_synch,fig.cap="Average financial cycle synchronization \\label{plot_Fin_synch}",fig.pos="H"}
+```{r plot_average_cycle_synch,fig.cap=avg_cycle_synch_cap,fig.pos="H"}
 
 ggplot(fin_reg_df %>% 
          select(Date, Fin_synch) %>% 
@@ -117,7 +128,7 @@ ggplot(fin_reg_df %>%
   labs(title = "Average financial cycle synchronization",y = "", x = "") + 
   geom_line() + 
   theme_bw() + 
-  theme(axis.text.x = element_text(angle = 45, vjust = 0),
+  theme(axis.text.x = element_text(angle = 45, vjust = 0, size = 7),
         legend.position = "bottom", plot.title = element_text(hjust = 0.5))
 
 
