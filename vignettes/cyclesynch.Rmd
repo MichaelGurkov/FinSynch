@@ -416,7 +416,7 @@ $L_{i,j,t}$ - total liabilities of banks in country $j$ in country $i$
 \newline
 $G_{i,t}$ - gross domestic product of country $j$ in year $t$
 \newline
-$i,j$ - Country index
+$i,j$ - country index
 
 This measure captures the financial integration between two countries.
 For example increase in bank linkages means that more capital is moving between the countries.
@@ -429,14 +429,14 @@ Credit and asset prices are considered as the most fundamental components of the
 I calculate the percentage difference of each variable and then take a simple average to obtain the growth of the financial cycle. As a measure of synchronization of financial cycles, I use the negative of divergence in growth rates defined as the absolute value of financial cycle growth differences between country \textit{i} and country \textit{j} in period \textit{t}.
 
 \begin{equation}
-FinSynch_{i,j,i} = -\lvert FinRet_{i,t}  - FinRet_{j,t} \rvert
+FinSynch_{i,j,i} = -\lvert R_{i,t}  - R_{j,t} \rvert
 \end{equation}
 
 
 where:
 
 \begin{equation*}
-FinRet_{i,t} = \frac{1}{3} \cdot ln \left(  \frac{C_{i,t}}{C_{i,t-1}} \right) 
+R_{i,t} = \frac{1}{3} \cdot ln \left(  \frac{C_{i,t}}{C_{i,t-1}} \right) 
 +\frac{1}{3} \cdot ln\left( \frac{H_{i,t}}{H_{i,t-1}} \right) 
 +\frac{1}{3} \cdot ln\left( \frac{S_{i,t}}{S_{i,t-1}} \right)
 \end{equation*}    

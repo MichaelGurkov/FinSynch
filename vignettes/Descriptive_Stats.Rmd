@@ -1,19 +1,34 @@
 
 ```{r define_fig_captions}
 
+country_pairs = length(unique(country_pair_df$CountryPair))
+
+countries = length(unique(country_df$Country))
+
 bank_gdp_cap = paste0(
-  "Average real cross border bank claims.",
-  "\n Shaded areas are banking crises periods",
+  "Cross border bank claims over time. ",
+  "This figure plots the evolution of the average value of ",
+  "logs of bilateral stocks of assets and liabilities normalized",
+  "by the sum of the two countries’ GDP.",
+  " For each year the average is estimated across ",
+  country_pairs,
+  " country pairs (the sample spans ",countries,
+  " countries).",
+
+  " Shaded areas are banking crises periods.",
   " \\label{plot_bank_gdp}"
   )
 
-bank_gdp_strata_cap = paste0(
-  "Average real cross border bank by claims country-pair group",
-  " \\label{plot_bank_gdp_strata}"
-  )
 
 avg_cycle_synch_cap = paste0(
-  "Average financial cycle synchronization",
+  "Financial cycle synchronization over time.",
+  " This figure plots the evolution of the average value of ",
+  "the negative absolute difference in financial cycle rate of change",
+  " between country i and country j in year t.",
+  " For each year the average is estimated across ",
+  country_pairs,
+  " country pairs (the sample spans ",countries,
+  " countries).",
   " \\label{plot_Fin_synch}")
 
 ```

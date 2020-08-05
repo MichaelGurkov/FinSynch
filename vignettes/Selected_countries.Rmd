@@ -6,19 +6,32 @@ theme_set(theme_bw())
 library(cowplot)
 
 plot_cycles_cap = paste0(
-  "Financial cycles of US, UK and Israel",
+  "This figure plots the financial cycles of US, UK and Israel",
+  " The financial cycle is defined as the simple average of log returns",
+  " of the three cycle components (total credit, house prices",
+  " and share prices).",
   "\\label{plot_cycles}")
 
 plot_correl_cap = paste0(
-  "Correlation of banking integration and ",
-  "financial synchronization ",
-  "(netting fixed effects and controls).",
-  "\\label{plot_correl}")
+ "The figure plots the within-country pair and within-year correlation between",
+ " financial synchronization. (Fin Synch) in the vertical axis",
+" and banking integration (Bank Linkages) in the horizontal axis.",
+" Each observation corresponds to a particular country pair",
+" in each year. To generate the figure I first regress output",
+" synchronization and banking integration on country-pair fixed",
+" effects and year fixed effects. Then I plot the residuals",
+" of the synchronization regression in the vertical axis",
+" against the residuals from the banking integration regression",
+" in the horizontal axis.",
+"\\label{plot_correl}")
+
 
 
 plot_bank_linkages_cap = paste0(
   "Top 5 counter parties with respect to cross border credit",
   "\\label{plot_bank_linkages}")
+
+
 ```
 
 
@@ -107,8 +120,7 @@ ggplot(country_df %>%
       group = Country)) + 
   geom_line() + 
   labs(x = "", y = "Rate of change (YoY)",
-       title = paste0("Synchronization of Israel and",
-                      " US financial activity")) + 
+       title = paste0("Financial cycles of US, UK and Israel")) + 
   theme_bw() + 
   theme(legend.position = "bottom",
         legend.title = element_blank(),
@@ -126,7 +138,7 @@ synchronization and banking integration for United Kingdom - United States and I
 synchronization and banking integration on control variables set (including
 fixed effect). The figure plots the residuals of this first step regressions, the trend line shows the (slightly) negative association between financial synchronization and banking integration in the all country pair.
 
-```{r plot_correl,fig.cap=plot_correl_cap, fig.pos="H", out.extra=""}
+```{r plot_correl,fig.cap=plot_correl_cap, out.extra=""}
 
 
 ggplot(correl_df %>%
