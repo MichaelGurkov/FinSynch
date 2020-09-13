@@ -277,7 +277,7 @@ lines_str = list(c("Country pair FE","Yes"),
 ```
 
 
-```{r child="Import_Data.Rmd", eval=FALSE}
+```{r child="Import_Data.Rmd"}
 
 ```
 
@@ -290,7 +290,7 @@ raw_data = readRDS(paste0("C:\\Users\\Misha\\Documents\\SandBox",
 ```
 
 
-```{r child="Process_Data.Rmd", eval=FALSE}
+```{r child="Process_Data.Rmd"}
 
 ```
 
@@ -308,7 +308,7 @@ country_df = readRDS(paste0("C:\\Users\\Misha\\Documents\\SandBox",
 
 <!-- Regression analysis -->
 
-```{r estimation, eval=FALSE}
+```{r estimation}
 
 reg_list$baseline = plm(formula = formula(reg_formula),data = fin_reg_df,
           model = "within",effect = "twoways",
@@ -332,7 +332,7 @@ sd_ratio_isr = sd(fin_reg_df$bank_gdp[isr_ind]) / sd(fin_reg_df$Fin_synch[isr_in
 ```
 
 
-```{r temp_loading}
+```{r temp_loading, eval=FALSE}
 load("C:\\Users\\internet\\Desktop\\cyclesynch.RData")
 ```
 
@@ -418,12 +418,11 @@ $G_{i,t}$ - gross domestic product of country $j$ in year $t$
 \newline
 $i,j$ - country index
 
-This measure captures the financial integration between two countries.
-For example increase in bank linkages means that more capital is moving between the countries.
+This measure captures the financial integration between two countries at an annual frequency. For example, an increase in bank linkages means that more capital is moving between the countries.
 
 \subsection{Financial cycles synchronization}
 
-Credit and asset prices are considered as the most fundamental components of the financial cycle and are extensively used in the literature (@Drehmann2012, @Grinderslev2017). @Borio2014 argues that the most parsimonious description of the financial cycle can be made in terms of credit and property prices. @Rey2015 and @MirandaRey2015 expand the definition of the financial cycle to include both house and share prices. Following this literature, I use total credit and assets (property and shares) price data to estimate the financial cycle. Importantly, total credit account for credit from all sources, namely credit from financial accounts, domestic bank credit, and cross-border bank credit are the three main building blocks underlying the construction of the total credit series. The credit data come from the BIS database while property and shares prices come from OECD data.
+Credit and asset prices are considered as the most fundamental components of the financial cycle and are extensively used in the literature (@Drehmann2012, @Grinderslev2017). @Borio2014 argues that the most parsimonious description of the financial cycle can be made in terms of credit and property prices. @Rey2015 and @MirandaRey2015 expand the definition of the financial cycle to include both house and share prices. Following this literature, I use total credit and assets (property and shares) price data to estimate the financial cycle. Importantly, total credit account for credit from all sources, namely credit from financial accounts, domestic bank credit, and cross-border bank credit are the three main building blocks underlying the construction of the total credit series. The credit data come from the BIS database while property and shares prices come from OECD database.
 
 
 I calculate the percentage difference of each variable and then take a simple average to obtain the growth of the financial cycle. As a measure of synchronization of financial cycles, I use the negative of divergence in growth rates defined as the absolute value of financial cycle growth differences between country \textit{i} and country \textit{j} in period \textit{t}.
