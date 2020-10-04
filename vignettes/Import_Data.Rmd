@@ -7,7 +7,7 @@ raw_data = list()
 
 raw_data$oecd_codes = read.csv(paste0(
   file.path(Sys.getenv("USERPROFILE"),fsep ="\\"),
-  "\\Documents\\Data\\ISO\\",
+  "\\OneDrive - Bank Of Israel\\Data\\ISO\\",
   "iso_3digit_alpha_country","_codes.csv" ),
   stringsAsFactors = FALSE) %>%
   setNames(c("Code","Country")) %>% 
@@ -33,7 +33,7 @@ raw_data$bis_lbs = import.bis.lbs.data(
 raw_data$GDP_constant = import.wdi.gdp(
   filepath = paste0(
     file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-    "\\Documents\\Data\\World ",
+    "\\OneDrive - Bank Of Israel\\Data\\World ",
     "Bank\\API_NY.GDP.MKTP.KD_DS2_en_csv_v2_316073.csv"),
   message_gdp_type = FALSE,
   countries_codes = raw_data$oecd_codes %>%
@@ -46,7 +46,7 @@ raw_data$GDP_constant = import.wdi.gdp(
 raw_data$GDP_current = import.wdi.gdp(
   filepath = paste0(
     file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-    "\\Documents\\Data\\World ",
+    "\\OneDrive - Bank Of Israel\\Data\\World ",
     "Bank\\API_NY.GDP.MKTP.CD_DS2_en_csv_v2_315857.csv"),
   message_gdp_type = FALSE,
   countries_codes = raw_data$oecd_codes %>%
@@ -85,7 +85,7 @@ raw_data$cpi = import.bis.cpi.data(annual_freq = FALSE) %>%
 
 eu_df = read.csv(paste0(
   file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-  "\\Documents\\Data\\Misc\\EU_membership.csv"),
+  "\\OneDrive - Bank Of Israel\\Data\\Misc\\EU_membership.csv"),
                  stringsAsFactors = FALSE) %>%
   setNames(c("Country","Euro_area","EU")) %>%
   mutate(Country = gsub("\\s","_",Country)) %>%
