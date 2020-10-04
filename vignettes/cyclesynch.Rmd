@@ -588,15 +588,25 @@ During banking crises one standard deviation change in integration contributes
 ```
 
 
+\section{Policy implications} \label{policy}
+
+I find that financial crises increase the "shock propagation" feature of banking integration relative to baseline setting. This is an important result for
+policymakers. It suggests that while banking integration may be desired,
+additional macro prudential measures may be warranted to account for the risk
+exposure during crisis times.
+
+Additional factors that contribute to financial cycle synchronization are the
+high development of financial markets that means that policy makers should take
+the structural characteristics of their financial markets into account as well.
+
+
+
 \section{Summary and conclusions} \label{conclusions}
 
 This paper studies the effect of banking integration on the synchronization of financial cycles. Theory posits that there may be opposite effects ("shock absorption" vs "shock propagation") that make the identification of this effect difficult. In a real business cycle setting @Kalemli-Ozcan2013JF find that banking integration causes business cycles divergence, they suggest that credit flow from low to high return investments may be the mechanism that causes the divergence.
 
 I hypothesize that the same credit flow will cause financial cycles divergence as well. I find corroborating evidence of a negative association between banking integration and financial cycles synchronization. Moreover my results suggest that there are other factors that contribute to financial cycle synchronization and make the relationship state depended.
 
-Most importanly I find that financial crises increase the "shock propagation" feature of banking integration relative to baseline setting. This is an important result for policymakers. It suggests that while banking integration may be desired, additional macro prudential measures may be warranted to account for the risk exposure during crisis times.
-
-Additional factors that contribute to financial cycle synchronization are the high development of financial markets that means that policy makers should take the structural characteristics of their financial markets into account as well.
 
 \newpage
 
