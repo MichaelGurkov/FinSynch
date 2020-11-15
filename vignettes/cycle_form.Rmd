@@ -384,7 +384,7 @@ cat(star, sep = "\n")
 ```
 
 
-Figure \ref{plot_bank_gdp} shows the average cross border (bilateral) bank linkages of the countries in my sample. We can see that financial integration had increased since the 1980s until 2007-2008 (the Global Financial Crises)  and then a sharp drop followed, dropping below initial levels. The shaded area in the figure refer to dates of banking crises in the sample countries and it seems that those are associated with a decrease in financial integration.
+figure \ref{plot_bank_gdp} shows the average cross border (bilateral) bank linkages of the countries in my sample. We can see that financial integration had increased since the 1980s until 2007-2008 (the Global Financial Crises)  and then a sharp drop followed, dropping below initial levels. The shaded area in the figure refer to dates of banking crises in the sample countries and it seems that those are associated with a decrease in financial integration.
 
 
 ```{r plot_bank_gdp,fig.cap="Average real cross border bank claims \\label{plot_bank_gdp}",fig.height=5}
@@ -454,7 +454,7 @@ legend.position = "bottom", plot.title = element_text(hjust = 0.5))
 ```
 
 
-Figure \ref{plot_Fin_synch} shows the average synchronization (measured as the difference between credit and house price growth rates for each country-pair). The synchronization seems to be quite volatile with no specific trend until 2007-2008 (the global financial crises) and trending upward since.
+figure \ref{plot_Fin_synch} shows the average synchronization (measured as the difference between credit and house price growth rates for each country-pair). The synchronization seems to be quite volatile with no specific trend until 2007-2008 (the global financial crises) and trending upward since.
 
 
 \section{Estimation and results} \label{results}

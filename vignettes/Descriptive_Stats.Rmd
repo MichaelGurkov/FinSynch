@@ -35,7 +35,7 @@ avg_cycle_synch_cap = paste0(
 
 
 Summary statistics of the data are presented in table \ref{summary_table}.
-My sample includes `r format(nrow(fin_reg_df),big.mark = ",")`countrypair-year observations. The average divergence in financial cycle growth over the sample period is `r round(mean(fin_reg_df$Fin_synch, na.rm = TRUE),2)` (Fin cycles synch), with significant variation (the standard deviation is `r round(sd(fin_reg_df$Fin_synch, na.rm = TRUE),2)`). Banking linkages are characterized by similiar average level (`r round(mean(fin_reg_df$bank_gdp),2)`) with much smaller variation (the stadandard deviation is `r round(sd(fin_reg_df$bank_gdp),2)`).
+My sample includes `r format(nrow(fin_reg_df),big.mark = ",")` countrypair-year observations for `r paste(range(fin_reg_df$Date), collapse = "-")` period. The average divergence in financial cycle growth over the sample period is `r round(mean(fin_reg_df$Fin_synch, na.rm = TRUE),2)` (Fin cycles synch), with significant variation (the standard deviation is `r round(sd(fin_reg_df$Fin_synch, na.rm = TRUE),2)`). Banking linkages are characterized by similiar average level (`r round(mean(fin_reg_df$bank_gdp),2)`) with much smaller variation (the stadandard deviation is `r round(sd(fin_reg_df$bank_gdp),2)`).
 About `r paste0(format(mean(fin_reg_df$Crises) * 100,digits = 3),"%")` of the observations in the sample refer to crises periods (where at least one country in the countrypair undergoes a financial crises during this year).
 
 ```{r countrypair_table_summary, include=FALSE}
@@ -85,7 +85,7 @@ cat(star, sep = "\n")
 ```
 
 
-Figure \ref{plot_bank_gdp} shows the average cross border (bilateral) bank linkages of the countries in my sample. We can see that financial integration had increased since the 1980s until 2007-2008 (the Global Financial Crises)  and then a sharp drop followed, dropping below initial levels. The shaded area in the Figure refer to the dates of banking crises in the sample countries and it seems that those are associated with a decrease in financial integration.
+figure \ref{plot_bank_gdp} shows the average cross border (bilateral) bank linkages of the countries in my sample. We can see that financial integration had increased since the 1980s until 2007-2008 (the Global Financial Crises)  and then a sharp drop followed, dropping below initial levels. The shaded area in the figure refer to the dates of banking crises in the sample countries and it seems that those are associated with a decrease in financial integration.
 
 
 ```{r plot_bank_gdp,fig.cap=bank_gdp_cap,fig.height=5}
@@ -154,7 +154,7 @@ ggplot(fin_reg_df %>%
 ```
 
 
-Figure \ref{plot_Fin_synch} shows the average synchronization (measured as the difference between credit and house price growth rates for each country-pair). The synchronization seems to be quite volatile with no specific trend until 2007-2008 (the GFC) and trending upward since. 
+figure \ref{plot_Fin_synch} shows the average synchronization (measured as the difference between credit and house price growth rates for each country-pair). The synchronization seems to be quite volatile with no specific trend until 2007-2008 (the Great Financial Crisis) and trending upward since. 
 
 
 

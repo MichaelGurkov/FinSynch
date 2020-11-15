@@ -133,7 +133,7 @@ ggplot(country_df %>%
 
 
 
-Figure \ref{plot_correl} shows the correlation between financial
+figure \ref{plot_correl} shows the correlation between financial
 synchronization and banking integration for United Kingdom - United States and Israel - United States pairs. To control for the effect of other factors I first regress financial
 synchronization and banking integration on control variables set (including
 fixed effect). The figure plots the residuals of this first step regressions, the trend line shows the (slightly) negative association between financial synchronization and banking integration in the all country pair.
