@@ -80,7 +80,7 @@ correl_df = list(bank_clean$model$CountryPair,
 
 
 For illustration purpose, I present in this section the result of the analysis
-for two big financial centers (United States and United Kingdom), as well as small open market country (Israel).The distribution of the bilateral cross border credit is shown in figure \ref{plot_bank_linkages}. United States and United Kingdom are the largest counterparty to each other, Unites States is also the largest cross border credit counterparty for Israel.
+for two big financial centers (United States and United Kingdom), as well as small open market country (Israel). The distribution of the bilateral cross border credit is shown in Figure \ref{plot_bank_linkages}. United States and United Kingdom are the largest counterparty to each other, Unites States is also the largest cross border credit counterparty for Israel.
 
 ```{r plot_bank_linkages,fig.cap=plot_bank_linkages_cap, fig.pos="h", out.extra=""}
 
@@ -133,7 +133,7 @@ ggplot(country_df %>%
 
 
 
-figure \ref{plot_correl} shows the correlation between financial
+Figure \ref{plot_correl} shows the correlation between financial
 synchronization and banking integration for United Kingdom - United States and Israel - United States pairs. To control for the effect of other factors I first regress financial
 synchronization and banking integration on control variables set (including
 fixed effect). The figure plots the residuals of this first step regressions, the trend line shows the (slightly) negative association between financial synchronization and banking integration in the all country pair.

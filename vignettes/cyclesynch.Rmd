@@ -1,5 +1,5 @@
 ---
-title: "Financial cycles synchronization and financial integration ^[I thank Yossi Saadon, Nimrod Segev and Jonathan Benshimol and the participants of the Bank of Israel Research Department seminar for their helpful comments and suggestions]"
+title: "Financial cycles synchronization and financial integration ^[I thank Yossi Saadon, Nimrod Segev, Jonathan Benshimol, Osnat Zohar and the participants of the Bank of Israel Research Department seminar for their helpful comments and suggestions]"
 subtitle: 'Preliminary draft'
 author: "Michael Gurkov"
 fontsize: 11pt
@@ -265,7 +265,7 @@ notes_str_ctrl = paste0(notes_str,
                        "stability, monetary independence, financial ",
                        "openness, trade linkages and GDP (log). ",
                        "The standard errors are clustered ",
-                       "at country-pair level and ",
+                       "at country pair level and ",
                        "heteroscedasticity robust.")
 
 roll_cor_len = 5
@@ -354,7 +354,7 @@ The theory provides ambiguous predictions regarding the effect of financial inte
 
 <!-- How do you do it (methodology) -->
 
-To this end, I follow the methodology suggested by @Kalemli-Ozcan2013JF. Specifically, I use their measures of cycles synchronization and banking linkages and run a panel regression controlling for common and time-invariant unobservable factors. I also control for other economic factors that can affect both financial cycle synchronization and banking integration. Since the theory is ambiguous on the issue of the effect of banking integration
+To this end, I follow the methodology suggested by @Kalemli-Ozcan2013JF. Specifically, I use their measures of cycles synchronization and banking linkages and run a panel regression controlling for common and time invariant unobservable factors. I also control for other economic factors that can affect both financial cycle synchronization and banking integration. Since the theory is ambiguous on the issue of the effect of banking integration
 on financial synchronization, the question becomes an empirical one. The theory does provide
 predictions with respect to the direction of the association between cycles synchronization and banking linkages in more specific setups such as during financial crises as well as in highly developed market. I analyze those setups in addition to baseline analysis.
 
@@ -478,7 +478,7 @@ $FinSynch$ - a measure of synchronization of financial cycles.
 \newline
 $BankLinkages$ - a measure of banking integration between two countries.
 
-This specification includes time and country-pair fixed effect to control for unobservable time and country-pair specific factors (such as cultural difference or turmoil years). The time fixed effects account for the effect of global shocks and other common time-varying factors that affect both financial cycle patterns and banking integration. The country-pair effects account for hard-to-measure factors such as cultural ties and similarities, informational frictions, and other time-invariant unobservable factors that affect both financial integration and financial cycle patterns. To account for the trend and the non-stationary nature of banking integration (see figure \ref{plot_bank_gdp}), I add country-pair specific linear time trend\footnote{I choose a linear trend for reasons of simplicity and comparability with @Kalemli-Ozcan2013JF, see @Bouvatier2015 for use of trends in banking integration measures.}. It should be noted that it may be the case that the trend picks up the effect of some other omitted variable. Since I'm only interested in estimating the bank linkage effect in the regression (as opposed to explicitly modeling all the factors that affect financial synchronization), controlling for other variables (trend or another omitted variable) seems required.
+This specification includes time and country pair fixed effect to control for unobservable time and country pair specific factors (such as cultural difference or turmoil years). The time fixed effects account for the effect of global shocks and other common time varying factors that affect both financial cycle patterns and banking integration. The country pair effects account for hard to measure factors such as cultural ties and similarities, informational frictions, and other time invariant unobservable factors that affect both financial integration and financial cycle patterns. To account for the trend and the non-stationary nature of banking integration (see figure \ref{plot_bank_gdp}), I add country pair specific linear time trend\footnote{I choose a linear trend for reasons of simplicity and comparability with @Kalemli-Ozcan2013JF, see @Bouvatier2015 for use of trends in banking integration measures.}. It should be noted that it may be the case that the trend picks up the effect of some other omitted variable. Since I'm only interested in estimating the bank linkage effect in the regression (as opposed to explicitly modeling all the factors that affect financial synchronization), controlling for other variables (trend or another omitted variable) seems required.
 
 
 The estimation results can be subject to an endogeneity problem for reasons of omitting relevant variables or reverse causality. In order to address this issue, I take several steps: first, I augment the specified regression with a set of variables to control for other economic factors that can affect both financial cycle synchronization and banking integration. @Chinn2010 suggests that the most important factors for monetary policy are foreign exchange stability, monetary independence, and financial openness. The authors construct indexes of the relevant measures and I include them in the control variables set. I also include trading linkages and gravity measure\footnote{All the variables are explained in the Appendix.} in the controlling variables set. Second, bank linkages enter in my specification in a lagged form, which should attenuate the reverse causality problem.
@@ -487,13 +487,13 @@ The estimation results can be subject to an endogeneity problem for reasons of o
 \subsection{Crisis effect}
 Several papers (see @Kalemli-Ozcan2013, @Aysun2019, @Fratzscher2012) find that during financial crises times the effect of global ("push") factors in cross border bank lending increases. If during financial crises times common (global) shocks are prevalent that should induce more synchronized financial cycles. That means that the crisis effect should be positive and the "shock propagator" role of banking integration should increase during crisis times. @Stremmel2015 analyzes financial cycles of 21 EU economies and finds that during stress periods the similarity of financial cycles increases.
 
-To test the role of crises I introduce an indicator variable for banking crisis periods. The variable equals 1 if at least one country of the country-pair is going through banking crises at period \textit{t}. The data comes from an updated version of @Laeven2013 and includes the start and end year of banking crises in the OECD countries for the entire sample period. I expect that the effect of banking integration will be different in crises vs normal times and to capture this difference I add an interaction variable between bank linkages and crisis indicator to the estimation equation.
+To test the role of crises I introduce an indicator variable for banking crisis periods. The variable equals 1 if at least one country of the country pair is going through banking crises at period \textit{t}. The data comes from an updated version of @Laeven2013 and includes the start and end year of banking crises in the OECD countries for the entire sample period. I expect that the effect of banking integration will be different in crises vs normal times and to capture this difference I add an interaction variable between bank linkages and crisis indicator to the estimation equation.
 
 
 
 \subsection{Financial development}
 
-@Mendoza2009 study the relationship between financial development and global imbalances. The authors show that financial development varies widely even among industrial countries and that financial integration can have different effects when countries differ in financial markets development. Countries with deeper financial markets react to financial integration by borrowing from abroad and investing in high-return foreign risky assets while countries that are less financially developed accumulate positions in safer assets.
+@Mendoza2009 study the relationship between financial development and global imbalances. The authors show that financial development varies widely even among industrial countries and that financial integration can have different effects when countries differ in financial markets development. Countries with deeper financial markets react to financial integration by borrowing from abroad and investing in high return foreign risky assets while countries that are less financially developed accumulate positions in safer assets.
 
 @Bahadir2015 shows that financial development convergence takes place. Countries with a high level of financial development exhibit lower credit growth rates in comparison to countries with a low level of financial development. @Kil2017 confirm the financial development convergence for EU15 countries. They find that both credit and stock markets exhibit convergence meaning that growth rates of these markets decrease at high levels of development. 
 
@@ -501,7 +501,7 @@ To test the role of crises I introduce an indicator variable for banking crisis 
 
 I hypothesize that this phenomenon (co-movement induced by a high level of financial development) holds with respect to financial activity as well. An example is given in @Acharya2010. The authors analyze an investment strategy of large commercial banks that set up asset back commercial paper (ABCP) conduits. This strategy involved selling to investors short-term asset-backed commercial paper and investing the proceeds mainly in US asset back longer-term securities. Once negative news about US assets emerged, all the banks suffered significant losses, thus inducing co-movement. This investment strategy required a highly developed domestic financial market (financing through commercial paper instruments), and it is not surprising that the list of countries whose banks were pursuing this strategy includes the US, UK, Germany, France, Belgium, and Portugal - highly developed countries.
 
-To account for the fact that the effect of financial integration depends on the level of domestic financial development I include an index of financial development (the sum of financial development index of each country in the country-pair) and an interaction term between financial development and banking integration. Data on financial development index comes from @Sviry2016 and includes an index of financial development of all the countries in my sample for `r paste(range(fin_reg_df$Date[!is.na(fin_reg_df$FD_tot)]), collapse = "-")` period.
+To account for the fact that the effect of financial integration depends on the level of domestic financial development I include an index of financial development (the sum of financial development index of each country in the country pair) and an interaction term between financial development and banking integration. Data on financial development index comes from @Sviry2016 and includes an index of financial development of all the countries in my sample for `r paste(range(fin_reg_df$Date[!is.na(fin_reg_df$FD_tot)]), collapse = "-")` period.
 
 
 
@@ -520,7 +520,7 @@ star = stargazer(reg_list$baseline, header = FALSE,digits = 2,
           dep.var.labels.include = FALSE,
           notes = paste0("\\parbox[t]{8cm}{",
                          paste0("The table presents panel estimation that ",
-                                "includes twoway fixed effects and country-pair ",
+                                "includes twoway fixed effects and country pair ",
                                 " specific linear time trend. ",notes_str_ctrl,
                                 "}")),
           notes.align = "l",
@@ -545,7 +545,7 @@ cat(star,sep = "\n")
 ```
 
 
-Estimation results are shown in table \ref{baseline}. Banking linkages enter the equation with a negative sign, meaning that integration is associated with less synchronized cycles. That means that in my sample the "risk absorber" feature dominates the "risk propagator" feature in . One possible interpretation is that bank linkages contribute to risk sharing by diverting capital from low return countries (perhaps due to country specific shock) to high return investment opportunities.
+Estimation results are shown in table \ref{baseline}. Banking linkages enter the equation with a negative sign, meaning that integration is associated with less synchronized cycles. That means that in my sample the "risk absorber" feature dominates the "risk propagator" feature. One possible interpretation is that bank linkages contribute to risk sharing by diverting capital from low return countries (perhaps due to country specific shock) to high return investment opportunities.
 We can see that this risk sharing effect is state depended: the interaction terms suggest that during banking crises
 periods or in highly developed financial markets integration is associated with higher synchronization (relative to baseline case). That finding is in line with the theory that suggests that the "risk propagator" feature is present in these settings and thus the synchronization should increase relative to base setting. Banking (and financial) crises are often contagious events that are being hard to contain in locally and thus produce common shocks that result in higher synchronization. 
 
@@ -624,7 +624,7 @@ Importantly, the data account for credit from all sources, not only that extende
 
 
 \textbf{Bank linkages}
-This variable is based on bilateral cross-border holdings (stocks) of banks. Data on banks’ cross-border bilateral stocks of assets and liabilities come from BIS’s Locational Banking Statistics. For each country-pair and year there are up to four observations: i) asset holdings (stocks) of banks located in country i in all sectors of the economy in country j, ii) asset holdings (stocks) of banks located in country j in all sectors of the economy in country i, iii) liabilities (stocks) of banks located in country i to country j, and iv) liabilities (stocks) of banks located in country j to country i. The data are originally expressed in (millions) current U.S. dollars. I normalize the data with the following steps:
+This variable is based on bilateral cross-border holdings (stocks) of banks. Data on banks’ cross-border bilateral stocks of assets and liabilities come from BIS’s Locational Banking Statistics. For each country pair and year there are up to four observations: i) asset holdings (stocks) of banks located in country i in all sectors of the economy in country j, ii) asset holdings (stocks) of banks located in country j in all sectors of the economy in country i, iii) liabilities (stocks) of banks located in country i to country j, and iv) liabilities (stocks) of banks located in country j to country i. The data are originally expressed in (millions) current U.S. dollars. I normalize the data with the following steps:
 
 \begin{enumerate}
   \item
