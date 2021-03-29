@@ -85,7 +85,7 @@ cat(star, sep = "\n")
 ```
 
 
-Figure \ref{plot_bank_gdp} shows the average cross border (bilateral) bank linkages of the countries in my sample. We can see that financial integration had increased since the 1980s until 2007-2008 (the Global Financial Crises)  and then a sharp drop followed, dropping below initial levels. The shaded area in the figure refer to the dates of banking crises in the sample countries and it seems that those are associated with a decrease in financial integration.
+Figure \ref{plot_bank_gdp} shows the average cross border (bilateral) bank linkages of the countries in my sample. We can see that financial integration had increased since the 1980s until 2007-2008 (the Global Financial Crises)  and then a sharp drop followed, dropping below initial levels. The shaded area in the figure refer to the dates of banking crises (which comes from an updated version of @Laeven2013 and includes the start and end year of banking crises in the OECD countries for the entire sample period) in the sample countries and it seems that those are associated with a decrease in financial integration.
 
 
 ```{r plot_bank_gdp,fig.cap=bank_gdp_cap,fig.height=5}

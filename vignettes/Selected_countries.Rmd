@@ -28,8 +28,9 @@ plot_correl_cap = paste0(
 
 
 plot_bank_linkages_cap = paste0(
-  "Top 5 counter parties with respect to cross border credit",
-  "\\label{plot_bank_linkages}")
+  "The cross border credit (millions USD) for top 5 counter parties of two",
+  " big financial centers (United States and United Kingdom), and small",
+  " open market country (Israel)", "\\label{plot_bank_linkages}")
 
 
 ```
@@ -134,9 +135,10 @@ ggplot(country_df %>%
 
 
 Figure \ref{plot_correl} shows the correlation between financial
-synchronization and banking integration for United Kingdom - United States and Israel - United States pairs. To control for the effect of other factors I first regress financial
+synchronization and banking integration for United Kingdom - United States and Israel - United States pairs. To obtain the correlation estimate I first regress financial
 synchronization and banking integration on control variables set (including
-fixed effect). The figure plots the residuals of this first step regressions, the trend line shows the (slightly) negative association between financial synchronization and banking integration in the all country pair.
+fixed effect) in an attempt to "clean out" the effect of other factors.
+The figure plots the residuals of this first step regressions, the trend line shows the (slightly) negative association between financial synchronization and banking integration in the all country pair.
 
 ```{r plot_correl,fig.cap=plot_correl_cap, out.extra=""}
 

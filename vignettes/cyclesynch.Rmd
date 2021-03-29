@@ -251,7 +251,7 @@ notes_str = paste0(" Financial cycles synchronization",
                    "Bank linkages are the total bilateral ",
                    "cross border banking claims normalized",
                    " by total GDP. ",
-                   "Financial development is the sum of the ",
+                   "FD is the sum of the ",
                    "level of each country financial development ",
                    "index. ","Crises is an indicator variable ",
                    "that equals 1 if at least one country ",
@@ -284,8 +284,11 @@ lines_str = list(c("Country pair FE","Yes"),
 
 ```{r temp_import, eval=FALSE}
 
-raw_data = readRDS(paste0("C:\\Users\\Misha\\Documents\\SandBox",
-                          "\\FinSynchRawData.rds"))
+raw_data = readRDS(paste0(
+  file.path(Sys.getenv("USERPROFILE")),
+  "\\Documents\\SandBox",
+  "\\FinSynchRawData.rds"
+))
 
 ```
 
@@ -342,19 +345,17 @@ load("C:\\Users\\internet\\Desktop\\cyclesynch.RData")
 
 <!-- What do you do -->
 
-This work analyzes the relationship between financial integration and financial cycles synchronization. I identify the 
-synchronization between cross border flows of 30 OECD countries
+This work analyzes the relationship between financial integration and financial cycles synchronization. Financial integration refers to the linkage of different financial markets while financial cycles synchronization refers to the co-movement of the main components of the financial cycle (credit, house and shares prices). I identify the 
+synchronization between cross border banking flows of 30 OECD countries
 and find that the level of the synchronization generally decreases with
-the increase in banking linkages between the countries. 
-
-A recent line of research studies the relationship between business synchronization and financial integration. For example, @Kalemli-Ozcan2013JF find that output synchronization is negatively affected by financial integration. The authors explain the connection as follows: if a country is hit with a negative productivity shock, global banks will reduce credit to that country and increase credit to another country, thus, exacerbating negative output effect in the former country and facilitating positive output effect in the latter. In this paper, I test whether the same mechanism applies to financial synchronization.
+the increase in banking linkages between the countries.
 
 <!-- Why is it important -->
-The theory provides ambiguous predictions regarding the effect of financial integration on financial cycles synchronization. On the one hand, financial integration can help diversify risk, redirect capital to more profitable investment opportunities and act as country-specific "shock absorber". In that case, the association between banking integration and financial synchronization should be negative. On the other hand, banking integration can induce contagion effects and act as a global "shock propagator". In that case, a positive association should be observed. This paper examines which affect dominates by studying the connection between banking integration and financial cycles synchronization.
+The theory provides ambiguous predictions regarding the effect of financial integration on financial cycles synchronization. On the one hand, financial integration can help diversify risk, redirect capital to more profitable investment opportunities and act as country-specific "shock absorber". In that case, the association between banking integration and financial synchronization should be negative. On the other hand, banking integration can induce contagion effects and act as a global "shock propagator" [@Degryse2010; @Popov2012]. In that case, a positive association should be observed. This paper examines which affect dominates by studying the connection between banking integration and financial cycles synchronization.
 
 <!-- How do you do it (methodology) -->
 
-To this end, I follow the methodology suggested by @Kalemli-Ozcan2013JF. Specifically, I use their measures of cycles synchronization and banking linkages and run a panel regression controlling for common and time invariant unobservable factors. I also control for other economic factors that can affect both financial cycle synchronization and banking integration. Since the theory is ambiguous on the issue of the effect of banking integration
+A recent line of research studies the relationship between business synchronization and financial integration. For example, @Kalemli-Ozcan2013JF find that output synchronization is negatively affected by financial integration. The authors explain the connection as follows: if a country is hit with a negative productivity shock, global banks will reduce credit to that country and increase credit to another country, thus, exacerbating negative output effect in the former country and facilitating positive output effect in the latter. In this paper, I test whether the same mechanism applies to financial synchronization. To this end, I follow the methodology suggested by @Kalemli-Ozcan2013JF. Specifically, I use their measures of cycles synchronization and banking linkages and run a panel regression controlling for common and time invariant unobservable factors. I also control for other economic factors that can affect both financial cycle synchronization and banking integration. Since the theory is ambiguous on the issue of the effect of banking integration
 on financial synchronization, the question becomes an empirical one. The theory does provide
 predictions with respect to the direction of the association between cycles synchronization and banking linkages in more specific setups such as during financial crises as well as in highly developed market. I analyze those setups in addition to baseline analysis.
 
@@ -426,7 +427,7 @@ This measure captures the financial integration between two countries at an annu
 Credit and asset prices are considered as the most fundamental components of the financial cycle and are extensively used in the literature (@Drehmann2012, @Grinderslev2017). @Borio2014 argues that the most parsimonious description of the financial cycle can be made in terms of credit and property prices. @Rey2015 and @MirandaRey2015 expand the definition of the financial cycle to include both house and share prices. Following this literature, I use total credit and assets (property and shares) price data to estimate the financial cycle. Importantly, total credit account for credit from all sources, namely credit from financial accounts, domestic bank credit, and cross-border bank credit are the three main building blocks underlying the construction of the total credit series. The credit data come from the BIS database while property and shares prices come from OECD database.
 
 
-I calculate the percentage difference of each variable and then take a simple average to obtain the growth of the financial cycle. 
+I calculate the logarithmic change of each variable and then take a simple average to obtain the growth of the financial cycle. 
 
 \begin{equation*}
 R_{i,t} = \frac{1}{3} \cdot ln \left(  \frac{C_{i,t}}{C_{i,t-1}} \right) 
@@ -481,7 +482,7 @@ $BankLinkages$ - a measure of banking integration between two countries.
 This specification includes time and country pair fixed effect to control for unobservable time and country pair specific factors (such as cultural difference or turmoil years). The time fixed effects account for the effect of global shocks and other common time varying factors that affect both financial cycle patterns and banking integration. The country pair effects account for hard to measure factors such as cultural ties and similarities, informational frictions, and other time invariant unobservable factors that affect both financial integration and financial cycle patterns. To account for the trend and the non-stationary nature of banking integration (see figure \ref{plot_bank_gdp}), I add country pair specific linear time trend\footnote{I choose a linear trend for reasons of simplicity and comparability with @Kalemli-Ozcan2013JF, see @Bouvatier2015 for use of trends in banking integration measures.}. It should be noted that it may be the case that the trend picks up the effect of some other omitted variable. Since I'm only interested in estimating the bank linkage effect in the regression (as opposed to explicitly modeling all the factors that affect financial synchronization), controlling for other variables (trend or another omitted variable) seems required.
 
 
-The estimation results can be subject to an endogeneity problem for reasons of omitting relevant variables or reverse causality. In order to address this issue, I take several steps: first, I augment the specified regression with a set of variables to control for other economic factors that can affect both financial cycle synchronization and banking integration. @Chinn2010 suggests that the most important factors for monetary policy are foreign exchange stability, monetary independence, and financial openness. The authors construct indexes of the relevant measures and I include them in the control variables set. I also include trading linkages and gravity measure\footnote{All the variables are explained in the Appendix.} in the controlling variables set. Second, bank linkages enter in my specification in a lagged form, which should attenuate the reverse causality problem.
+The estimation results can be subject to an endogeneity problem for reasons of omitting relevant variables or reverse causality. In order to address this issue, I take several steps: first, I augment the specified regression with a set of variables to control for other economic factors that can affect both financial cycle synchronization and banking integration. I use the index of @Chinn2010 to control for foreign exchange stability, monetary independence, and financial openness. I also include trading linkages to control for cross country trading activity\footnote{All the variables are explained in the Appendix.}. Second, bank linkages enter in my specification in a lagged form, which should attenuate the reverse causality problem.
 
 
 \subsection{Crisis effect}
@@ -510,6 +511,19 @@ To account for the fact that the effect of financial integration depends on the 
 
 ```{r output_reg, include=FALSE}
 
+
+temp_notes = paste0(
+  "\\parbox[t]{8cm}{",
+  paste0(
+    "The table presents panel estimation that ",
+    "includes twoway fixed effects and country pair ",
+    " specific linear time trend. ",
+    notes_str_ctrl,
+    "}"
+  )
+)
+
+
 star = stargazer(reg_list$baseline, header = FALSE,digits = 2,
           label = "baseline",table.placement = "H",
           title = paste0("Financial synchronization and banking integration: ",
@@ -518,11 +532,7 @@ star = stargazer(reg_list$baseline, header = FALSE,digits = 2,
           add.lines = lines_str,
           model.numbers = FALSE,
           dep.var.labels.include = FALSE,
-          notes = paste0("\\parbox[t]{8cm}{",
-                         paste0("The table presents panel estimation that ",
-                                "includes twoway fixed effects and country pair ",
-                                " specific linear time trend. ",notes_str_ctrl,
-                                "}")),
+          notes = temp_notes,
           notes.align = "l",
           notes.append = FALSE,
           se = list(sqrt(diag(vcovHC(reg_list$baseline,cluster = "group")))),
@@ -547,10 +557,10 @@ cat(star,sep = "\n")
 
 Estimation results are shown in table \ref{baseline}. Banking linkages enter the equation with a negative sign, meaning that integration is associated with less synchronized cycles. That means that in my sample the "risk absorber" feature dominates the "risk propagator" feature. One possible interpretation is that bank linkages contribute to risk sharing by diverting capital from low return countries (perhaps due to country specific shock) to high return investment opportunities.
 We can see that this risk sharing effect is state depended: the interaction terms suggest that during banking crises
-periods or in highly developed financial markets integration is associated with higher synchronization (relative to baseline case). That finding is in line with the theory that suggests that the "risk propagator" feature is present in these settings and thus the synchronization should increase relative to base setting. Banking (and financial) crises are often contagious events that are being hard to contain in locally and thus produce common shocks that result in higher synchronization. 
+periods or in highly developed financial markets integration is associated with higher synchronization relative to baseline case (the overall effect remains negative). That finding is in line with the theory that suggests that the "risk propagator" feature is present in these settings and thus the synchronization should increase relative to base setting. Banking (and financial) crises are often contagious events that are being hard to contain in locally and thus produce common shocks that result in higher synchronization. 
 
 Another finding is that when both countries belong to the euro-zone the synchronization also increases perhaps due to absence of currency risk.
-One implication for the Euro block (that is characterized by one currency and very developed financial markets) is that the sum of the coefficients suggest that during a financial crises European Union's banking ystem may have a cumulative effect of shock propagation and not
+One implication for the Euro block (that is characterized by one currency and very developed financial markets) is that the sum of the coefficients suggest that during a financial crises European Union's banking system may have a cumulative effect of shock propagation and not
 risk absorbency.
 
 Coefficient analysis shows that banking integration effect is economically significant. A change of one standard deviation in banking linkages is
