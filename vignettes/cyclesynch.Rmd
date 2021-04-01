@@ -1,5 +1,5 @@
 ---
-title: "Financial cycles synchronization and financial integration ^[I thank Yossi Saadon, Nimrod Segev, Jonathan Benshimol, Osnat Zohar and the participants of the Bank of Israel Research Department seminar for their helpful comments and suggestions]"
+title: "Financial cycles synchronization and financial integration ^[I thank Yossi Yakhin (discussant), Yossi Saadon, Nimrod Segev, Jonathan Benshimol, Osnat Zohar, Yaakov Chen-Zion and the participants of the Bank of Israel Research Department seminar for their helpful comments and suggestions]"
 subtitle: 'Preliminary draft'
 author: "Michael Gurkov"
 fontsize: 11pt
