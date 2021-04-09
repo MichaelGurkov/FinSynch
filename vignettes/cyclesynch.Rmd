@@ -14,6 +14,7 @@ abstract: "This paper studies the relationship between financial cycles synchron
 
 bibliography: '`r stringr::str_replace_all(paste(file.path(Sys.getenv("USERPROFILE"),"\\OneDrive - Bank Of Israel\\References\\Financial_Cycle-Global_Financial_Cycle - Copy.bib")),"\\\\","\\\\\\\\\\")`'
 
+nocite: '@*'
 
 vignette: >
   %\VignetteIndexEntry{CycleSynch}
@@ -277,34 +278,37 @@ lines_str = list(c("Country pair FE","Yes"),
 ```
 
 
-```{r child="Import_Data.Rmd"}
+```{r child="Import_Data.Rmd", eval=FALSE}
 
 ```
 
 
-```{r temp_import, eval=FALSE}
+```{r temp_import}
 
 raw_data = readRDS(paste0(
   file.path(Sys.getenv("USERPROFILE")),
-  "\\Documents\\SandBox",
+  "\\desktop",
   "\\FinSynchRawData.rds"
 ))
 
 ```
 
 
-```{r child="Process_Data.Rmd"}
+```{r child="Process_Data.Rmd",eval=FALSE}
 
 ```
 
 
-```{r temp_fin_reg,eval=FALSE}
+```{r temp_fin_reg}
 
-fin_reg_df = readRDS(paste0("C:\\Users\\Misha\\Documents\\SandBox",
-                           "\\FinSynchFinReg.rds"))
+fin_reg_df = readRDS(paste0(file.path(Sys.getenv("USERPROFILE")),
+                            "\\Desktop\\FinSynchFinReg.rds"))
 
-country_df = readRDS(paste0("C:\\Users\\Misha\\Documents\\SandBox",
-                           "\\FinSynchCountryDF.rds"))
+country_df = readRDS(paste0(file.path(Sys.getenv("USERPROFILE")),
+                           "\\Desktop\\FinSynchCountryDF.rds"))
+
+country_pair_df = readRDS(paste0(file.path(Sys.getenv("USERPROFILE")),
+                           "\\Desktop\\FinSynchCountryPairDF.rds"))
 
 ```
 
@@ -351,7 +355,7 @@ and find that the level of the synchronization generally decreases with
 the increase in banking linkages between the countries.
 
 <!-- Why is it important -->
-The theory provides ambiguous predictions regarding the effect of financial integration on financial cycles synchronization. On the one hand, financial integration can help diversify risk, redirect capital to more profitable investment opportunities and act as country-specific "shock absorber". In that case, the association between banking integration and financial synchronization should be negative. On the other hand, banking integration can induce contagion effects and act as a global "shock propagator" [@Degryse2010; @Popov2012]. In that case, a positive association should be observed. This paper examines which affect dominates by studying the connection between banking integration and financial cycles synchronization.
+The theory provides ambiguous predictions regarding the effect of financial integration on financial cycles synchronization. On the one hand, financial integration can help diversify risk, redirect capital to more profitable investment opportunities and act as country-specific "shock absorber" [@Kose2009]. In that case, the association between banking integration and financial synchronization should be negative. On the other hand, banking integration can induce contagion effects and act as a global "shock propagator" [@Degryse2010; @Popov2012]. In that case, a positive association should be observed. This paper examines which affect dominates by studying the connection between banking integration and financial cycles synchronization.
 
 <!-- How do you do it (methodology) -->
 
@@ -479,7 +483,7 @@ $FinSynch$ - a measure of synchronization of financial cycles.
 \newline
 $BankLinkages$ - a measure of banking integration between two countries.
 
-This specification includes time and country pair fixed effect to control for unobservable time and country pair specific factors (such as cultural difference or turmoil years). The time fixed effects account for the effect of global shocks and other common time varying factors that affect both financial cycle patterns and banking integration. The country pair effects account for hard to measure factors such as cultural ties and similarities, informational frictions, and other time invariant unobservable factors that affect both financial integration and financial cycle patterns. To account for the trend and the non-stationary nature of banking integration (see figure \ref{plot_bank_gdp}), I add country pair specific linear time trend\footnote{I choose a linear trend for reasons of simplicity and comparability with @Kalemli-Ozcan2013JF, see @Bouvatier2015 for use of trends in banking integration measures.}. It should be noted that it may be the case that the trend picks up the effect of some other omitted variable. Since I'm only interested in estimating the bank linkage effect in the regression (as opposed to explicitly modeling all the factors that affect financial synchronization), controlling for other variables (trend or another omitted variable) seems required.
+This specification includes time and country pair fixed effect to control for unobservable time and country pair specific factors (such as cultural difference or turmoil years). The time fixed effects account for the effect of global shocks and other common time varying factors that affect both financial cycle patterns and banking integration. The country pair effects account for hard to measure factors such as cultural ties and similarities, informational frictions, and other time invariant unobservable factors that affect both financial integration and financial cycle patterns. To account for the trend and the non-stationary nature of banking integration (see figure \ref{plot_bank_gdp}), I add country pair specific linear time trend\footnote{I choose a linear trend for reasons of simplicity and comparability with Kalemli-Ozcan, Papaioannou, and Peydro (2013), see Bouvatier, Vincent and Delatte and Anne-Laure (2015) for use of trends in banking integration measures.}. It should be noted that it may be the case that the trend picks up the effect of some other omitted variable. Since I'm only interested in estimating the bank linkage effect in the regression (as opposed to explicitly modeling all the factors that affect financial synchronization), controlling for other variables (trend or another omitted variable) seems required.
 
 
 The estimation results can be subject to an endogeneity problem for reasons of omitting relevant variables or reverse causality. In order to address this issue, I take several steps: first, I augment the specified regression with a set of variables to control for other economic factors that can affect both financial cycle synchronization and banking integration. I use the index of @Chinn2010 to control for foreign exchange stability, monetary independence, and financial openness. I also include trading linkages to control for cross country trading activity\footnote{All the variables are explained in the Appendix.}. Second, bank linkages enter in my specification in a lagged form, which should attenuate the reverse causality problem.
@@ -570,6 +574,13 @@ standard deviations in financial synchronization.
 During banking crises one standard deviation change in integration contributes
 `r abs(round(coef_vec[names(coef_vec) == "lag(bank_gdp, 1):Crises"] * sd_ratio,2))` standard deviations to the synchronization. 
 
+\subsection{Graphical results} \label{Israel}
+
+
+```{r, child="Selected_countries.Rmd"}
+
+```
+
 
 
 <!-- \section{Instrumental variable estimation} -->
@@ -581,19 +592,12 @@ During banking crises one standard deviation change in integration contributes
 
 \newpage
 
-\section{Graphical results} \label{Israel}
-
-
-```{r, child="Selected_countries.Rmd"}
-
-```
-
 
 
 \section{Robustness} \label{Robust}
 
 
-```{r child="Robustness.Rmd", eval=FALSE}
+```{r child="Robustness.Rmd"}
 
 ```
 

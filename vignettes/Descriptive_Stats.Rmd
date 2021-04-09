@@ -42,12 +42,15 @@ About `r paste0(format(mean(fin_reg_df$Crises) * 100,digits = 3),"%")` of the ob
 
 star = stargazer(fin_reg_df %>% 
                    select(Fin_synch, bank_gdp, FD_tot,Crises, Euro_both) %>% 
+                   filter(complete.cases(.)) %>% 
+                   mutate(Fin_synch = if_else(Fin_synch == max(Fin_synch),
+                                    0,Fin_synch)) %>% 
                    as.data.frame(),
                  title = "Summary statistics of the main variables",
                  table.placement = "H",
                  label = "summary_table",
           header =FALSE, summary = TRUE,
-          digits = 2,digits.extra = 2,
+          digits = 2,digits.extra = 0,
           summary.stat = c("max","min","mean","median","sd","n"),
           notes = paste0("\\parbox[t]{16cm}{",
                          paste0("Note: The table reports summary statistics of ",
@@ -64,6 +67,8 @@ star = star %>%
   sub(pattern = "Crises\\_tot",replacement = "Crises",
       fixed = TRUE) %>% 
   sub(pattern = "Euro\\_both",replacement = "Euro",
+      fixed = TRUE) %>% 
+sub(pattern = "0.00",replacement = "0",
       fixed = TRUE)
 
 
