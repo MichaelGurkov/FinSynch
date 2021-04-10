@@ -41,7 +41,7 @@ About `r paste0(format(mean(fin_reg_df$Crises) * 100,digits = 3),"%")` of the ob
 ```{r countrypair_table_summary, include=FALSE}
 
 star = stargazer(fin_reg_df %>% 
-                   select(Fin_synch, bank_gdp, FD_tot,Crises, Euro_both) %>% 
+                   select(Fin_synch, bank_gdp, FD_tot,Crises) %>% 
                    filter(complete.cases(.)) %>% 
                    mutate(Fin_synch = if_else(Fin_synch == max(Fin_synch),
                                     0,Fin_synch)) %>% 

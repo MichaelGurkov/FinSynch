@@ -234,13 +234,33 @@ reg_formula_list = list(
   )
 )
 
-temp_names = c("lag\\(bank_gdp, 1\\)",
-               "Crises",
-               "FD_tot",
-               "Euro_both",
-               "lag\\(bank_gdp, 1\\):Crises",
-               "lag\\(bank_gdp, 1\\):FD_tot",
-               "lag\\(bank_gdp, 1\\):Euro_both")
+temp_names = c(
+  "lag\\(bank_gdp, 1\\)",
+  "Crises",
+  "FD_tot",
+  "lag\\(bank_gdp, 1\\):Crises",
+  "lag\\(bank_gdp, 1\\):FD_tot",
+  "trade_gdp",
+  "FX_stab_tot",
+  "FO_ind_tot",
+  "MI_ind_tot",
+  "GDP_real_tot"
+)
+
+
+temp_labels = c(
+  "Bank linkages (lag)",
+  "Crises",
+  "FD",
+  "Bank linkages (lag) * Crises",
+  "Bank linkages (lag) * FD",
+  "Trade linkages",
+  "FX stability",
+  "Financial openness",
+  "Monetary independence",
+  "GDP total"
+)
+
 
 temp_names_lag = c("lag\\(bank_gdp, 1\\)",
                    "lag\\(Crises, 1\\)",
@@ -251,13 +271,6 @@ temp_names_lag = c("lag\\(bank_gdp, 1\\)",
                    "lag\\(bank_gdp, 1\\):lag\\(Euro_both, 1\\)")
 
 
-temp_labels = c("Bank linkages (lag)",
-                "Crises",
-                "FD",
-                "Euro",
-                "Bank linkages (lag) * Crises",
-                "Bank linkages (lag) * FD",
-                "Bank linkages (lag) * Euro")
 
 
 notes_str = paste0(" Financial cycles synchronization",
@@ -333,6 +346,20 @@ country_pair_df = readRDS(paste0(file.path(Sys.getenv("USERPROFILE")),
 <!-- Regression analysis -->
 
 ```{r estimation}
+
+fin_reg_df = fin_reg_df %>%
+  select(
+    -Crises_tot,
+    -Crises_one,
+    -Crises_both,
+    -Common_Lang,
+    -Country_A_crises,
+    -Country_B_crises,
+    -Euro_both,
+    -EU_both
+  ) %>% 
+  filter(complete.cases(.))
+
 
 reg_list = map(reg_formula_list, function(temp_formula){
   
@@ -568,9 +595,10 @@ star = stargazer(reg_list, header = FALSE,digits = 2,
           # notes.align = "l",
           # notes.append = FALSE,
           se = robust_se,
-          # keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
-          keep = 1:30,
-          # covariate.labels = temp_labels,
+          keep = paste0("^",temp_names,"$"),
+          order = paste0("^",temp_names,"$"),
+          # keep = 1:30,
+          covariate.labels = temp_labels,
           omit.stat = c("f","adj.rsq"))
 
 star = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
