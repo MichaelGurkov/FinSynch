@@ -209,13 +209,30 @@ control_vars = c("trade_gdp","FX_stab_tot","FO_ind_tot","MI_ind_tot",
                  "GDP_real_tot")
 
 
-reg_formula = paste("Fin_synch ~ lag(bank_gdp,1) * Crises",
-                    "lag(bank_gdp,1) * FD_tot",
-                    "lag(bank_gdp,1) * Euro_both",
-                    paste(control_vars,
-                          collapse = "+"),
-                    "CountryPair:Time_Trend",
-                    sep = "+")
+reg_formula_list = list(
+  baseline = paste(
+    "Fin_synch ~ lag(bank_gdp,1)",
+    paste(control_vars,
+          collapse = "+"),
+    "CountryPair:Time_Trend",
+    sep = "+"
+  ),
+  crises = paste(
+    "Fin_synch ~ lag(bank_gdp,1) * Crises",
+    paste(control_vars,
+          collapse = "+"),
+    "CountryPair:Time_Trend",
+    sep = "+"
+  ),
+  full_spec = paste(
+    "Fin_synch ~ lag(bank_gdp,1) * Crises",
+    "lag(bank_gdp,1) * FD_tot",
+    paste(control_vars,
+          collapse = "+"),
+    "CountryPair:Time_Trend",
+    sep = "+"
+  )
+)
 
 temp_names = c("lag\\(bank_gdp, 1\\)",
                "Crises",
@@ -317,9 +334,14 @@ country_pair_df = readRDS(paste0(file.path(Sys.getenv("USERPROFILE")),
 
 ```{r estimation}
 
-reg_list$baseline = plm(formula = formula(reg_formula),data = fin_reg_df,
+reg_list = map(reg_formula_list, function(temp_formula){
+  
+  temp_model = plm(formula = formula(temp_formula),data = fin_reg_df,
           model = "within",effect = "twoways",
           index = c("CountryPair","Date"))
+  return(temp_model)
+  
+})
 
 
 coef_vec = coefficients(reg_list$baseline)
@@ -527,21 +549,28 @@ temp_notes = paste0(
   )
 )
 
+robust_se = map(reg_list, function(temp_model){
+  
+  temp_se = sqrt(diag(vcovHC(temp_model,cluster = "group")))
+  
+  return(temp_se)
+})
 
-star = stargazer(reg_list$baseline, header = FALSE,digits = 2,
+star = stargazer(reg_list, header = FALSE,digits = 2,
           label = "baseline",table.placement = "H",
           title = paste0("Financial synchronization and banking integration: ",
                          "\\newline panel specification"),
           dep.var.caption = "Fin cycles synch",
-          add.lines = lines_str,
+          # add.lines = lines_str,
           model.numbers = FALSE,
           dep.var.labels.include = FALSE,
-          notes = temp_notes,
-          notes.align = "l",
-          notes.append = FALSE,
-          se = list(sqrt(diag(vcovHC(reg_list$baseline,cluster = "group")))),
-          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
-          covariate.labels = temp_labels,
+          # notes = temp_notes,
+          # notes.align = "l",
+          # notes.append = FALSE,
+          se = robust_se,
+          # keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
+          keep = 1:30,
+          # covariate.labels = temp_labels,
           omit.stat = c("f","adj.rsq"))
 
 star = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
@@ -602,7 +631,11 @@ During banking crises one standard deviation change in integration contributes
 ```
 
 
-\section{Policy implications} \label{policy}
+\section{Summary and conclusions} \label{conclusions}
+
+This paper studies the effect of banking integration on the synchronization of financial cycles. Theory posits that there may be opposite effects ("shock absorption" vs "shock propagation") that make the identification of this effect difficult. In a real business cycle setting @Kalemli-Ozcan2013JF find that banking integration causes business cycles divergence, they suggest that credit flow from low to high return investments may be the mechanism that causes the divergence.
+
+I hypothesize that the same credit flow will cause financial cycles divergence as well. I find corroborating evidence of a negative association between banking integration and financial cycles synchronization. Moreover my results suggest that there are other factors that contribute to financial cycle synchronization and make the relationship state depended.
 
 I find that financial crises increase the "shock propagation" feature of banking integration relative to baseline setting. This is an important result for
 policymakers. It suggests that while banking integration may be desired,
@@ -612,14 +645,6 @@ exposure during crisis times.
 Additional factors that contribute to financial cycle synchronization are the
 high development of financial markets that means that policy makers should take
 the structural characteristics of their financial markets into account as well.
-
-
-
-\section{Summary and conclusions} \label{conclusions}
-
-This paper studies the effect of banking integration on the synchronization of financial cycles. Theory posits that there may be opposite effects ("shock absorption" vs "shock propagation") that make the identification of this effect difficult. In a real business cycle setting @Kalemli-Ozcan2013JF find that banking integration causes business cycles divergence, they suggest that credit flow from low to high return investments may be the mechanism that causes the divergence.
-
-I hypothesize that the same credit flow will cause financial cycles divergence as well. I find corroborating evidence of a negative association between banking integration and financial cycles synchronization. Moreover my results suggest that there are other factors that contribute to financial cycle synchronization and make the relationship state depended.
 
 
 \newpage

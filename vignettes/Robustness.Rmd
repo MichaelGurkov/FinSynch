@@ -7,7 +7,7 @@ of the GFC (2008-2009) from my sample. The results are presented in column 1 in 
 
 ```{r estimation_no_GFC}
 
-reg_list$no_GFC = plm(formula = formula(reg_formula),
+reg_list$no_GFC = plm(formula = formula(reg_formula_list$full_spec),
                         data = fin_reg_df %>% 
                           filter(!Date %in% c(2007,2008,2009)),
           model = "within",effect = "twoways",
@@ -72,7 +72,8 @@ roll_cor = get.roll.cor(country_df %>%
   rename(Fin_roll_cor = Fin_ret)
 
 reg_list$roll_cor_reg = plm(formula = gsub("Fin_synch","Fin_roll_cor",
-                                           reg_formula, fixed = TRUE),
+                                           reg_formula_list$full_spec,
+                                           fixed = TRUE),
                             data = fin_reg_df %>% 
                               left_join(roll_cor) %>% 
                               select(-Fin_synch),
@@ -143,7 +144,7 @@ Eurozone country pairs decrease financial synchronization.
 
 ```{r delta_estimation}
 
-reg_list$delta_reg = plm(formula = reg_formula,
+reg_list$delta_reg = plm(formula = reg_formula_list$full_spec,
                          data = fin_reg_df %>% 
                            group_by(CountryPair) %>% 
                            mutate(bank_gdp = c(NA, diff(bank_gdp))) %>% 

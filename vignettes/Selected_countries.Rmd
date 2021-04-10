@@ -63,12 +63,14 @@ net_df = map(
 ```{r make_correl_df}
 
 bank_clean = plm(sub("Fin_synch","bank_gdp",
-                     gsub("lag(bank_gdp,1) *","",reg_formula, fixed = TRUE),
+                     gsub("lag(bank_gdp,1) *","",reg_formula_list$full_spec,
+                          fixed = TRUE),
                      fixed = TRUE),
                  data = fin_reg_df, index = c("CountryPair","Date"),
                  model = "within", effect = "twoways")
 
-synch_clean = plm(gsub("lag(bank_gdp,1) *","",reg_formula, fixed = TRUE),
+synch_clean = plm(gsub("lag(bank_gdp,1) *","",reg_formula_list$full_spec,
+                       fixed = TRUE),
                   data = fin_reg_df, index = c("CountryPair","Date"),
                   model = "within", effect = "twoways")
 
@@ -142,11 +144,11 @@ The figure plots the residuals of this first step regressions, the trend line sh
 
 ```{r plot_correl,fig.cap=plot_correl_cap, out.extra=""}
 
-
-ggplot(correl_df %>%
-         filter(CountryPair %in% c("Israel-United_States",
-                                   "United_Kingdom-United_States")),
-       aes(x = Bank, y = FinSynch)) +
+correl_df %>%
+  filter(CountryPair %in% c("Israel-United_States",
+                            "United_Kingdom-United_States")) %>% 
+  mutate(CountryPair = str_replace_all(CountryPair,"_"," ")) %>% 
+  ggplot(aes(x = Bank, y = FinSynch)) +
   geom_point() +
   labs(x = "Banking integration (log of bank credit to gdp)",
        y = "Financial synchronization (percent)",
