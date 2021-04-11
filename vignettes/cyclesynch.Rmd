@@ -205,8 +205,10 @@ reg_list = list()
 
 hyp_test_list = list()
 
-control_vars = c("trade_gdp","FX_stab_tot","FO_ind_tot","MI_ind_tot",
-                 "GDP_real_tot")
+# control_vars = c("trade_gdp","FX_stab_tot","FO_ind_tot","MI_ind_tot",
+#                  "GDP_real_tot")
+
+control_vars = c("trade_gdp","FX_stab_tot","FO_ind_tot","GDP_real_tot")
 
 
 reg_formula_list = list(
@@ -243,7 +245,6 @@ temp_names = c(
   "trade_gdp",
   "FX_stab_tot",
   "FO_ind_tot",
-  "MI_ind_tot",
   "GDP_real_tot"
 )
 
@@ -257,7 +258,6 @@ temp_labels = c(
   "Trade linkages",
   "FX stability",
   "Financial openness",
-  "Monetary independence",
   "GDP total"
 )
 
@@ -347,17 +347,19 @@ country_pair_df = readRDS(paste0(file.path(Sys.getenv("USERPROFILE")),
 
 ```{r estimation}
 
+filter_vars = c(
+      "Fin_synch",
+      "bank_gdp",
+      "Crises",
+      "Time_Trend",
+      "CountryPair",
+      "Date",
+      control_vars
+    )
+
 fin_reg_df = fin_reg_df %>%
-  select(
-    -Crises_tot,
-    -Crises_one,
-    -Crises_both,
-    -Common_Lang,
-    -Country_A_crises,
-    -Country_B_crises,
-    -Euro_both,
-    -EU_both
-  ) %>% 
+  select(all_of(c(filter_vars, "FD_tot"))) %>% 
+  # filter(if_all(filter_vars, ~!is.na(.))) %>% 
   filter(complete.cases(.))
 
 

@@ -1,7 +1,7 @@
 
 ```{r define_fig_captions}
 
-country_pairs = length(unique(country_pair_df$CountryPair))
+country_pairs = length(unique(fin_reg_df$CountryPair))
 
 countries = length(unique(country_df$Country))
 
@@ -41,8 +41,6 @@ About `r paste0(format(mean(fin_reg_df$Crises) * 100,digits = 3),"%")` of the ob
 ```{r countrypair_table_summary, include=FALSE}
 
 star = stargazer(fin_reg_df %>% 
-                   select(Fin_synch, bank_gdp, FD_tot,Crises) %>% 
-                   filter(complete.cases(.)) %>% 
                    mutate(Fin_synch = if_else(Fin_synch == max(Fin_synch),
                                     0,Fin_synch)) %>% 
                    as.data.frame(),
