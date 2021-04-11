@@ -373,7 +373,7 @@ reg_list = map(reg_formula_list, function(temp_formula){
 })
 
 
-coef_vec = coefficients(reg_list$baseline)
+coef_vec = coefficients(reg_list$full_spec)
 
 coef_vec = coef_vec[names(coef_vec) %in% c("lag(bank_gdp, 1)",
                                            "lag(bank_gdp, 1):Crises",
@@ -618,20 +618,29 @@ cat(star,sep = "\n")
 ```
 
 
-Estimation results are shown in table \ref{baseline}. Banking linkages enter the equation with a negative sign, meaning that integration is associated with less synchronized cycles. That means that in my sample the "risk absorber" feature dominates the "risk propagator" feature. One possible interpretation is that bank linkages contribute to risk sharing by diverting capital from low return countries (perhaps due to country specific shock) to high return investment opportunities.
-We can see that this risk sharing effect is state depended: the interaction terms suggest that during banking crises
-periods or in highly developed financial markets integration is associated with higher synchronization relative to baseline case (the overall effect remains negative). That finding is in line with the theory that suggests that the "risk propagator" feature is present in these settings and thus the synchronization should increase relative to base setting. Banking (and financial) crises are often contagious events that are being hard to contain in locally and thus produce common shocks that result in higher synchronization. 
+Estimation results are shown in table \ref{baseline}. The table start with the baseline specification and then interaction variables are added going left to right.
 
-Another finding is that when both countries belong to the euro-zone the synchronization also increases perhaps due to absence of currency risk.
-One implication for the Euro block (that is characterized by one currency and very developed financial markets) is that the sum of the coefficients suggest that during a financial crises European Union's banking system may have a cumulative effect of shock propagation and not
-risk absorbency.
+Banking linkages enter the equation with a negative sign, meaning that integration is associated with less synchronized cycles. However in baseline specification this result is not statistically significant suggesting that in my sample the "risk absorber" feature is similar in magnitude to the "risk propagator" feature thus rendering the final result inconclusive. 
+
+Introduction of the crises indicator variable allows to disentangle the opposite effects. We see that during banking crises periods integration is associated with higher synchronization relative to baseline case (the overall effect remains negative). Banking (and financial) crises are often contagious events that are being hard to contain in locally and thus produce common shocks that result in higher synchronization. Addition of the financial development indicators further enhances the results. In highly developed financial markets integration is  also associated with higher synchronization relative to baseline case.
+
+The findings with respect to crisis periods as well as highly developed financial
+markets are in line with the theory that suggests that the "risk propagator" feature is present in these settings and thus the synchronization should increase relative to base setting.
+
 
 Coefficient analysis shows that banking integration effect is economically significant. A change of one standard deviation in banking linkages is
 associated with a change of
 `r abs(round(coef_vec[names(coef_vec) == "lag(bank_gdp, 1)"] * sd_ratio,2))` 
 standard deviations in financial synchronization.
 During banking crises one standard deviation change in integration contributes
-`r abs(round(coef_vec[names(coef_vec) == "lag(bank_gdp, 1):Crises"] * sd_ratio,2))` standard deviations to the synchronization. 
+`r abs(round(coef_vec[names(coef_vec) == "lag(bank_gdp, 1):Crises"] * sd_ratio,2))` standard deviations to the synchronization. In highly developed financial markets one standard deviation change in integration contributes
+`r abs(round(coef_vec[names(coef_vec) == "lag(bank_gdp, 1):FD_tot"] * sd_ratio,2))` standard deviations to the synchronization of financial cycles.
+
+Looking at the control variables we see that FX stability contributes to the synchronization of financial cycles, possibly because stable FX facilitates
+cross border financial transactions. Financial openness works in the same direction however statically significant only in the baseline specification.
+The economic size of the country pair measured by the sum of GDP also promotes
+the synchronization of financial cycles.
+
 
 \subsection{Graphical results} \label{Israel}
 

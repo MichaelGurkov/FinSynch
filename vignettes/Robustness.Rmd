@@ -133,14 +133,11 @@ My measure of banking integration is a stock measure (the balance of normalized
 cross border credit). It may be the case the flow measures will capture a
 different aspect of the banking integration, for example during crises the
 credit flows will presumably drop due to a credit crunch while the credit
-balance will stay the same. To capture this aspect of banking integration I run
-a change my measure of integration to be credit flows instead od credit stocks
+balance will stay the same. To capture this aspect of banking integration I  change my measure of integration to credit flows instead od credit stocks
 by differencing the cross border credit balance. Column 3 in table \ref{robust_table} shows the
 results of this exercise. Similarly to the case of rolling correlation test
 I find that the main result holds as well as the effect of financial
-development. The crisis effect is insignificant in this setting as well and the
-Euro indicator variable changes sign suggesting the increased credit flows in
-Eurozone country pairs decrease financial synchronization.
+development. The crisis effect is insignificant in this setting as well.
 
 ```{r delta_estimation}
 
