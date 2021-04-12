@@ -3,27 +3,6 @@
 ```{r desc_stats_params_setup}
 
 
-desc_stat_temp_names = c(
-  "bank_gdp",
-  "Crises",
-  "FD_tot",
-  "trade_gdp",
-  "FX_stab_tot",
-  "FO_ind_tot",
-  "GDP_real_tot"
-)
-
-
-desc_stat_temp_labels = c(
-  "Bank linkages (lag)",
-  "Crises",
-  "FD",
-  "Trade linkages",
-  "FX stability",
-  "Financial openness",
-  "GDP total"
-)
-
 
 ```
 
