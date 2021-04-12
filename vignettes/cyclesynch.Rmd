@@ -5,7 +5,7 @@ author: "Michael Gurkov"
 fontsize: 11pt
 output:
   rmarkdown::pdf_document:
-    latex_engine: xelatex
+    # latex_engine: xelatex
     number_sections: true
     includes:
             in_header: GlobalFinCyclePreambleDoc.tex
@@ -599,21 +599,21 @@ star = stargazer(reg_list, header = FALSE,digits = 2,
           add.lines = lines_str,
           model.numbers = FALSE,
           dep.var.labels.include = FALSE,
-          # notes = estimation_table_notes,
-          # notes.align = "l",
-          # notes.append = FALSE,
+          notes = estimation_table_notes,
+          notes.align = "l",
+          notes.append = FALSE,
           se = robust_se,
           keep = paste0("^",temp_names,"$"),
           order = paste0("^",temp_names,"$"),
           covariate.labels = temp_labels,
           omit.stat = c("f","adj.rsq"))
 
-# star = sub("\\textit{Note:}  & \\multicolumn{3}{l}{\\parbox[t]{8cm}{",
-#                     "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
-#                     star,fixed = TRUE)
+star = sub("\\textit{Note:}  & \\multicolumn{3}{l}{\\parbox[t]{8cm}{",
+                    "\\multicolumn{4}{l}{\\parbox[t]{15cm}{\\textit{Note:} ",
+                    star,fixed = TRUE)
 
 # star = sub("multicolumn{3}{l}{\\parbox[t]{8cm}{",
-#                     "multicolumn{2}{l}{\\parbox[t]{10cm}",
+#                     "multicolumn{4}{l}{\\parbox[t]{10cm}",
 #                     star,fixed = TRUE)
 
 
