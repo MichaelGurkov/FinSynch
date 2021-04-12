@@ -287,13 +287,11 @@ notes_str = paste0(" Financial cycles synchronization",
                    "index. ","Crises is an indicator variable ",
                    "that equals 1 if at least one country ",
                    "undergoes ",
-                   "banking crises at that year. ",
-                   "Euro is an indicator variable ",
-                   "that equals 1 if both countries are in the euro-zone. ")
+                   "banking crises at that year. ")
 
 notes_str_ctrl = paste0(notes_str,
                        "Controls include foreign exchange ",
-                       "stability, monetary independence, financial ",
+                       "stability, financial ",
                        "openness, trade linkages and GDP (log). ",
                        "The standard errors are clustered ",
                        "at country pair level and ",
@@ -475,7 +473,7 @@ $G_{i,t}$ - gross domestic product of country $j$ in year $t$
 \newline
 $i,j$ - country index
 
-This measure captures the financial integration between two countries at an annual frequency. For example, an increase in bank linkages means that more capital is moving between the countries.
+This measure captures the financial integration between two countries at an annual frequency. An increase in bank linkages means that more capital is moving between the countries.
 
 \subsection{Financial cycles synchronization}
 
@@ -509,7 +507,7 @@ FinSynch_{i,j,i} = -\lvert R_{i,t}  - R_{j,t} \rvert
 
 
 
-This index is simple and quite popular (for example @Kalemli-Ozcan2013, @Giannone2010). In contrast to the correlation measures, it is not sensitive to the various filtering methods that have been criticized on many grounds (e.g.,@Canova1998).
+This index is simple and quite popular (@Kalemli-Ozcan2013, @Giannone2010). In contrast to the correlation measures, it is not sensitive to the various filtering methods that have been criticized on many grounds (e.g.,@Canova1998).
 It also does not contain estimation error that emerges, for example, from self-selecting a rolling estimating window. Nevertheless, in order to test the robustness of the results in section \ref{Robust} I use a rolling (`r roll_cor_len` year) correlation as the synchronization measure. The results are similar to the main results of the paper. 
 
 
