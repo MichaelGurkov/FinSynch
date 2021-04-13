@@ -1,12 +1,5 @@
 
 
-```{r desc_stats_params_setup}
-
-
-
-```
-
-
 ```{r define_fig_captions}
 
 country_pairs = length(unique(fin_reg_df$CountryPair))
@@ -64,7 +57,6 @@ desc_df = fin_reg_df %>%
 
 star = stargazer(desc_df,
   title = "Summary statistics of the main variables",
-  table.placement = "H",
   label = "summary_table",
   header = FALSE,
   summary = TRUE,

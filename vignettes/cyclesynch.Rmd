@@ -315,12 +315,12 @@ lines_str = list(c("Country pair FE","Yes"),
 ```
 
 
-```{r child="Import_Data.Rmd", eval=FALSE}
+```{r child="Import_Data.Rmd"}
 
 ```
 
 
-```{r temp_import}
+```{r temp_import, eval=FALSE}
 
 raw_data = readRDS(paste0(
   file.path(Sys.getenv("USERPROFILE")),
@@ -331,12 +331,12 @@ raw_data = readRDS(paste0(
 ```
 
 
-```{r child="Process_Data.Rmd",eval=FALSE}
+```{r child="Process_Data.Rmd"}
 
 ```
 
 
-```{r temp_fin_reg}
+```{r temp_fin_reg,eval=FALSE}
 
 fin_reg_df = readRDS(paste0(file.path(Sys.getenv("USERPROFILE")),
                             "\\Desktop\\FinSynchFinReg.rds"))
@@ -592,7 +592,8 @@ robust_se = map(reg_list, function(temp_model){
 })
 
 star = stargazer(reg_list, header = FALSE,digits = 2,
-          label = "baseline",table.placement = "H",
+          label = "baseline",
+          # table.placement = "H",
           title = paste0("Financial synchronization and banking integration: ",
                          "\\newline panel specification"),
           dep.var.caption = "Fin cycles synch",
@@ -667,9 +668,6 @@ the synchronization of financial cycles.
 
 ```
 
-\newpage
-
-
 
 \section{Robustness} \label{Robust}
 
@@ -694,8 +692,6 @@ Additional factors that contribute to financial cycle synchronization are the
 high development of financial markets that means that policy makers should take
 the structural characteristics of their financial markets into account as well.
 
-
-\newpage
 
 \section{Appendix}
 
