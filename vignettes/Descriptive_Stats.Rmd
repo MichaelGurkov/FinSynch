@@ -1,7 +1,8 @@
 
+
 ```{r define_fig_captions}
 
-country_pairs = length(unique(country_pair_df$CountryPair))
+country_pairs = length(unique(fin_reg_df$CountryPair))
 
 countries = length(unique(country_df$Country))
 
@@ -40,19 +41,39 @@ About `r paste0(format(mean(fin_reg_df$Crises) * 100,digits = 3),"%")` of the ob
 
 ```{r countrypair_table_summary, include=FALSE}
 
-star = stargazer(fin_reg_df %>% 
-                   select(Fin_synch, bank_gdp, FD_tot,Crises, Euro_both) %>% 
-                   as.data.frame(),
-                 title = "Summary statistics of the main variables",
-                 table.placement = "H",
-                 label = "summary_table",
-          header =FALSE, summary = TRUE,
-          digits = 2,digits.extra = 2,
-          summary.stat = c("max","min","mean","median","sd","n"),
-          notes = paste0("\\parbox[t]{16cm}{",
-                         paste0("Note: The table reports summary statistics of ",
-                                "the main variables used in the empirical ",
-                                "analysis.",notes_str ,"}")))
+desc_df = fin_reg_df %>%
+  select(Fin_synch, bank_gdp, Crises,FD_tot,trade_gdp, FX_stab_tot,
+         FO_ind_tot,GDP_real_tot) %>% 
+  mutate(Fin_synch = if_else(Fin_synch == max(Fin_synch),
+                             0, Fin_synch)) %>%
+  rename(`Financial synchronization` = Fin_synch,
+         `Banking linkages` = bank_gdp,
+         FD = FD_tot,
+         `Trade linkages` = trade_gdp,
+         `FX stability` = FX_stab_tot,
+         `Financial openness` = FO_ind_tot,
+         `GDP total` = GDP_real_tot) %>% 
+    as.data.frame()
+
+star = stargazer(desc_df,
+  title = "Summary statistics of the main variables",
+  label = "summary_table",
+  header = FALSE,
+  summary = TRUE,
+  digits = 2,
+  digits.extra = 0,
+  summary.stat = c("max", "min", "mean", "median", "sd", "n"),
+  notes = paste0(
+    "\\parbox[t]{16cm}{",
+    paste0(
+      "Note: The table reports summary statistics of ",
+      "the main variables used in the empirical ",
+      "analysis.",
+      notes_str ,
+      "}"
+    )
+  )
+)
 
 star = star %>% 
   sub(pattern = "Fin\\_synch",replacement = "Fin cycles synch",
@@ -64,6 +85,8 @@ star = star %>%
   sub(pattern = "Crises\\_tot",replacement = "Crises",
       fixed = TRUE) %>% 
   sub(pattern = "Euro\\_both",replacement = "Euro",
+      fixed = TRUE) %>% 
+sub(pattern = "0.00",replacement = "0",
       fixed = TRUE)
 
 

@@ -7,7 +7,7 @@ of the GFC (2008-2009) from my sample. The results are presented in column 1 in 
 
 ```{r estimation_no_GFC}
 
-reg_list$no_GFC = plm(formula = formula(reg_formula),
+reg_list$no_GFC = plm(formula = formula(reg_formula_list$full_spec),
                         data = fin_reg_df %>% 
                           filter(!Date %in% c(2007,2008,2009)),
           model = "within",effect = "twoways",
@@ -72,7 +72,8 @@ roll_cor = get.roll.cor(country_df %>%
   rename(Fin_roll_cor = Fin_ret)
 
 reg_list$roll_cor_reg = plm(formula = gsub("Fin_synch","Fin_roll_cor",
-                                           reg_formula, fixed = TRUE),
+                                           reg_formula_list$full_spec,
+                                           fixed = TRUE),
                             data = fin_reg_df %>% 
                               left_join(roll_cor) %>% 
                               select(-Fin_synch),
@@ -132,18 +133,15 @@ My measure of banking integration is a stock measure (the balance of normalized
 cross border credit). It may be the case the flow measures will capture a
 different aspect of the banking integration, for example during crises the
 credit flows will presumably drop due to a credit crunch while the credit
-balance will stay the same. To capture this aspect of banking integration I run
-a change my measure of integration to be credit flows instead od credit stocks
+balance will stay the same. To capture this aspect of banking integration I  change my measure of integration to credit flows instead od credit stocks
 by differencing the cross border credit balance. Column 3 in table \ref{robust_table} shows the
 results of this exercise. Similarly to the case of rolling correlation test
 I find that the main result holds as well as the effect of financial
-development. The crisis effect is insignificant in this setting as well and the
-Euro indicator variable changes sign suggesting the increased credit flows in
-Eurozone country pairs decrease financial synchronization.
+development. The crisis effect is insignificant in this setting as well.
 
 ```{r delta_estimation}
 
-reg_list$delta_reg = plm(formula = reg_formula,
+reg_list$delta_reg = plm(formula = reg_formula_list$full_spec,
                          data = fin_reg_df %>% 
                            group_by(CountryPair) %>% 
                            mutate(bank_gdp = c(NA, diff(bank_gdp))) %>% 
