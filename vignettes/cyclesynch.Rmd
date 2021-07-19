@@ -51,7 +51,7 @@ library(scales)
 ```
 
 
-```{r params_setup}
+```{r params_setup, eval=FALSE}
 
 countries_list = list(
   oecd_countries = c(
@@ -277,7 +277,7 @@ lines_str = list(c("Country pair FE","Yes"),
 ```
 
 
-```{r child="Import_Data.Rmd"}
+```{r child="Import_Data.Rmd", eval=FALSE}
 
 ```
 
@@ -293,17 +293,27 @@ raw_data = readRDS(paste0(
 ```
 
 
-```{r child="Process_Data.Rmd"}
+```{r child="Process_Data.Rmd",eval=FALSE}
 
 ```
 
 
-```{r temp_fin_reg,eval=FALSE}
+```{r temp_fin_reg, eval=FALSE}
 
-fin_reg_df = readRDS(paste0("C:\\Users\\Misha\\Documents\\SandBox",
+# write_rds(fin_reg_df, paste0(file.path(Sys.getenv("USERPROFILE")),
+#                             "\\Documents\\SandBox",
+#                            "\\FinSynchFinReg.rds"))
+
+fin_reg_df = readRDS(paste0(file.path(Sys.getenv("USERPROFILE")),
+                            "\\Documents\\SandBox",
                            "\\FinSynchFinReg.rds"))
 
-country_df = readRDS(paste0("C:\\Users\\Misha\\Documents\\SandBox",
+# write_rds(country_df, paste0(file.path(Sys.getenv("USERPROFILE")),
+#                             "\\Documents\\SandBox",
+#                            "\\FinSynchCountryDF.rds"))
+
+country_df = readRDS(paste0(file.path(Sys.getenv("USERPROFILE")),
+                            "\\Documents\\SandBox",
                            "\\FinSynchCountryDF.rds"))
 
 ```
@@ -311,7 +321,7 @@ country_df = readRDS(paste0("C:\\Users\\Misha\\Documents\\SandBox",
 
 <!-- Regression analysis -->
 
-```{r estimation}
+```{r estimation, eval=FALSE}
 
 reg_list$baseline = plm(formula = formula(reg_formula),data = fin_reg_df,
           model = "within",effect = "twoways",
@@ -335,7 +345,10 @@ sd_ratio_isr = sd(fin_reg_df$bank_gdp[isr_ind]) / sd(fin_reg_df$Fin_synch[isr_in
 ```
 
 
-```{r temp_loading, eval=FALSE}
+```{r temp_loading}
+
+# save(list = ls(),file =  "C:\\Users\\internet\\Desktop\\cyclesynch.RData")
+
 load("C:\\Users\\internet\\Desktop\\cyclesynch.RData")
 ```
 
