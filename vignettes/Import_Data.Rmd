@@ -1,191 +1,104 @@
 
-<!-- Import raw data -->
+```{r import_lbs}
 
-```{r Import_raw_data}
-
-raw_data = list()
-
-raw_data$oecd_codes = read.csv(paste0(
-  file.path(Sys.getenv("USERPROFILE"),fsep ="\\"),
-  "\\OneDrive - Bank Of Israel\\Data\\ISO\\",
-  "iso_3digit_alpha_country","_codes.csv" ),
-  stringsAsFactors = FALSE) %>%
-  setNames(c("Code","Country")) %>% 
-  mutate(Country = gsub(Country,pattern = "\\s",
-      replacement = "_")) %>% 
-  mutate(Country = sub(Country,pattern = "Korea,_Republic_of",
-      replacement = "Korea", fixed = TRUE)) %>% 
-  mutate(Country = sub(Country,pattern = "Czechia",
-      replacement = "Czech_Republic", fixed = TRUE)) %>% 
-  mutate(Country = sub(Country,pattern = "Slovakia",
-      replacement = "Slovak_Republic", fixed = TRUE)) %>% 
-  mutate(Country = sub("The_Netherlands","Netherlands",
-                       Country,fixed = TRUE))
-
-raw_data$TotalCredit = import.bis.tot.credit.data(
-  countries_vec = countries_list$oecd_countries) %>%
-  mutate(Date = as.yearqtr(Date, format = "%Y-Q%q"))
-
-raw_data$bis_lbs = import.bis.lbs.data(
-  countries_vec = countries_list$oecd_countries) %>%
-  mutate(Date = as.yearqtr(Date, format = "%Y-Q%q"))
-
-raw_data$GDP_constant = import.wdi.gdp(
-  filepath = paste0(
-    file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-    "\\OneDrive - Bank Of Israel\\Data\\World ",
-    "Bank\\API_NY.GDP.MKTP.KD_DS2_en_csv_v2_316073.csv"),
-  message_gdp_type = FALSE,
-  countries_codes = raw_data$oecd_codes %>%
-    filter(Country %in% countries_list$oecd_countries) %>% 
-    select(Code) %>% 
-    unlist()) %>% 
-  mutate(GDP = GDP * 10 ^ (-6)) %>% 
-  mutate(Country = gsub("\\s","_",Country))
-
-raw_data$GDP_current = import.wdi.gdp(
-  filepath = paste0(
-    file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-    "\\OneDrive - Bank Of Israel\\Data\\World ",
-    "Bank\\API_NY.GDP.MKTP.CD_DS2_en_csv_v2_315857.csv"),
-  message_gdp_type = FALSE,
-  countries_codes = raw_data$oecd_codes %>%
-    filter(Country %in% countries_list$oecd_countries) %>% 
-    select(Code) %>% 
-    unlist()) %>% 
-  mutate(GDP = GDP * 10 ^ (-6)) %>% 
-  mutate(Country = gsub("\\s","_",Country))
-
-raw_data$HousePrice = import.oecd.houseprice() %>% 
-  rename(Code = Country) %>% 
-  left_join(raw_data$oecd_codes, by = "Code") %>% 
-  select(-Code) %>% 
-  select(Country, Date, HousePrice)
+lbs_df = import_bis_lbs(paste0("C:\\Users\\internet\\OneDrive - Bank Of Israel",
+                               "\\Data\\BIS\\WEBSTATS_LBS_D_PUB_DATAFLOW_csv_col.csv"))
 
 
-raw_data$SharePrice = import.oecd.shareprice() %>% 
-  rename(Code = Country) %>% 
-  left_join(raw_data$oecd_codes, by = "Code") %>% 
-  select(-Code) %>% 
-  select(Country, Date, SharePrice)
+lbs_df_filtered = lbs_df %>% 
+  filter(reporting_country %in% str_replace_all(countries_list$kpp_countries,"_"," ")) %>%
+  filter(counterparty_country %in% str_replace_all(countries_list$kpp_countries,"_"," ")) %>%
+  filter(measure == "Amounts outstanding / Stocks") %>% 
+  filter(type_of_instruments == "All instruments") %>% 
+  filter(currency_denomination == "All currencies") %>% 
+  filter(counterparty_sector == "All sectors") %>% 
+  select(c(reporting_country, counterparty_country, balance_sheet_position,
+           matches("[0-9]"))) %>% 
+  mutate(across(c(reporting_country, counterparty_country),
+                ~str_replace_all(.," ","_"))) %>% 
+  pivot_longer(-c(reporting_country, counterparty_country, balance_sheet_position),
+               names_to = "date") %>% 
+  mutate(date = year(as.yearqtr(date, format = "%Y-Q%q"))) %>% 
+  filter(date >= 1978 & date <= 2006) %>% 
+  group_by(reporting_country, counterparty_country, balance_sheet_position,date) %>% 
+  summarise(value = mean(value, na.rm = TRUE), .groups = "drop") %>% 
+  filter(complete.cases(.))
 
 
-raw_data$cpi = import.bis.cpi.data(annual_freq = FALSE) %>% 
-  mutate(Date = as.yearqtr(Date, format = "%Y.%m")) %>% 
-  group_by(Date) %>% 
-  summarise(US_CPI = mean(US_CPI)) %>% 
-  ungroup()
+
 
 
 
 ```
 
 
-```{r Import_raw_data_EU_membership}
+```{r import_gdp}
 
-eu_df = read.csv(paste0(
-  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-  "\\OneDrive - Bank Of Israel\\Data\\Misc\\EU_membership.csv"),
-                 stringsAsFactors = FALSE) %>%
-  setNames(c("Country","Euro_area","EU")) %>%
-  mutate(Country = gsub("\\s","_",Country)) %>%
-  mutate(Country = sub("The_Netherlands","Netherlands",
-                       Country,fixed = TRUE)) %>%
-  mutate(Country = sub("Slovakia","Slovak_Republic",
-                       Country,fixed = TRUE))
-
-
-eu_dates_vec = seq.Date(
-  from = as.Date(min(raw_data$bis_lbs$Date)),
-  to = as.Date(max(raw_data$bis_lbs$Date)),
-  by = "year") %>%
-  format(.,"%Y")
-
-raw_data$EU_both = construct_countrypair_EU_index(
-  eu_df = eu_df %>%
-    select(Country, EU) %>%
-    rename(Date = EU),
-  dates_vec = eu_dates_vec,
-  countries = countries_list$oecd_countries) %>%
-  rename(EU_both = Status) %>%
-  mutate(Date = as.character(Date))
-
-raw_data$EU_one = construct_countrypair_EU_index(
-  eu_df = eu_df %>%
-    select(Country, EU) %>%
-    rename(Date = EU),
-  dates_vec = eu_dates_vec,
-  countries = countries_list$oecd_countries,
-  index_status = "one") %>%
-  rename(EU_one = Status) %>%
-  mutate(Date = as.character(Date))
+gdp_df = read_csv(paste0(Sys.getenv("USERPROFILE"),
+                  "\\OneDrive - Bank Of Israel\\Data\\World Bank\\GDP_panel.csv"),
+                  col_types = cols()) %>% 
+  select(country = `Country Name`, matches("[0-9]")) %>% 
+  filter(country %in% countries_list$kpp_countries) %>% 
+  pivot_longer(-country,names_to = "date", values_to = "gdp") %>% 
+  filter(date >= 1978 & date <= 2006) %>% 
+  mutate(date = as.numeric(date)) %>% 
+  mutate(gdp = gdp * 10 ^ (-6))
 
 
-raw_data$Euro_both = construct_countrypair_EU_index(
-  eu_df = eu_df %>%
-    select(Country, Euro_area) %>%
-    rename(Date = Euro_area) %>%
-    filter(!Date == "Not a member"),
-  dates_vec = eu_dates_vec,
-  countries = countries_list$oecd_countries) %>%
-  rename(Euro_both = Status) %>%
-  mutate(Date = as.character(Date))
+```
 
-raw_data$Euro_one = construct_countrypair_EU_index(
-  eu_df = eu_df %>%
-    select(Country, Euro_area) %>%
-    rename(Date = Euro_area),
-  dates_vec = eu_dates_vec,
-  countries = countries_list$oecd_countries,
-  index_status = "one") %>%
-  rename(Euro_one = Status) %>%
-  mutate(Date = as.character(Date))
+```{r import_gdp_per_capita}
 
-rm(eu_df, eu_dates_vec)
+gdp_per_capita_df = read_csv(paste0(Sys.getenv("USERPROFILE"),
+                  "\\OneDrive - Bank Of Israel\\Data\\World Bank\\GDP_per_capita_panel.csv"),
+                  col_types = cols()) %>% 
+  select(country = `Country Name`, matches("[0-9]")) %>% 
+  filter(country %in% countries_list$kpp_countries) %>% 
+  pivot_longer(-country,names_to = "date", values_to = "gdp_pc") %>% 
+  mutate(date = str_extract(date,"^[0-9]{4}")) %>% 
+  filter(date >= 1977 & date <= 2006) %>% 
+  mutate(date = as.numeric(date)) %>% 
+  arrange(country, date) %>% 
+  mutate(gdp_pc_lag = dplyr::lag(gdp_pc)) %>% 
+  filter(complete.cases(.)) %>% 
+  mutate(across(starts_with("gdp"), as.numeric)) %>% 
+  mutate(gdp_diff = log(gdp_pc) - log(gdp_pc_lag)) %>% 
+  select(-starts_with("gdp_pc"))
 
 ```
 
 
-```{r Import_raw_data_common_language}
+```{r, eval=FALSE}
 
-raw_data$geodist = import.geodist.data() %>%
-  filter(Country %in% countries_list$oecd_countries) %>%
-  filter(Counter_Country %in% countries_list$oecd_countries) %>%
-  mutate(CountryPair = ifelse(Country < Counter_Country,
-                              paste(Country, Counter_Country,
-                                    sep = "-"),
-                              paste(Counter_Country,Country,
-                                    sep = "-"))) %>%
-  select(-Country, -Counter_Country) %>%
-  distinct()
+temp_lbs = import.bis.lbs.data(countries_vec = countries_list$kpp_countries) %>%
+  mutate(Date = year(as.yearqtr(Date, format = "%Y-Q%q"))) %>% 
+  filter(Date >= 1978 & Date <= 2006) %>%
+  group_by(Balance_Pos,CountryPair,Date) %>% 
+  summarise(Balance = mean(Balance, na.rm = TRUE), .groups = "drop") %>% 
+  filter(complete.cases(.))
+
+
+
 
 ```
 
 
-```{r Import_raw_data_crises_dates}
 
-raw_data$crises_df =  import.crises.dates.df(countries_vec = countries_list$oecd_countries)
+```{r data}
 
-```
-
-
-```{r Import_raw_data_IMF}
-
-raw_data$trade = import.imf.trade.data()
-
-```
-
-
-```{r Import_raw_data_trilemma}
-
-raw_data$trilemma_data = import.trilemma.ind()
-
-```
-
-
-```{r Import_fin_dev_data}
-
-raw_data$fin_dev_data = import.fin.dev.ind()
+df = lbs_df_filtered %>% 
+  left_join(gdp_df, by = c("date", "reporting_country" = "country")) %>% 
+  left_join(gdp_df, by = c("date", "counterparty_country" = "country"),
+            suffix = c("_x","_y")) %>% 
+  mutate(value = log(value / (gdp_x + gdp_y))) %>% 
+  select(-starts_with("gdp")) %>% 
+  group_by(reporting_country,counterparty_country,date) %>% 
+  summarise(bank_int = mean(value, na.rm = TRUE), .groups = "drop") %>% 
+  left_join(gdp_per_capita_df, by = c("date", "reporting_country" = "country")) %>% 
+  left_join(gdp_per_capita_df, by = c("date", "counterparty_country" = "country"),
+            suffix = c("_x","_y")) %>% 
+  mutate(synch = -1 * abs(gdp_diff_x - gdp_diff_y)) %>% 
+  select(-starts_with("gdp_diff"))
 
 ```
 
