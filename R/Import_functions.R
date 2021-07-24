@@ -85,11 +85,11 @@ import_wdi_df = function(filepath_list = NULL,
         dir_path,"\\OneDrive - Bank Of Israel\\Data\\",
         "World Bank\\GDP_per_capita_panel.csv"),
       GDP = paste0(
-        dir_path,"\\Documents\\",
-        "Data\\World Bank\\GDP_panel.csv"),
+        dir_path,"\\OneDrive - Bank Of Israel\\Data\\",
+        "World Bank\\GDP_panel.csv"),
       Pop = paste0(
-        dir_path,"\\Documents\\",
-        "Data\\World Bank\\Population.csv"))
+        dir_path,"\\OneDrive - Bank Of Israel\\Data\\",
+        "World Bank\\Population.csv"))
 
 
   }

@@ -69,7 +69,7 @@ import_imf_df = function(filepath, countries_vec = NULL){
 #' @usage import.imf.trade.data(export_dirpath, import_dirpath)
 #'
 
-import.imf.trade.data = function(
+import_imf_trade_data = function(
   export_dirpath = paste0(
     file.path(Sys.getenv("USERPROFILE"), fsep = "\\"),
     "\\OneDrive - Bank Of Israel\\Data",
@@ -77,13 +77,14 @@ import.imf.trade.data = function(
   import_dirpath = paste0(
     file.path(Sys.getenv("USERPROFILE"), fsep = "\\"),
     "\\OneDrive - Bank Of Israel\\Data",
-    "\\IMF\\Export-Import\\Import")){
+    "\\IMF\\Export-Import\\Import"),
+  countries_vec = NULL){
 
 
 
 export_df = lapply(list.files(export_dirpath,full.names = TRUE),
                    import_imf_df,
-                   countries_vec = countries_list$oecd_countries) %>%
+                   countries_vec = countries_vec) %>%
   bind_rows() %>%
   mutate(Exports = as.numeric(Exports)) %>%
   group_by(Date, CountryPair) %>%
@@ -92,7 +93,7 @@ export_df = lapply(list.files(export_dirpath,full.names = TRUE),
 
 import_df = lapply(list.files(import_dirpath,full.names = TRUE),
                    import_imf_df,
-                   countries_vec = countries_list$oecd_countries) %>%
+                   countries_vec = countries_vec) %>%
   bind_rows() %>%
   mutate(Imports = as.numeric(Imports)) %>%
   group_by(Date, CountryPair) %>%
