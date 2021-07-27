@@ -1,13 +1,167 @@
 
+
+```{r params_setup}
+
+countries_list = list(
+  kpp_countries = c(
+    "Australia",
+    "Austria",
+    "Belgium",
+    "Canada",
+    "Switzerland",
+    "Germany",
+    "Denmark",
+    "Spain",
+    "Finland",
+    "France",
+    "United_Kingdom",
+    "Ireland",
+    "Italy",
+    "Japan",
+    "Netherlands",
+    "Portugal",
+    "Sweden",
+    "United_States"
+  ),
+  fsap_countries = c(
+    "Austria",
+    "Belgium",
+    "Germany",
+    "Denmark",
+    "Spain",
+    "France",
+    "Finland",
+    "Greece",
+    "Ireland",
+    "Italy",
+    "Luxembourg",
+    "Netherlands",
+    "Portugal",
+    "Sweden",
+    "United_Kingdom"
+  ),
+  eu_countries = c(
+    "Austria",
+    "Belgium",
+    "Bulgaria",
+    "Croatia",
+    "Cyprus",
+    "Czech_Republic",
+    "Denmark",
+    "Estonia",
+    "Finland",
+    "France",
+    "Germany",
+    "Greece",
+    "Hungary",
+    "Ireland",
+    "Italy",
+    "Latvia",
+    "Lithuania",
+    "Luxembourg",
+    "Malta",
+    "Netherlands",
+    "Poland",
+    "Portugal",
+    "Romania",
+    "Slovak_Republic",
+    "Slovenia",
+    "Spain",
+    "Sweden",
+    "United_Kingdom"
+  ),
+  euro_countries = c(
+    "Austria",
+    "Belgium",
+    "Cyprus",
+    "Estonia",
+    "Finland",
+    "France",
+    "Germany",
+    "Greece",
+    "Ireland",
+    "Italy",
+    "Latvia",
+    "Lithuania",
+    "Luxembourg",
+    "Malta",
+    "Netherlands",
+    "Portugal",
+    "Slovak_Republic",
+    "Slovenia",
+    "Spain"
+  )
+)
+
+
+pairs_list = lapply(names(countries_list),
+                    function(temp_name){
+                      apply(combn(countries_list[[temp_name]],2), 2,
+                            function(temp_col){
+                              ifelse(temp_col[1]<temp_col[2],
+                                     paste(temp_col[1],temp_col[2],sep = "-"),
+                                     paste(temp_col[2],temp_col[1],sep = "-"))})
+
+                    })
+
+names(pairs_list) = paste(names(countries_list), "pairs", sep = "_")
+
+countries_list = c(countries_list, pairs_list)
+
+rm(pairs_list)
+
+reg_list = list()
+
+
+
+```
+
+```{r import_wdi_df}
+
+wdi_df = import_wdi_df(countries_vec = countries_list$kpp_countries)
+
+wdi_df = wdi_df %>% 
+  rename_all(tolower) %>% 
+  rename(date = year) %>% 
+  mutate(gdp = gdp * 10 ^ (-6))
+  
+
+
+```
+
+```{r import_trade_data}
+
+trade_df = import_imf_trade_data(countries_vec = countries_list$kpp_countries)
+
+trade_df = trade_df %>% 
+  ungroup() %>% 
+  rename_all(tolower) %>% 
+  separate(countrypair,into = c("country", "counterparty_country"),sep = "-") %>% 
+  filter(country %in% countries_list$kpp_countries) %>% 
+  filter(counterparty_country %in% countries_list$kpp_countries) %>% 
+  left_join(select(wdi_df, c(date, country, gdp)), by = c("date","country")) %>% 
+  left_join(select(wdi_df, c(date, country, gdp)),
+            by = c("date","counterparty_country" = "country")) %>% 
+  mutate(trade = trade / (gdp.x + gdp.y)) %>% 
+  group_by(date, country,counterparty_country) %>% 
+  summarise(trade = log(sum(trade, na.rm = TRUE)), .groups = "drop")
+            
+            
+
+
+```
+
 ```{r import_lbs}
 
-lbs_df = import_bis_lbs(paste0("C:\\Users\\internet\\OneDrive - Bank Of Israel",
-                               "\\Data\\BIS\\WEBSTATS_LBS_D_PUB_DATAFLOW_csv_col.csv"))
+lbs_df = import_bis_lbs(paste0(Sys.getenv("USERPROFILE"),
+                               "\\OneDrive - Bank Of Israel",                               "\\Data\\BIS\\WEBSTATS_LBS_D_PUB_DATAFLOW_csv_col.csv"))
 
 
 lbs_df_filtered = lbs_df %>% 
-  filter(reporting_country %in% str_replace_all(countries_list$kpp_countries,"_"," ")) %>%
-  filter(counterparty_country %in% str_replace_all(countries_list$kpp_countries,"_"," ")) %>%
+  filter(reporting_country %in% str_replace_all(countries_list$kpp_countries,
+                                                "_"," ")) %>%
+  filter(counterparty_country %in% str_replace_all(countries_list$kpp_countries,
+                                                   "_"," ")) %>%
   filter(measure == "Amounts outstanding / Stocks") %>% 
   filter(type_of_instruments == "All instruments") %>% 
   filter(currency_denomination == "All currencies") %>% 
@@ -16,11 +170,13 @@ lbs_df_filtered = lbs_df %>%
            matches("[0-9]"))) %>% 
   mutate(across(c(reporting_country, counterparty_country),
                 ~str_replace_all(.," ","_"))) %>% 
-  pivot_longer(-c(reporting_country, counterparty_country, balance_sheet_position),
+  pivot_longer(-c(reporting_country, counterparty_country,
+                  balance_sheet_position),
                names_to = "date") %>% 
   mutate(date = year(as.yearqtr(date, format = "%Y-Q%q"))) %>% 
   filter(date >= 1978 & date <= 2006) %>% 
-  group_by(reporting_country, counterparty_country, balance_sheet_position,date) %>% 
+  group_by(reporting_country, counterparty_country,
+           balance_sheet_position,date) %>% 
   summarise(value = mean(value, na.rm = TRUE), .groups = "drop") %>% 
   filter(complete.cases(.))
 
@@ -31,71 +187,47 @@ lbs_df_filtered = lbs_df %>%
 
 ```
 
+```{r bank_integration_data}
 
-```{r import_gdp}
-
-gdp_df = read_csv(paste0(Sys.getenv("USERPROFILE"),
-                  "\\OneDrive - Bank Of Israel\\Data\\World Bank\\GDP_panel.csv"),
-                  col_types = cols()) %>% 
-  select(country = `Country Name`, matches("[0-9]")) %>% 
-  filter(country %in% countries_list$kpp_countries) %>% 
-  pivot_longer(-country,names_to = "date", values_to = "gdp") %>% 
-  filter(date >= 1978 & date <= 2006) %>% 
-  mutate(date = as.numeric(date)) %>% 
-  mutate(gdp = gdp * 10 ^ (-6))
-
-
-```
-
-```{r import_gdp_per_capita}
-
-gdp_per_capita_df = read_csv(paste0(Sys.getenv("USERPROFILE"),
-                  "\\OneDrive - Bank Of Israel\\Data\\World Bank\\GDP_per_capita_panel.csv"),
-                  col_types = cols()) %>% 
-  select(country = `Country Name`, matches("[0-9]")) %>% 
-  filter(country %in% countries_list$kpp_countries) %>% 
-  pivot_longer(-country,names_to = "date", values_to = "gdp_pc") %>% 
-  mutate(date = str_extract(date,"^[0-9]{4}")) %>% 
-  filter(date >= 1977 & date <= 2006) %>% 
-  mutate(date = as.numeric(date)) %>% 
-  arrange(country, date) %>% 
-  mutate(gdp_pc_lag = dplyr::lag(gdp_pc)) %>% 
-  filter(complete.cases(.)) %>% 
-  mutate(across(starts_with("gdp"), as.numeric)) %>% 
-  mutate(gdp_diff = log(gdp_pc) - log(gdp_pc_lag)) %>% 
-  select(-starts_with("gdp_pc"))
-
-```
-
-
-```{r, eval=FALSE}
-
-temp_lbs = import.bis.lbs.data(countries_vec = countries_list$kpp_countries) %>%
-  mutate(Date = year(as.yearqtr(Date, format = "%Y-Q%q"))) %>% 
-  filter(Date >= 1978 & Date <= 2006) %>%
-  group_by(Balance_Pos,CountryPair,Date) %>% 
-  summarise(Balance = mean(Balance, na.rm = TRUE), .groups = "drop") %>% 
-  filter(complete.cases(.))
-
-
-
-
-```
-
-
-
-```{r data}
-
-df = lbs_df_filtered %>% 
-  left_join(gdp_df, by = c("date", "reporting_country" = "country")) %>% 
-  left_join(gdp_df, by = c("date", "counterparty_country" = "country"),
+bank_int = lbs_df_filtered %>% 
+  left_join(wdi_df %>% 
+              mutate(date = as.numeric(date)) %>% 
+              select(c(date, country, gdp)),
+            by = c("date", "reporting_country" = "country")) %>% 
+  left_join(wdi_df %>% 
+              mutate(date = as.numeric(date)) %>% 
+              select(c(date, country, gdp)),
+            by = c("date", "counterparty_country" = "country"),
             suffix = c("_x","_y")) %>% 
   mutate(value = log(value / (gdp_x + gdp_y))) %>% 
   select(-starts_with("gdp")) %>% 
   group_by(reporting_country,counterparty_country,date) %>% 
-  summarise(bank_int = mean(value, na.rm = TRUE), .groups = "drop") %>% 
-  left_join(gdp_per_capita_df, by = c("date", "reporting_country" = "country")) %>% 
-  left_join(gdp_per_capita_df, by = c("date", "counterparty_country" = "country"),
+  summarise(bank_int = mean(value, na.rm = TRUE), .groups = "drop")
+
+```
+
+```{r synch_data}
+
+gdp_per_capita_df = wdi_df %>% 
+  select(date,country, gdp_pc = gdp_per_capita) %>% 
+  filter(country %in% countries_list$kpp_countries) %>%
+  filter(date >= 1977 & date <= 2006) %>%
+  mutate(date = as.numeric(date)) %>%
+  arrange(country, date) %>%
+  mutate(gdp_pc_lag = dplyr::lag(gdp_pc)) %>%
+  filter(complete.cases(.)) %>%
+  mutate(across(starts_with("gdp"), as.numeric)) %>%
+  mutate(gdp_diff = log(gdp_pc) - log(gdp_pc_lag)) %>%
+  select(-starts_with("gdp_pc"))
+
+
+
+synch_df = lbs_df_filtered %>% 
+  select(country = reporting_country, counterparty_country, date) %>% 
+  left_join(gdp_per_capita_df,
+            by = c("date", "country" = "country")) %>% 
+  left_join(gdp_per_capita_df,
+            by = c("date", "counterparty_country" = "country"),
             suffix = c("_x","_y")) %>% 
   mutate(synch = -1 * abs(gdp_diff_x - gdp_diff_y)) %>% 
   select(-starts_with("gdp_diff"))
