@@ -144,7 +144,8 @@ trade_df = trade_df %>%
             by = c("date","counterparty_country" = "country")) %>% 
   mutate(trade = trade / (gdp.x + gdp.y)) %>% 
   group_by(date, country,counterparty_country) %>% 
-  summarise(trade = log(sum(trade, na.rm = TRUE)), .groups = "drop")
+  summarise(trade = log(sum(trade, na.rm = TRUE)), .groups = "drop") %>% 
+  mutate(date = as.numeric(date))
             
             
 
@@ -202,7 +203,10 @@ bank_int = lbs_df_filtered %>%
   mutate(value = log(value / (gdp_x + gdp_y))) %>% 
   select(-starts_with("gdp")) %>% 
   group_by(reporting_country,counterparty_country,date) %>% 
-  summarise(bank_int = mean(value, na.rm = TRUE), .groups = "drop")
+  summarise(bank_int = mean(value, na.rm = TRUE), .groups = "drop") %>% 
+  rename(country = reporting_country)
+
+# rm(lbs_df, lbs_df_filtered)
 
 ```
 
@@ -222,8 +226,8 @@ gdp_per_capita_df = wdi_df %>%
 
 
 
-synch_df = lbs_df_filtered %>% 
-  select(country = reporting_country, counterparty_country, date) %>% 
+synch_df = bank_int %>% 
+  select(country, counterparty_country, date) %>%
   left_join(gdp_per_capita_df,
             by = c("date", "country" = "country")) %>% 
   left_join(gdp_per_capita_df,
@@ -231,6 +235,36 @@ synch_df = lbs_df_filtered %>%
             suffix = c("_x","_y")) %>% 
   mutate(synch = -1 * abs(gdp_diff_x - gdp_diff_y)) %>% 
   select(-starts_with("gdp_diff"))
+
+rm(gdp_per_capita_df)
+
+```
+
+```{r harmon_data}
+
+harmon = import.harmon.data()
+
+harmon = construct_countrypair_harmon_index(harmon)
+
+```
+
+
+
+```{r merge_data}
+
+df = list(bank_int, trade_df,synch_df) %>% 
+  reduce(inner_join, by = c("date","country","counterparty_country"))
+
+
+
+```
+
+
+
+
+```{r clean_up}
+
+rm(list = ls()[!ls() == "df"])
 
 ```
 

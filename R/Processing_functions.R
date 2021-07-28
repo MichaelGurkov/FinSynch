@@ -460,99 +460,18 @@ construct_countrypair_harmon_index = function(df, dates_vec = NULL,
                                               index_status = "both"){
 
 
-  country_pairs_list = combn(unique(df$Country),2) %>%
-    apply(.,2,as.list)
-
-  reg_list = df$Directive %>%
-    unique() %>%
-    as.list()
-
-  # Default dates vec
-
-  if(is.null(dates_vec)){
-
-    dates_vec = unique(df$Date) %>%
-      na.omit() %>%
-      .[order(.)]
-
-  }
-
-  res = lapply(country_pairs_list,
-               function(country_pair, dates_vec){
-
-    countryA = country_pair[[1]]
-
-    countryB = country_pair[[2]]
-
-    dates_vec_list = lapply(reg_list,
-                            function(temp_reg, countryA, countryB,
-                                     dates_vec){
-
-                              date_max = max(df$Date[df$Directive == temp_reg &
-                                                   df$Country == countryA],
-                                         df$Date[df$Directive == temp_reg &
-                                                   df$Country == countryB])
-
-                              date_min = min(df$Date[df$Directive == temp_reg &
-                                                       df$Country == countryA],
-                                             df$Date[df$Directive == temp_reg &
-                                                       df$Country == countryB])
-
-                              if(is.na(date_min)){
-                                return(rep(0, length(dates_vec)))
-                                }
-
-                              if(index_status == "both"){
-
-                                temp_vec = as.numeric(dates_vec >= date_max)
-
-                              } else {
-
-                                temp_vec = as.numeric(dates_vec >= date_min &
-                                                        dates_vec <= date_max)
-
-                              }
-
-                              return(temp_vec)
+  df = df %>%
+    mutate(counterparty_country = country) %>%
+    expand(country, counterparty_country) %>%
+    filter(!country == counterparty_country) %>%
+    left_join(df, by = "country", "directive") %>%
+    left_join(df, by = c("counterparty_country" = "country", "directive"),
+              suffix = c("_x","_y")) %>%
+    mutate(across(starts_with("value"), ~as.yearqtr(.,format = "%Y-Q%q"))) %>%
+    mutate(date = if_else(value_x > value_y,value_y,value_x)) %>%
+    select(-starts_with("value"))
 
 
-                            },
-                            countryA = countryA,
-                            countryB = countryB,
-                            dates_vec = dates_vec)
-
-    dates_df = do.call(cbind.data.frame, dates_vec_list)
-
-    colnames(dates_df) = unlist(reg_list)
-
-    dates_df$Date = dates_vec
-
-    dates_df = gather(dates_df,key = Directive, value = Transposed, -Date)
-
-    return(dates_df)
-
-
-
-  },
-               dates_vec = dates_vec)
-
-  names(res) = sapply(country_pairs_list,
-                      function(temp_row){ifelse(temp_row[[1]]< temp_row[[2]],
-                                                paste(temp_row[[1]],
-                                                       temp_row[[2]],
-                                                       sep = "-"),
-                                                paste(temp_row[[2]],
-                                                      temp_row[[1]],
-                                                      sep = "-"))})
-
-  res = lapply(names(res),
-                function(name){res[[name]] = mutate(res[[name]],
-                                                    CountryPair = name)})
-
-  res = do.call(rbind.data.frame,res)
-
-
-  return(res)
 
 
 

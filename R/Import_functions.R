@@ -360,62 +360,49 @@ import.fin.dev.ind = function(filepath = paste0(
 #'  @import zoo
 
 import.harmon.data = function(filepath = paste0(
-  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
+  file.path(Sys.getenv("USERPROFILE")),
   "\\OneDrive - Bank Of Israel\\Data\\",
-  "Kalemli_Ozcan_Papaionnou_Peydro\\harmon.xlsx"),
-  myrange = "B4:AF32",
+  "Kalemli_Ozcan_Papaionnou_Peydro\\harmon_table.csv"),
   codes_filepath = paste0(
     file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
     "\\OneDrive - Bank Of Israel\\Data\\ISO\\",
     "iso_2digit_alpha_country_codes.csv"),
   convert_country_names = TRUE){
 
-  harmon = read_xlsx(path = filepath,range = myrange)
+  harmon = read_csv(filepath, col_types = cols(.default = col_character()))
 
-  temp_names = grep("[A-Z]{2}",names(harmon), value = TRUE)
+  harmon = map(seq(2,30,2), function(temp_ind){
 
-  temp = lapply(temp_names,
-                function(temp_name){
-                  temp_col = which(names(harmon) == temp_name)
-                  unite(harmon[,temp_col:(temp_col + 1)], !!temp_name,
-                        sep = "-")}) %>%
-    reduce(., cbind)
+    col_name = names(harmon)[temp_ind]
 
-  temp = cbind.data.frame(Directive = harmon$Directive[-1], temp[-1,])
+    temp_df = harmon %>%
+      select(c(1,temp_ind, temp_ind + 1)) %>%
+      unite(col = !!col_name,2:3, sep = "-")
+
+    return(temp_df)
+
+
+  }) %>%
+    reduce(inner_join, by = "Directive") %>%
+    pivot_longer(-Directive) %>%
+    rename_all(tolower)
+
 
   if(convert_country_names){
 
-    names(temp)[names(temp) == "UK"] = "GB"
+    iso_names = read_csv(codes_filepath,
+                         col_types = cols(.default = col_character())) %>%
+      rename_all(tolower)
 
-    iso_names = read.csv(codes_filepath, stringsAsFactors = FALSE)
-
-    names(iso_names) = c("Code","Country")
-
-    source_names = colnames(temp)[-1]
-
-    target_names = inner_join(data.frame(Code = source_names,
-                                         stringsAsFactors = FALSE),
-                              iso_names,
-                              by = "Code") %>%
-      select(Country) %>%
-      unlist() %>%
-      setNames(.,NULL)
-
-    colnames(temp) = c(colnames(temp)[1],target_names)
+     harmon = harmon %>%
+       mutate(name = recode(name, "UK" = "GB")) %>%
+       left_join(iso_names, by = c("name" = "code")) %>%
+       select(-name)
 
   }
 
-  temp = temp %>%
-    gather(key = Country, value = Date, - Directive) %>%
-    mutate(Date = str_replace(Date,
-                              pattern = "(^[0-9]{4})(Q[0-9])-NA$",
-                              replacement = "\\1-\\2")) %>%
-    mutate(Date = as.yearqtr(Date, format = "%Y-Q%q")) %>%
-    mutate(Directive = levels(Directive)[Directive]) %>%
-    mutate(Country = str_replace(Country,"\\s","_"))
 
-
-  return(temp)
+  return(harmon)
 
 
 }
