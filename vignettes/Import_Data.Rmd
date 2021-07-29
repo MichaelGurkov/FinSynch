@@ -246,20 +246,30 @@ harmon = import.harmon.data()
 
 harmon = construct_countrypair_harmon_index(harmon)
 
-```
+harmon = harmon %>% 
+  group_by(country, counterparty_country, date = year(date)) %>% 
+  summarise(fsap_ind = max(fsap_ind, na.rm = TRUE), .groups = "drop")
 
+```
 
 
 ```{r merge_data}
 
 df = list(bank_int, trade_df,synch_df) %>% 
-  reduce(inner_join, by = c("date","country","counterparty_country"))
+  reduce(inner_join, by = c("date","country","counterparty_country")) %>% 
+  left_join(harmon, by = c("date","country","counterparty_country")) %>% 
+  mutate(fsap_ind = replace_na(fsap_ind,0))
 
+df = df %>% 
+  filter(complete.cases(.)) %>% 
+  filter(is.finite(trade))
+
+
+df = df %>% 
+  unite(c("country", "counterparty_country"), col = "countrypair")
 
 
 ```
-
-
 
 
 ```{r clean_up}

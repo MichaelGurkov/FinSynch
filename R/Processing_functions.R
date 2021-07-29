@@ -459,17 +459,37 @@ construct_fin_reg = function(df,countries_vec = NULL,
 construct_countrypair_harmon_index = function(df, dates_vec = NULL,
                                               index_status = "both"){
 
+  dates_df = df %>%
+    select(date) %>%
+    filter(!is.na(date)) %>%
+    distinct() %>%
+    mutate(date = as.yearqtr(date, format = "%Y-Q%q"))
 
-  df = df %>%
+  countries_df = df %>%
     mutate(counterparty_country = country) %>%
     expand(country, counterparty_country) %>%
     filter(!country == counterparty_country) %>%
     left_join(df, by = "country", "directive") %>%
     left_join(df, by = c("counterparty_country" = "country", "directive"),
               suffix = c("_x","_y")) %>%
-    mutate(across(starts_with("value"), ~as.yearqtr(.,format = "%Y-Q%q"))) %>%
-    mutate(date = if_else(value_x > value_y,value_y,value_x)) %>%
-    select(-starts_with("value"))
+    mutate(across(starts_with("date"), ~as.yearqtr(.,format = "%Y-Q%q"))) %>%
+    mutate(trans_date = if_else(date_x < date_y,date_y,date_x)) %>%
+    select(-matches("_x|_y"))
+
+  merged_df = dates_df %>%
+    full_join(countries_df, by = character()) %>%
+    mutate(fsap_ind = as.numeric(date >= trans_date)) %>%
+    # select(-trans_date) %>%
+    arrange(country, counterparty_country, directive,date)
+
+
+  final_df = merged_df %>%
+    group_by(date, country, counterparty_country) %>%
+    summarise(fsap_ind = log(1 + sum(fsap_ind, na.rm = TRUE)), .groups = "drop")
+
+
+  return(final_df)
+
 
 
 

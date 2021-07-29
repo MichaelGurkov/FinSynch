@@ -1,20 +1,7 @@
 ---
-title: "Financial cycles synchronization and financial integration ^[I thank Yossi Yakhin (discussant), Yossi Saadon, Nimrod Segev, Jonathan Benshimol, Osnat Zohar, Yaakov Chen-Zion and the participants of the Bank of Israel Research Department seminar for their helpful comments and suggestions]"
-subtitle: 'Preliminary draft'
+title: ""
 author: "Michael Gurkov"
-fontsize: 11pt
-output:
-  rmarkdown::pdf_document:
-    # latex_engine: xelatex
-    number_sections: true
-    includes:
-            in_header: GlobalFinCyclePreambleDoc.tex
-            
-abstract: "This paper studies the relationship between financial cycles synchronization and financial integration using data on 30 OECD countries. The results suggest that the relationship is state depended: While financial integration acts as \"shock absorber\" during normal times, I find that financial crises increase the \"shock propagation\" feature of banking integration. Overall the findings show that while banking integration may be desired because it may facilitate risk diversification, additional macro prudential measures may be warranted to account for the risk exposure during crisis times."
-
-bibliography: '`r stringr::str_replace_all(paste(file.path(Sys.getenv("USERPROFILE"),"\\OneDrive - Bank Of Israel\\References\\Financial_Cycle-Global_Financial_Cycle - Copy.bib")),"\\\\","\\\\\\\\\\")`'
-
-nocite: '@*'
+output: "html_document"     
 
 vignette: >
   %\VignetteIndexEntry{CycleSynch}
@@ -55,6 +42,25 @@ library(scales)
 
 
 ```{r child="Import_Data.Rmd"}
+
+```
+
+# OLS estimation
+
+```{r ols}
+
+ols_mod = plm(formula = "synch ~ bank_int + trade",model = "within",
+    effect = "twoways", index = c("countrypair","date"), data = df)
+
+```
+
+
+# IV estimation
+
+```{r}
+
+iv_mod = plm(formula = "synch ~ bank_int + trade | fsap_ind + trade",model = "within",
+    effect = "twoways", index = c("countrypair","date"), data = df)
 
 ```
 

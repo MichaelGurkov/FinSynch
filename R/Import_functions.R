@@ -397,7 +397,9 @@ import.harmon.data = function(filepath = paste0(
      harmon = harmon %>%
        mutate(name = recode(name, "UK" = "GB")) %>%
        left_join(iso_names, by = c("name" = "code")) %>%
-       select(-name)
+       select(-name) %>%
+       rename(date = value) %>%
+       mutate(date = recode(date, "Not-Yet" = NA_character_))
 
   }
 
