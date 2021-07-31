@@ -252,6 +252,39 @@ harmon = harmon %>%
 
 ```
 
+```{r import_fx_regime}
+
+fx_data = read_csv(paste0(
+  Sys.getenv("USERPROFILE"),"\\OneDrive - Bank Of Israel\\",
+  "Data\\AizenmanChinnIto\\trilemma_indexes_update2018.csv")) %>% 
+  select(year, country = `Country Name`,
+         fx_regime = `Exchange Rate Stability Index`) %>% 
+  mutate(country = str_replace(country, " ", "_"))
+
+fx_data =fx_data %>% 
+  filter(country %in% countries_list$kpp_countries)
+
+```
+
+```{r import_eu_data}
+
+eu_data = read_csv(paste0(
+  Sys.getenv("USERPROFILE"),"\\OneDrive - Bank Of Israel\\",
+  "Data\\Misc\\EU_membership.csv")) %>% 
+  rename_all(tolower) %>% 
+  rename_all(~str_remove_all(.,"_membership")) %>% 
+  mutate(country = str_replace_all(country," ","_")) %>% 
+  mutate(country = str_remove(country,"The ")) %>% 
+  filter(country %in% countries_list$kpp_countries) %>% 
+  mutate(across(matches("^eu"), as.numeric)) %>% 
+  pivot_longer(-country,names_to = "membership", values_to = "date") %>% 
+  mutate(value = 1) %>% 
+  pivot_wider(names_from = membership,values_from = value) %>% 
+  mutate(across(matches("eu"), ~replace_na(.,0)))
+
+```
+
+
 
 ```{r merge_data}
 
@@ -264,9 +297,33 @@ df = df %>%
   filter(complete.cases(.)) %>% 
   filter(is.finite(trade))
 
+df = df %>% 
+  left_join(fx_data, by = c("country", "date" = "year")) %>% 
+  left_join(fx_data, by = c("counterparty_country" = "country",
+                            "date" = "year"), suffix = c("_x","_y")) %>% 
+  mutate(fx_regime = log(fx_regime_x) + log(fx_regime_x)) %>% 
+  select(-matches("_[xy]$"))
+
+
+
+df = df %>% 
+  left_join(eu_data, by = c("country", "date")) %>% 
+  left_join(eu_data, by = c("counterparty_country" = "country",
+                            "date"), suffix = c("_x","_y")) %>% 
+  mutate(across(matches("eu"), ~replace_na(.,0))) %>% 
+  rowwise() %>% 
+  mutate(eu_both = sum(eu_x,eu_y)) %>%
+  mutate(euro_both = sum(euro_x,euro_y)) %>% 
+  select(-matches("_[xy]$")) %>% 
+  mutate(euro_alone = as.numeric(euro_both == 1)) %>% 
+  mutate(eu_alone = as.numeric(eu_both == 1)) %>% 
+  mutate(euro_both = as.numeric(euro_both == 2)) %>% 
+  mutate(eu_both = as.numeric(eu_both == 2))
+
 
 df = df %>% 
   unite(c("country", "counterparty_country"), col = "countrypair")
+
 
 
 ```

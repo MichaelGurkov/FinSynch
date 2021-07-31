@@ -28,15 +28,19 @@ library(lubridate)
 
 library(tidyverse)
 
+library(tidymodels)
+
 library(tidyselect)
 
 library(plm)
 
+library(hdm)
+
 library(stargazer)
  
-library(purrr)
-
 library(scales)
+
+library(glue)
 
 ```
 
@@ -45,22 +49,91 @@ library(scales)
 
 ```
 
+
+
 # OLS estimation
 
 ```{r ols}
 
-ols_mod = plm(formula = "synch ~ bank_int + trade",model = "within",
-    effect = "twoways", index = c("countrypair","date"), data = df)
+
+ols_reg = 
+
+x_vars = names(df)[!names(df) %in% c("synch","fsap_ind")] %>% 
+  glue_collapse(sep = "+")
+
+ols_mod = plm(
+  formula = formula(glue("synch ~ ", x_vars)),
+  model = "within",
+  effect = "twoways",
+  index = c("countrypair", "date"),
+  data = df)
 
 ```
 
 
 # IV estimation
 
+```{r iv}
+
+iv_vars = names(df)[!names(df) %in% c("synch","bank_int")] %>% 
+  glue_collapse(sep = "+")
+
+iv_mod = plm(
+  formula = glue("synch ~ ", x_vars, "|", iv_vars),
+  model = "within",
+  effect = "twoways",
+  index = c("countrypair", "date"),
+  data = df
+)
+
+```
+
+
+# Lasso estimation
+
+
+```{r my_recipe}
+
+my_recipe = recipe(synch ~ ., data = df) %>% 
+  step_rm("fsap_ind") %>% 
+  step_mutate(date = factor(date)) %>% 
+  step_dummy(c("countrypair", "date"))
+
+```
+
+
+
+```{r lasso_estimation}
+
+df_dummy = my_recipe %>% 
+  prep() %>% 
+  bake(df)
+
+
+y = df_dummy %>% 
+  pull(synch)
+
+d = df_dummy %>% 
+  pull(bank_int)
+
+x_mat = df_dummy  %>% 
+  select(-c(synch, bank_int)) %>% 
+  as.matrix()
+
+```
+
 ```{r}
 
-iv_mod = plm(formula = "synch ~ bank_int + trade | fsap_ind + trade",model = "within",
-    effect = "twoways", index = c("countrypair","date"), data = df)
+part_Lasso = rlassoEffect(x = x_mat,
+                          y = y,
+                          d = d,
+                          method = "partialling out")
+
+double_Lasso = rlassoEffect(x = x_mat,
+                          y = y,
+                          d = d,
+                          method = "double selection")
+
 
 ```
 
