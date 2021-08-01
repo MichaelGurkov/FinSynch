@@ -101,8 +101,6 @@ my_recipe = recipe(synch ~ ., data = df) %>%
 
 ```
 
-
-
 ```{r lasso_estimation}
 
 df_dummy = my_recipe %>% 
@@ -122,7 +120,7 @@ x_mat = df_dummy  %>%
 
 ```
 
-```{r}
+```{r partial_lasso}
 
 part_Lasso = rlassoEffect(x = x_mat,
                           y = y,
@@ -133,6 +131,26 @@ double_Lasso = rlassoEffect(x = x_mat,
                           y = y,
                           d = d,
                           method = "double selection")
+
+
+```
+
+# Forecasting
+
+```{r predict_synch}
+
+lasso_wf = workflow() %>% 
+  add_recipe(my_recipe) %>% 
+  add_model(linear_reg(penalty = tune()) %>% 
+  set_engine("glmnet"))
+  
+lasso_fit = lasso_wf %>% 
+  tune_grid(resamples = vfold_cv(df),
+            grid = grid_regular(penalty(), levels = 10))
+
+final_fit = lasso_wf %>% 
+  finalize_workflow(lasso_fit %>% 
+  select_best(metric = "rmse"))
 
 
 ```
