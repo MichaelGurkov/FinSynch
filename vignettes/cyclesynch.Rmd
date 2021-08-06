@@ -1,7 +1,7 @@
 ---
 title: ""
 author: "Michael Gurkov"
-output: "html_document"     
+output: "pdf_document"     
 
 vignette: >
   %\VignetteIndexEntry{CycleSynch}
@@ -63,10 +63,13 @@ df = df %>%
 
 I replicate the paper "Financial Regulation, Financial Globalization, and the Synchronization of Economic Activity" (Journal of Finance, 2013) \footnote{Part of the paper's data is confidential so the replication is not complete}. The paper studies the relationship between synchronization of business cycles and  financial integration. 
 
-The theory provides ambiguous predictions regarding the effect of financial integration on business cycles synchronization. On the one hand, financial integration can help diversify risk, redirect capital to more profitable investment opportunities and act as country-specific "shock absorber". On the other hand, banking integration can induce contagion effects and act as a global "shock propagator". In that case, a positive association should be observed. The authors find that output synchronization is negatively affected by financial integration. The authors explain the connection as follows: if a country is hit with a negative productivity shock, global banks will reduce credit to that country and increase credit to another country, thus, exacerbating negative output effect in the former country and facilitating positive output effect in the latter. In order to establish causal relatioship the paper uses
+The theory provides ambiguous predictions regarding the effect of financial integration on business cycles synchronization. On the one hand, financial integration can help diversify risk, redirect capital to more profitable investment opportunities and act as country-specific "shock absorber". On the other hand, integration can induce contagion effects and act as a global "shock propagator". In that case, a positive association should be observed. The authors find that output synchronization is negatively affected by financial integration. The authors explain the connection as follows: if a country is hit with a negative productivity shock, global banks will reduce credit to that country and increase credit to another country, thus, exacerbating negative output effect in the former country and facilitating positive output effect in the latter. In order to establish causal relationship the paper uses
 instrumental variable technique.
 
 # OLS estimation - replication of the main result
+
+One of the main results of this paper is the comparison of the relationship between integration and synchronization cross sectional ("between" variation) and in panel setting with country-pair and year fixed effects ("within" variation). The authors find positive relationship with regards to "between" variation and
+negative relationship "within". In table \ref{baseline} I replicate the results (I get the correct signs and "close" coefficients since the data I use is not identical to the data of the paper due to confidentiality issues)
 
 ```{r ols}
 
@@ -96,7 +99,7 @@ ols_mod_between = plm(
 data.frame(model_spec = c("between","within"),
        coeff = c(coefficients(ols_mod_between)[2],
                  coefficients(ols_mod_within))) %>% 
-  stargazer(type = "html",summary = FALSE)
+  stargazer(summary = FALSE, label = "baseline", header = FALSE)
 
 ```
 
@@ -104,9 +107,11 @@ data.frame(model_spec = c("between","within"),
 
 # IV estimation
 
-In order to establish causality the authors employ instrumental variable - they use the transposition of EU directives into national law. The variation in the time that takes each country to transpose the directives into law is the proxy to financial integration.
+In order to establish causality the authors employ instrumental variable - they use the transposition of EU directives into national law. 
+The authors use data on financial sector harmonization policies across EU15 countries on the implementation of the legislative acts of the Financial Services Action Plan (FSAP). The FSAP was a major policy initiative launched in 1998 by the EU Commission and the EU Council (the two main bodies of the European Union) that aimed to remove regulatory and legislative barriers across European countries in financial intermediation. The FSAP included 29 major pieces of legislation, 27 EU Directives and two EU Regulations.  By the official completion date at the end of 2003, the EU Commission had passed 21 ofthese measures. The remaining six Directives of the FSAP passed in the period 2004 to 2006. In contrast to EU Regulations that instantly become part of the legal order
+of all EU member countries, EU Directives are legal acts that do not become immediately enforceable across the EU. Instead, member countries are given time to adopt, modify, and eventually transpose the EU Directives into domestic law. As with other pieces of EU-initiated legislation, there is a great deal of heterogeneity on the speed with which European countries adopted the FSAP Directives so the variation in the time that takes each country to transpose the directives into law can be used as instrumental variable (a proxy) to financial integration.
  
-```{r iv, eval=FALSE}
+```{r iv}
 
 # x_vars = names(df)[!names(df) %in% c("synch","fsap_ind")] %>%
 #   glue_collapse(sep = "+")
@@ -135,9 +140,28 @@ iv_mod = plm(
 # Lasso estimation
 
 In this section I try the double and partial lasso methods in order to
-compare them to IV estimation.
+compare them to IV estimation. The double lasso and partial lasso coeffs are (almost) the same, the iv coefficient is quite different in magnitude but holds the correct sign. My data is quite noisy and the iv estimation is not statistically significant.
 
-```{r partial_lasso, eval=FALSE}
+```{r lasso_data}
+
+y = df %>% 
+  pull(synch)
+
+d = df %>% 
+  pull(bank_int)
+
+x_mat = recipe(synch ~ .,data = df) %>% 
+  step_mutate(date = as_factor(date)) %>% 
+  step_select(-c("bank_int","synch","fsap_ind")) %>% 
+  step_dummy(c("countrypair","date")) %>% 
+  prep() %>% 
+  bake(NULL) %>% 
+  as.matrix()
+
+```
+
+
+```{r partial_lasso}
 
 part_Lasso = rlassoEffect(x = x_mat,
                           y = y,
@@ -152,6 +176,26 @@ double_Lasso = rlassoEffect(x = x_mat,
 
 ```
 
+```{r results='asis'}
+
+lasso_coeff_table = data.frame(
+  model_spec = c("iv", "part_lasso", "double_lasso"),
+  coeff = c(
+    coefficients(iv_mod)[1],
+    coefficients(part_Lasso),
+    coefficients(double_Lasso)
+  )
+)
+rownames(lasso_coeff_table) = NULL
+
+stargazer(lasso_coeff_table,summary = FALSE, label = "baseline",
+          header = FALSE)
+
+
+```
+
+
+
 # Forecasting
 
 ```{r data_split}
@@ -165,60 +209,24 @@ test_set = testing(data_split)
 ```
 
 
-```{r models_specs}
+```{r model_fit}
+
+
+pre_recipe = recipe(synch ~ ., data = train_set) %>% 
+  step_mutate(date = factor(date)) %>% 
+  step_dummy(c("countrypair", "date"))
 
 lasso_spec = linear_reg(penalty = tune()) %>% 
   set_mode("regression")  %>% 
   set_engine("glmnet")
 
-rf_spec <- 
-   rand_forest(mtry = tune(), min_n = tune(), trees = 1000) %>% 
-   set_engine("ranger") %>% 
-   set_mode("regression")
-
-xgb_spec <- 
-   boost_tree(tree_depth = tune(), learn_rate = tune(), loss_reduction = tune(), 
-              min_n = tune(), sample_size = tune(), trees = tune()) %>% 
-   set_engine("xgboost") %>% 
-   set_mode("regression")
-
-
-```
-
-
-```{r workflows}
-
-wf_set = workflow_set(
-  preproc = list(rec = pre_recipe),
-  models = list(lasso = lasso_spec, rf = rf_spec, xgb = xgb_spec)
-)
-
-wf_res = wf_set %>%
-  workflow_map(
-    fn = "tune_grid",
-    resamples = vfold_cv(train_set),
-    grid = 10,
-    verbose = TRUE
-  )
-
-
-```
-
-
-```{r model_fit}
-
-
-pre_recipe = recipe(synch ~ ., data = train_set) %>% 
-  step_rm("fsap_ind") %>% 
-  step_mutate(date = factor(date)) %>% 
-  step_dummy(c("countrypair", "date"))
 
 lasso_wf = workflow() %>% 
   add_recipe(pre_recipe) %>% 
-  add_model(lasso_mod)
+  add_model(lasso_spec)
   
 lasso_fit = lasso_wf %>% 
-  tune_grid(resamples = vfold_cv(train_set),
+  tune_grid(resamples = vfold_cv(train_set,v = 10),
             grid = grid_regular(penalty(), levels = 10))
 
 final_fit = lasso_wf %>% 
@@ -240,4 +248,4 @@ lasso_rmse = fit_res %>%
 
 ```
 
-In this section I forecast the dependent variable using lasso
+In this section I forecast the dependent variable using lasso model. I tune the penalty (lambda) parameter on a training set using cross validation of 10 folds and then evaluate the RMSE on the test set. The RMSE is `r lasso_rmse`.
