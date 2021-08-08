@@ -1,7 +1,8 @@
 ---
-title: ""
+title: "Final assignment"
 author: "Michael Gurkov"
 output: "pdf_document"     
+bibliography: '`r stringr::str_replace_all(paste(file.path(Sys.getenv("USERPROFILE"),"\\OneDrive - Bank Of Israel\\References\\Financial_Cycle-Global_Financial_Cycle - Copy.bib")),"\\\\","\\\\\\\\\\")`'
 
 vignette: >
   %\VignetteIndexEntry{CycleSynch}
@@ -55,13 +56,9 @@ df = df %>%
 ```
 
 
-```{r child="Import_Data.Rmd", eval=FALSE}
-
-```
-
 # Introduction
 
-I replicate the paper "Financial Regulation, Financial Globalization, and the Synchronization of Economic Activity" (Journal of Finance, 2013) \footnote{Part of the paper's data is confidential so the replication is not complete}. The paper studies the relationship between synchronization of business cycles and  financial integration. 
+I replicate the paper @Kalemli-Ozcan2013JF \footnote{Part of the paper's data is confidential so the replication is not complete}. The paper studies the relationship between synchronization of business cycles and  financial integration. 
 
 The theory provides ambiguous predictions regarding the effect of financial integration on business cycles synchronization. On the one hand, financial integration can help diversify risk, redirect capital to more profitable investment opportunities and act as country-specific "shock absorber". On the other hand, integration can induce contagion effects and act as a global "shock propagator". In that case, a positive association should be observed. The authors find that output synchronization is negatively affected by financial integration. The authors explain the connection as follows: if a country is hit with a negative productivity shock, global banks will reduce credit to that country and increase credit to another country, thus, exacerbating negative output effect in the former country and facilitating positive output effect in the latter. In order to establish causal relationship the paper uses
 instrumental variable technique.
@@ -245,7 +242,24 @@ lasso_rmse = fit_res %>%
   filter(.metric == "rmse") %>% 
   pull(.estimate)
 
+lasso_fit %>%
+  collect_metrics() %>%
+  filter(.metric == "rmse") %>%
+  ggplot() +
+  geom_point(aes(x = penalty, y = mean)) +
+  geom_errorbar(aes(
+    x = penalty,
+    ymax = mean + std_err,
+    ymin = mean - std_err
+  )) + 
+  scale_x_log10() + 
+  ylab(NULL) + ggtitle("RMSE (10 fold cross validation)")
+
 
 ```
 
-In this section I forecast the dependent variable using lasso model. I tune the penalty (lambda) parameter on a training set using cross validation of 10 folds and then evaluate the RMSE on the test set. The RMSE is `r lasso_rmse`.
+In this section I forecast the dependent variable using lasso model. I tune the penalty (lambda) parameter on a training set using cross validation of 10 folds and then evaluate the RMSE on the test set. The RMSE is `r lasso_rmse`. Interestingly
+although the number of features is 142 (most of them is dummy variables for year or country-pair) variable selection doesn't seem to exclude features (the RMSE
+doesn't go up until very high penalty value that exclude most of the features)
+
+# Bibliography
