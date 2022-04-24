@@ -1,0 +1,707 @@
+---
+title: "Financial cycles synchronization and financial integration ^[I thank Yossi Yakhin (discussant), Yossi Saadon, Nimrod Segev, Jonathan Benshimol, Osnat Zohar, Yaakov Chen-Zion and the participants of the Bank of Israel Research Department seminar for their helpful comments and suggestions]"
+subtitle: 'Preliminary draft'
+author: "Michael Gurkov"
+fontsize: 11pt
+output:
+  rmarkdown::word_document:
+    number_sections: true
+
+abstract: "This paper studies the relationship between financial cycles synchronization and financial integration using data on 30 OECD countries. The results suggest that the relationship is state depended: While financial integration acts as \"shock absorber\" during normal times, I find that financial crises increase the \"shock propagation\" feature of banking integration. Overall the findings show that while banking integration may be desired because it may facilitate risk diversification, additional macro prudential measures may be warranted to account for the risk exposure during crisis times."
+
+bibliography: '`r stringr::str_replace_all(paste(file.path(Sys.getenv("USERPROFILE"),"\\OneDrive - Bank Of Israel\\References\\Financial_Cycle-Global_Financial_Cycle - Copy.bib")),"\\\\","\\\\\\\\\\")`'
+
+nocite: '@*'
+
+vignette: >
+  %\VignetteIndexEntry{CycleSynch}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,echo = FALSE,
+  eval = FALSE, message = FALSE,
+  warning = FALSE, comment = "#>"
+)
+```
+
+
+```{r load_package}
+
+devtools::load_all()
+
+# library(car)
+
+library(tidyverse)
+
+library(tidyselect)
+
+library(plm)
+
+library(stargazer)
+ 
+library(purrr)
+
+library(scales)
+
+```
+
+
+```{r params_setup}
+
+countries_list = list(
+  oecd_countries = c(
+    "Australia",
+    "Austria",
+    "Belgium",
+    "Canada",
+    "Chile",
+    "Czech_Republic",
+    "Denmark",
+    "Estonia",
+    "Finland",
+    "France",
+    "Germany",
+    "Greece",
+    "Hungary",
+    "Iceland",
+    "Ireland",
+    "Israel",
+    "Italy",
+    "Japan",
+    "Korea",
+    "Latvia",
+    "Lithuania",
+    "Luxembourg",
+    "Mexico",
+    "Netherlands",
+    "New_Zealand",
+    "Norway",
+    "Poland",
+    "Portugal",
+    "Slovak_Republic",
+    "Slovenia",
+    "Spain",
+    "Sweden",
+    "Switzerland",
+    "Turkey",
+    "United_Kingdom"
+    ,
+    "United_States"
+  ),
+  kpp_countries = c(
+    "Australia",
+    "Austria",
+    "Belgium",
+    "Canada",
+    "Switzerland",
+    "Germany",
+    "Denmark",
+    "Spain",
+    "Finland",
+    "France",
+    "United_Kingdom",
+    "Ireland",
+    "Italy",
+    "Japan",
+    "Netherlands",
+    "Portugal",
+    "Sweden",
+    "United_States"
+  ),
+  fsap_countries = c(
+    "Austria",
+    "Belgium",
+    "Germany",
+    "Denmark",
+    "Spain",
+    "France",
+    "Finland",
+    "Greece",
+    "Ireland",
+    "Italy",
+    "Luxembourg",
+    "Netherlands",
+    "Portugal",
+    "Sweden",
+    "United_Kingdom"
+  ),
+  eu_countries = c(
+    "Austria",
+    "Belgium",
+    "Bulgaria",
+    "Croatia",
+    "Cyprus",
+    "Czech_Republic",
+    "Denmark",
+    "Estonia",
+    "Finland",
+    "France",
+    "Germany",
+    "Greece",
+    "Hungary",
+    "Ireland",
+    "Italy",
+    "Latvia",
+    "Lithuania",
+    "Luxembourg",
+    "Malta",
+    "Netherlands",
+    "Poland",
+    "Portugal",
+    "Romania",
+    "Slovak_Republic",
+    "Slovenia",
+    "Spain",
+    "Sweden",
+    "United_Kingdom"
+  ),
+  euro_countries = c(
+    "Austria",
+    "Belgium",
+    "Cyprus",
+    "Estonia",
+    "Finland",
+    "France",
+    "Germany",
+    "Greece",
+    "Ireland",
+    "Italy",
+    "Latvia",
+    "Lithuania",
+    "Luxembourg",
+    "Malta",
+    "Netherlands",
+    "Portugal",
+    "Slovak_Republic",
+    "Slovenia",
+    "Spain"
+  )
+)
+
+
+pairs_list = lapply(names(countries_list),
+                    function(temp_name){
+                      apply(combn(countries_list[[temp_name]],2), 2,
+                            function(temp_col){
+                              ifelse(temp_col[1]<temp_col[2],
+                                     paste(temp_col[1],temp_col[2],sep = "-"),
+                                     paste(temp_col[2],temp_col[1],sep = "-"))})
+
+                    })
+
+names(pairs_list) = paste(names(countries_list), "pairs", sep = "_")
+
+countries_list = c(countries_list, pairs_list)
+
+rm(pairs_list)
+
+reg_list = list()
+
+hyp_test_list = list()
+
+# control_vars = c("trade_gdp","FX_stab_tot","FO_ind_tot","MI_ind_tot",
+#                  "GDP_real_tot")
+
+control_vars = c("trade_gdp","FX_stab_tot","FO_ind_tot","GDP_real_tot")
+
+
+reg_formula_list = list(
+  baseline = paste(
+    "Fin_synch ~ lag(bank_gdp,1)",
+    paste(control_vars,
+          collapse = "+"),
+    "CountryPair:Time_Trend",
+    sep = "+"
+  ),
+  crises = paste(
+    "Fin_synch ~ lag(bank_gdp,1) * Crises",
+    paste(control_vars,
+          collapse = "+"),
+    "CountryPair:Time_Trend",
+    sep = "+"
+  ),
+  full_spec = paste(
+    "Fin_synch ~ lag(bank_gdp,1) * Crises",
+    "lag(bank_gdp,1) * FD_tot",
+    paste(control_vars,
+          collapse = "+"),
+    "CountryPair:Time_Trend",
+    sep = "+"
+  )
+)
+
+temp_names = c(
+  "lag\\(bank_gdp, 1\\)",
+  "Crises",
+  "FD_tot",
+  "lag\\(bank_gdp, 1\\):Crises",
+  "lag\\(bank_gdp, 1\\):FD_tot",
+  "trade_gdp",
+  "FX_stab_tot",
+  "FO_ind_tot",
+  "GDP_real_tot"
+)
+
+
+temp_labels = c(
+  "Bank linkages (lag)",
+  "Crises",
+  "FD",
+  "Bank linkages (lag) * Crises",
+  "Bank linkages (lag) * FD",
+  "Trade linkages",
+  "FX stability",
+  "Financial openness",
+  "GDP total"
+)
+
+
+temp_names_lag = c("lag\\(bank_gdp, 1\\)",
+                   "lag\\(Crises, 1\\)",
+                   "lag\\(FD_tot, 1\\)",
+                   "lag\\(Euro_both, 1\\)",
+                   "lag\\(bank_gdp, 1\\):lag\\(Crises, 1\\)",
+                   "lag\\(bank_gdp, 1\\):lag\\(FD_tot, 1\\)",
+                   "lag\\(bank_gdp, 1\\):lag\\(Euro_both, 1\\)")
+
+
+
+
+notes_str = paste0(" Financial cycles synchronization",
+                   " is the ",
+                   "negative of the absolute difference of ",
+                   "financial cycle growth between country",
+                   " \\textit{i}",
+                   " and country \\textit{j} in year \\textit{t}. ",
+                   "Bank linkages is the log of total bilateral ",
+                   "cross border banking claims ",
+                   "as a share of the two countries’ GDP. ",
+                   "Crises is an indicator variable ",
+                   "that equals 1 if at least one country ",
+                   "undergoes ",
+                   "banking crises at that year. ",
+                   "FD is the sum of the ",
+                   "level of each country financial development ",
+                   "index. ",
+                   "Trade linkages is the log of bilateral real exports  ",
+                   "and imports as a share of the two countries’ GDP. ",
+                   "FX stability is a measure of exchange rate stability. ",
+                   "Financial openness is a measure of capital account ",
+                   "openness. ",
+                   "GDP total is the sum of GDP of both countries.")
+
+
+
+notes_str_ctrl = paste0(notes_str,
+                       "Controls include foreign exchange ",
+                       "stability, financial ",
+                       "openness, trade linkages and GDP (log). ",
+                       "The standard errors are clustered ",
+                       "at country pair level and ",
+                       "heteroscedasticity robust.")
+
+roll_cor_len = 5
+
+lines_str = list(c("Country pair FE","Yes"),
+                           c("Year FE","Yes"),
+                           c("Country pair linear trend","Yes"))
+
+```
+
+
+```{r child="Import_Data.Rmd"}
+
+```
+
+
+```{r temp_import, eval=FALSE}
+
+raw_data = readRDS(paste0(
+  file.path(Sys.getenv("USERPROFILE")),
+  "\\desktop",
+  "\\FinSynchRawData.rds"
+))
+
+```
+
+
+```{r child="Process_Data.Rmd"}
+
+```
+
+
+```{r temp_fin_reg, eval=FALSE}
+
+
+fin_reg_df = readRDS(paste0(file.path(Sys.getenv("USERPROFILE")),
+                            "\\Desktop\\FinSynchFinReg.rds"))
+
+country_df = readRDS(paste0(file.path(Sys.getenv("USERPROFILE")),
+                           "\\Desktop\\FinSynchCountryDF.rds"))
+
+country_pair_df = readRDS(paste0(file.path(Sys.getenv("USERPROFILE")),
+                           "\\Desktop\\FinSynchCountryPairDF.rds"))
+
+
+```
+
+
+
+
+\section{Introduction} 
+
+<!-- What do you do -->
+
+This work analyzes the relationship between financial integration and financial cycles synchronization. Financial integration refers to the linkage of different financial markets while financial cycles synchronization refers to the co-movement of the main components of the financial cycle (credit, house and shares prices). I identify the 
+synchronization between cross border banking flows of 30 OECD countries
+and find that the level of the synchronization generally decreases with
+the increase in banking linkages between the countries.
+
+<!-- Why is it important -->
+The theory provides ambiguous predictions regarding the effect of financial integration on financial cycles synchronization. On the one hand, financial integration can help diversify risk, redirect capital to more profitable investment opportunities and act as country-specific "shock absorber" [@Kose2009]. In that case, the association between banking integration and financial synchronization should be negative. On the other hand, banking integration can induce contagion effects and act as a global "shock propagator" [@Degryse2010; @Popov2012]. In that case, a positive association should be observed. This paper examines which affect dominates by studying the connection between banking integration and financial cycles synchronization.
+
+<!-- How do you do it (methodology) -->
+
+A recent line of research studies the relationship between business synchronization and financial integration. For example, @Kalemli-Ozcan2013JF find that output synchronization is negatively affected by financial integration. The authors explain the connection as follows: if a country is hit with a negative productivity shock, global banks will reduce credit to that country and increase credit to another country, thus, exacerbating negative output effect in the former country and facilitating positive output effect in the latter. In this paper, I test whether the same mechanism applies to financial synchronization. To this end, I follow the methodology suggested by @Kalemli-Ozcan2013JF. Specifically, I use their measures of cycles synchronization and banking linkages and run a panel regression controlling for common and time invariant unobservable factors. I also control for other economic factors that can affect both financial cycle synchronization and banking integration. Since the theory is ambiguous on the issue of the effect of banking integration
+on financial synchronization, the question becomes an empirical one. The theory does provide
+predictions with respect to the direction of the association between cycles synchronization and banking linkages in more specific setups such as during financial crises as well as in highly developed market. I analyze those setups in addition to baseline analysis.
+
+<!-- What do you find -->
+I find evidence that financial integration is negatively associated with cycles synchronization thus on average act as a shock absorbent. However, the results show that the relationship is state-dependent: I find that during financial crises financial integration is associated with more synchronized financial cycles relative to normal times,indicating that during crises synchronization propagates shocks. In a highly developed financial market, integration is also associated with more synchronized cycles relative to a low level of financial development. 
+
+<!-- Contribution and policy implications -->
+
+This paper contributes to the literature in several ways: first, I contribute to the literature on financial cycles by identifying the situations in which financial cycles become more synchronized. Second, I contribute to the strand of literature that studies financial integration. The literature stresses that financial integration can function as "shock absorbent" or "shock propagator", I identify the conditions that characterize each of the effects.
+
+
+<!-- paper outline -->
+
+The paper is structured as follows. In section \ref{LitReview} I review the relevant literature and theoretical considerations. Empirical specification are formulated in section \ref{EmpSpec}. Section \ref{Data} provides a description of the data. Estimation results are presented in section \ref{results} and robustness test in section \ref{Robust}. Section \ref{conclusions} concludes the paper.
+
+
+
+
+\section{Literature review} \label{LitReview}
+
+This paper is related to both the financial cycles and financial integration strands of the literature. 
+
+The literature on financial cycles defines the components of the financial cycle and attempts to study the interactions between business and financial cycles.
+@Borio2014 stresses the role of the financial cycle in macroeconomics and suggest that the most parsimonious description of the financial cycle can be made in terms of credit and property prices. @Claessens2012 analyzes the interaction between business and financial cycles. They show that recessions in the business cycle that are related to financial cycle contraction tend to be deeper and longer relative to other recessions. @Meller2017 study the synchronization of credit cycles. They look at 14 advanced countries in 1906-2008 years using cluster analysis and find that there are several clusters with different synchronization patterns. They also find positive synchronization of business and credit cycle. Unfortunately, cluster analysis is unable to provide insight into the factors that affect the synchronization of credit cycles. I attempt to make some progress in this direction.
+
+Financial integration is a phenomenon in which financial markets in neighboring, regional or global economies are closely linked together. The literature in this field discuss the benefits and dangers of financial integration (see @Kose2009 for survey and summary).  Potential benefits of financial integration include efficient capital allocation, better governance, higher investment and growth, and risk-sharing. At the same time, financial integration can also have adverse effects. A higher degree of financial integration can generate severe financial contagion in integrated economies. @Popov2012 study banking integration and identify a mechanism by which financial shocks propagate through cross border linkages. The authors show that a negative shock to parent (foreign) bank leads to a reduction in lending provided by its subsidiaries abroad. @Degryse2010 analyzes the extent of contagion risk through banking linkages. They focus on the 1999-2006 period and ran a simulation based on cross border bank linkages and bank equity. The authors conclude that contagion risk had increased during that period. They also find that contagion is more widespread in geographical proximity. @Avdjiev2019 study the factors that affect the lending behavior of global banks’ subsidiaries throughout the world. The authors divide the influencing factors into two groups: "push" (global drivers) factors and "pull" factors such as macroeconomic conditions that measure the local cost of funding and the strength of the borrowers' balance sheets and the financial conditions of the global bank's subsidiaries. They find that the lending behavior of the subsidiaries is more closely related to local macroeconomic conditions and their financial conditions than to those of their owner-specific counterparts, namely that the "pull" factors are more important relative to "push" factors. From a financial stability point of view, the "push" factors increase synchronization (the contagion or propagation effect) while the "pull" factors should reduce synchronization (absorption effect) due to idiosyncratic shocks. @Cerutti2015 analyzes the composition and drivers of cross-border bank lending between 1995 and 2012, distinguishing between syndicated and non-syndicated loans. They find (among other results) that banking integration (cross border credit) is closely related to the level of development and sophistication of the banking system, strength of balance sheets and regulation.
+ 
+@Kalemli-Ozcan2013JF finds that output cycle synchronization is negatively affected by financial integration. They suggest that banking integration magnifies productivity
+shocks (to regions or countries), making output growth among integrated economies
+diverge. I use their methodology to analyze financial cycles synchronization.
+
+
+\section{Data} \label{Data}
+
+
+\subsection{Bank linkages}
+
+I use data on bilateral cross-border bank positions gathered from the Bank for International Settlements (BIS) data on the residence-based locational banking statistics (LBS). The LBS detail at the country level the geographical composition of banks’ balance sheets and capture outstanding claims and liabilities of banking offices located in the BIS reporting countries, including intragroup positions, and exclude local claims of foreign branches and subsidiaries. 
+
+The BIS statistics have possibly the most extensive time coverage from all similar databases on cross-border investment holdings (as a comparison to the IMF CPIS database that reports bilateral cross-border financial flows and stocks after 1999). The main limitation of the data set is that it reports the aggregate international exposure only of the banking system. Yet, cross-border banking activities continue to be a very significant component of cross-border investment. As long as there is a high correlation between international banking and other forms of portfolio investment (equity flows, FDI, and debt flows), my estimates will not be systematically biased. The BIS data are expressed originally in current U.S. dollars (millions). I convert the data into constant U.S. dollars by deflating the series with the U.S. consumer price index (CPI). Then I use the total stock of external assets and liabilities to construct a quantity-based measure of financial integration\footnote {Stocks seem to be better measurements than flows for financial integration, see Prasad et al. (2003)}. Following @Kalemli-Ozcan2013JF
+my main measure is the average of (the logs of) real bilateral asset and liability holdings as a share of the two countries’ GDP.
+
+\begin{equation}
+	B_{i,j,t} = \frac{1}{4} \bigg[
+	ln\left(\frac{A_{i,j,t}}{G_{i,t} + 
+		G_{j,t}}\right)  + ln\left(\frac{L_{i,j,t}}{G_{i,t} + 
+		G_{j,t}}\right)  + \\ ln\left(\frac{A_{j,i,t}}{G_{i,t} +
+		G_{j,t}}\right)  + ln\left(\frac{L_{j,i,t}}{G_{i,t} +
+		G_{j}}\right) \bigg]
+\end{equation}
+	
+
+where:
+\newline
+$B_{i,j,t}$ - bank linkages between bank $i$ and bank $j$ in year $t$
+\newline
+$A_{i,j,t}$ - total assets of banks in country $i$ in country $j$
+\newline
+$L_{i,j,t}$ - total liabilities of banks in country $j$ in country $i$
+\newline
+$G_{i,t}$ - gross domestic product of country $j$ in year $t$
+\newline
+$i,j$ - country index
+
+This measure captures the financial integration between two countries at an annual frequency. An increase in bank linkages means that more capital is moving between the countries.
+
+\subsection{Financial cycles synchronization}
+
+Credit and asset prices are considered as the most fundamental components of the financial cycle and are extensively used in the literature (@Drehmann2012, @Grinderslev2017). @Borio2014 argues that the most parsimonious description of the financial cycle can be made in terms of credit and property prices. @Rey2015 and @MirandaRey2015 expand the definition of the financial cycle to include both house and share prices. Following this literature, I use total credit and assets (property and shares) price data to estimate the financial cycle. Importantly, total credit account for credit from all sources, namely credit from financial accounts, domestic bank credit, and cross-border bank credit are the three main building blocks underlying the construction of the total credit series. The credit data come from the BIS database while property and shares prices come from OECD database.
+
+
+I calculate the logarithmic change of each variable and then take a simple average to obtain the growth of the financial cycle. 
+
+\begin{equation*}
+R_{i,t} = \frac{1}{3} \cdot ln \left(  \frac{C_{i,t}}{C_{i,t-1}} \right) 
++\frac{1}{3} \cdot ln\left( \frac{H_{i,t}}{H_{i,t-1}} \right) 
++\frac{1}{3} \cdot ln\left( \frac{S_{i,t}}{S_{i,t-1}} \right)
+\end{equation*}    
+
+where:
+\newline
+$C_{t}$ -  total credit to private sector in year $t$.
+\newline
+$H_{t}$ -  index of prices of residential property in country $i$ in year $t$.
+\newline
+$S_{t}$ -  index of common shares traded in country $i$ in year $t$.
+\newline
+$i,j$ - country index
+
+
+As a measure of synchronization of financial cycles, I use the negative of divergence in growth rates defined as the absolute value of financial cycle growth differences between country \textit{i} and country \textit{j} in period \textit{t}.
+
+\begin{equation}
+FinSynch_{i,j,i} = -\lvert R_{i,t}  - R_{j,t} \rvert
+\end{equation}
+
+
+
+This index is simple and quite popular (@Kalemli-Ozcan2013, @Giannone2010). In contrast to the correlation measures, it is not sensitive to the various filtering methods that have been criticized on many grounds (e.g.,@Canova1998).
+It also does not contain estimation error that emerges, for example, from self-selecting a rolling estimating window. Nevertheless, in order to test the robustness of the results in section \ref{Robust} I use a rolling (5 year) correlation as the synchronization measure. The results are similar to the main results of the paper. 
+
+
+\subsection{Descriptive Statistics} \label{DescStat}
+
+```{r child="Descriptive_Stats.Rmd"}
+
+```
+
+
+\section{Empirical specification} \label{EmpSpec}
+
+The baseline specification  (following along the lines of @Kalemli-Ozcan2013JF) is
+
+\begin{equation}
+FinSynch_{i,j,i} = \alpha_{i,j} + \delta_{t} + \beta BankLinkages_{i,j,t-1} + Controls_{i,j,t} + \varepsilon_{i,j,t}
+\end{equation}
+
+where:
+\newline
+$FinSynch$ - a measure of synchronization of financial cycles.
+\newline
+$BankLinkages$ - a measure of banking integration between two countries.
+
+This specification includes time and country pair fixed effect to control for unobservable time and country pair specific factors (such as cultural difference or turmoil years). The time fixed effects account for the effect of global shocks and other common time varying factors that affect both financial cycle patterns and banking integration. The country pair effects account for hard to measure factors such as cultural ties and similarities, informational frictions, and other time invariant unobservable factors that affect both financial integration and financial cycle patterns. To account for the trend and the non-stationary nature of banking integration (see figure \ref{plot_bank_gdp}), I add country pair specific linear time trend\footnote{I choose a linear trend for reasons of simplicity and comparability with Kalemli-Ozcan, Papaioannou, and Peydro (2013), see Bouvatier, Vincent and Delatte and Anne-Laure (2015) for use of trends in banking integration measures.}. It should be noted that it may be the case that the trend picks up the effect of some other omitted variable. Since I'm only interested in estimating the bank linkage effect in the regression (as opposed to explicitly modeling all the factors that affect financial synchronization), controlling for other variables (trend or another omitted variable) seems required.
+
+
+The estimation results can be subject to an endogeneity problem for reasons of omitting relevant variables or reverse causality. In order to address this issue, I take several steps: first, I augment the specified regression with a set of variables to control for other economic factors that can affect both financial cycle synchronization and banking integration. As control variables I use measures of foreign exchange stability, and financial (capital account) openness (see @Chinn2010). I also include trading linkages to control for cross country trading activity\footnote{All the variables are explained in the Appendix.}. Second, bank linkages enter in my specification in a lagged form, which should attenuate the reverse causality problem.
+
+
+\subsection{Crisis effect}
+Several papers (see @Kalemli-Ozcan2013, @Aysun2019, @Fratzscher2012) find that during financial crises times the effect of global ("push") factors in cross border bank lending increases. If during financial crises times common (global) shocks are prevalent that should induce more synchronized financial cycles. That means that the crisis effect should be positive and the "shock propagator" role of banking integration should increase during crisis times. @Stremmel2015 analyzes financial cycles of 21 EU economies and finds that during stress periods the similarity of financial cycles increases.
+
+To test the role of crises I introduce an indicator variable for banking crisis periods. The indicator equals 1 if at least one country of the country pair is going through banking crises at period \textit{t}. The data comes from an updated version of @Laeven2013 and includes the start and end year of banking crises in the OECD countries for the entire sample period. I expect that the effect of banking integration will be different in crises vs normal times and to capture this difference I add an interaction variable between bank linkages and crisis indicator to the estimation equation.
+
+
+
+\subsection{Financial development}
+
+@Mendoza2009 study the relationship between financial development and global imbalances. The authors show that financial development varies widely even among industrial countries and that financial integration can have different effects when countries differ in financial markets development. Countries with deeper financial markets react to financial integration by borrowing from abroad and investing in high return foreign risky assets while countries that are less financially developed accumulate positions in safer assets.
+
+@Bahadir2015 shows that financial development convergence takes place. Countries with a high level of financial development exhibit lower credit growth rates in comparison to countries with a low level of financial development. @Kil2017 confirm the financial development convergence for EU15 countries. They find that both credit and stock markets exhibit convergence meaning that growth rates of these markets decrease at high levels of development. 
+
+@Fisman2004 analyzes the role of financial development in allocating resources. They argue that global (productivity) shocks will induce co-movement of growth rates among countries with a high level of financial development since undeveloped countries will not be able to react to the shocks of other countries. Thus, financial development at a high level can transmit global shocks and induce co-movement in economic activity.
+
+I hypothesize that this phenomenon (co-movement induced by a high level of financial development) holds with respect to financial activity as well. An example is given in @Acharya2010. The authors analyze an investment strategy of large commercial banks that set up asset back commercial paper (ABCP) conduits. This strategy involved selling to investors short-term asset-backed commercial paper and investing the proceeds mainly in US asset back longer-term securities. Once negative news about US assets emerged, all the banks suffered significant losses, thus inducing co-movement. This investment strategy required a highly developed domestic financial market (financing through commercial paper instruments), and it is not surprising that the list of countries whose banks were pursuing this strategy includes the US, UK, Germany, France, Belgium, and Portugal - highly developed countries.
+
+To account for the fact that the effect of financial integration depends on the level of domestic financial development I include an index of financial development (the sum of financial development index of each country in the country pair) and an interaction term between financial development and banking integration. Data on financial development index comes from @Sviry2016 and includes an index of financial development of all the countries in my sample for XXX period.
+
+
+
+\section{Estimation and results} \label{results}
+
+
+```{r output_reg, include=FALSE}
+
+estimation_table_notes = paste0(
+    "\\parbox[t]{8cm}{",
+    paste0(
+      "The table presents panel estimation that ",
+      "includes twoway fixed effects and country pair ",
+      " specific linear time trend. ",
+      notes_str ,
+      "}"
+    )
+  )
+
+robust_se = map(reg_list, function(temp_model){
+  
+  temp_se = sqrt(diag(vcovHC(temp_model,cluster = "group")))
+  
+  return(temp_se)
+})
+
+star = stargazer(reg_list, header = FALSE,digits = 2,
+          label = "baseline",
+          # table.placement = "H",
+          title = paste0("Financial synchronization and banking integration: ",
+                         "\\newline panel specification"),
+          dep.var.caption = "Fin cycles synch",
+          add.lines = lines_str,
+          model.numbers = FALSE,
+          dep.var.labels.include = FALSE,
+          notes = estimation_table_notes,
+          notes.align = "l",
+          notes.append = FALSE,
+          se = robust_se,
+          keep = paste0("^",temp_names,"$"),
+          order = paste0("^",temp_names,"$"),
+          covariate.labels = temp_labels,
+          omit.stat = c("f","adj.rsq"))
+
+star = sub("\\textit{Note:}  & \\multicolumn{3}{l}{\\parbox[t]{8cm}{",
+                    "\\multicolumn{4}{l}{\\parbox[t]{15cm}{\\textit{Note:} ",
+                    star,fixed = TRUE)
+
+# star = sub("multicolumn{3}{l}{\\parbox[t]{8cm}{",
+#                     "multicolumn{4}{l}{\\parbox[t]{10cm}",
+#                     star,fixed = TRUE)
+
+
+```
+
+
+```{r output_baseline_table, results="asis"}
+
+cat(star,sep = "\n")
+
+```
+
+
+Estimation results are shown in table \ref{baseline}. The table starts with the baseline specification and then interaction variables are added going left to right.
+
+Banking linkages enter the equation with a negative sign, meaning that integration is associated with less synchronized cycles. However, in baseline specification this result is not statistically significant suggesting that in my sample the "risk absorber" feature is similar in magnitude to the "risk propagator" feature thus rendering the final result inconclusive. 
+
+Introduction of the crises indicator variable allows to disentangle the opposite effects. We see that during banking crises periods integration is associated with higher synchronization relative to baseline case (the overall effect remains negative). Banking (and financial) crises are often contagious events that are being hard to contain in locally and thus produce common shocks that result in higher synchronization. Addition of the financial development indicators further enhances the results. In highly developed financial markets integration is  also associated with higher synchronization relative to baseline case.
+
+The findings with respect to crisis periods as well as highly developed financial
+markets are in line with the theory that suggests that the "risk propagator" feature is present in these settings and thus the synchronization should increase relative to base setting.
+
+
+Coefficient analysis shows that banking integration effect is economically significant. A change of one standard deviation in banking linkages is
+associated with a change of XXX
+standard deviations in financial synchronization.
+During banking crises one standard deviation change in integration contributes XXX standard deviations to the synchronization. In highly developed financial markets one standard deviation change in integration contributes XXX standard deviations to the synchronization of financial cycles.
+
+Looking at the control variables we see that FX stability contributes to the synchronization of financial cycles, possibly because stable FX facilitates
+cross border financial transactions. Financial openness works in the same direction however statically significant only in the baseline specification.
+The economic size of the country pair measured by the sum of GDP also promotes
+the synchronization of financial cycles.
+
+
+\subsection{Graphical results} \label{Israel}
+
+
+```{r, child="Selected_countries.Rmd"}
+
+```
+
+
+
+<!-- \section{Instrumental variable estimation} -->
+
+
+```{r child="IV_estimation.Rmd", eval=FALSE}
+
+```
+
+
+\section{Robustness} \label{Robust}
+
+
+```{r child="Robustness.Rmd"}
+
+```
+
+
+\section{Summary and conclusions} \label{conclusions}
+
+This paper studies the effect of banking integration on the synchronization of financial cycles. Theory posits that there may be opposite effects ("shock absorption" vs "shock propagation") that make the identification of this effect difficult. In a real business cycle setting @Kalemli-Ozcan2013JF find that banking integration causes business cycles divergence, they suggest that credit flow from low to high return investments may be the mechanism that causes the divergence.
+
+I hypothesize that the same credit flow will cause financial cycles divergence as well. I find corroborating evidence of a negative association between banking integration and financial cycles synchronization. Moreover my results suggest that there are other factors that contribute to financial cycle synchronization and make the relationship state depended.
+
+I find that financial crises increase the "shock propagation" feature of banking integration relative to baseline setting. This is an important result for
+policymakers. It suggests that while banking integration may be desired,
+additional macro prudential measures may be warranted to account for the risk
+exposure during crisis times.
+
+Additional factors that contribute to financial cycle synchronization are the
+high development of financial markets that means that policy makers should take
+the structural characteristics of their financial markets into account as well.
+
+
+\section{Appendix}
+
+```{r child="Appendix.Rmd", eval=FALSE}
+
+```
+
+
+\subsection{Explanatory variables}
+
+\textbf{Total credit}
+Importantly, the data account for credit from all sources, not only that extended by domestic banks. Total credit from financial accounts, domestic bank credit, and cross-border bank credit are the three main building blocks underlying the construction of the total credit series. Trade credit (as well as other accounts payable and receivable) is excluded from the new total credit series because the quality of the underlying data is globally poor. In principle, nominal values are used for loans, corresponding to the origination price (historical cost) plus the interest that has accrued but not been paid if there has not been a default.  All other financial assets, including debt securities, are in principle valued at market prices. In practice, though, debt securities are often reported at nominal value. This may affect international comparability in cases of large volumes of debt securities and large price swings but is impossible to adjust for. As a rule, the total credit series are not adjusted for exchange rate movements. This correction is only possible for the international banking statistics where a currency breakdown is available but would be highly artificial for the long-run series.
+
+
+\textbf{Bank linkages}
+This variable is based on bilateral cross-border holdings (stocks) of banks. Data on banks’ cross-border bilateral stocks of assets and liabilities come from BIS’s Locational Banking Statistics. For each country pair and year there are up to four observations: i) asset holdings (stocks) of banks located in country i in all sectors of the economy in country j, ii) asset holdings (stocks) of banks located in country j in all sectors of the economy in country i, iii) liabilities (stocks) of banks located in country i to country j, and iv) liabilities (stocks) of banks located in country j to country i. The data are originally expressed in (millions) current U.S. dollars. I normalize the data with the following steps:
+
+\begin{enumerate}
+  \item
+  Deflate the four series with the U.S. CPI index
+  
+  \item
+  Standardize the series by dividing assets and liabilities by the sum of the
+two countries’ GDP in each year (using data from World Bank’s World
+Development Indicators).
+
+  \item
+  Take the average of the log value of real bilateral assets and liabilities in each year.
+
+\end{enumerate}
+
+\textbf{House Prices}
+
+The housing prices indicator shows indices of residential property prices over time. The real house price is given by the ratio of nominal price to the consumers’ expenditure deflator in each country, both seasonally adjusted, from the OECD national accounts database. This indicator is an index with base year 2015. The source is OECD (2019), Housing prices (indicator).
+
+\textbf{Share Prices}
+Share price indices are calculated from the prices of common shares of companies traded on national or foreign stock exchanges. They are usually determined by the stock exchange, using the closing daily values for the monthly data, and normally expressed as simple arithmetic averages of the daily data. The source is OECD (2019), Share prices (indicator).
+
+
+
+\textbf{Trading linkages} The measure is the log of bilateral real (deflated with the U.S. CPI) exports and imports as a share of the two countries’ GDP. Source: IMF Direction of Trade Database (2008).
+
+\textbf{Financial openness} and \textbf{Exchange Rate Stability} measures are based on the work of @Chinn2010.
+  
+
+\textbf{Exchange Rate Stability}
+
+To measure exchange rate stability, annual standard deviations of the monthly exchange rate
+between the home country and the base country are calculated and included in the following
+formula to normalize the index between 0 and 1:
+
+$ERS = \frac{0.01}{0.01 + SD(\Delta(ln(FX)))}$
+
+Merely applying this formula can easily create a downward bias in the index, that is, it would exaggerate the “flexibility” of the exchange rate especially when the rate usually follows a narrow band, but is de- or revalued infrequently. To avoid such downward bias, a threshold to the exchange rate movement is applied. That is, if the rate of monthly change in the exchange rate stayed within +/-0.33 percent bands, the exchange rate is considered “fixed” and the value of one is assigned for the ERS index. Furthermore, single year pegs are dropped because they are quite possibly not intentional ones. Higher values of this index indicate more stable movement of the exchange rate against the currency of the base country.
+
+
+\textbf{Financial openness}
+
+Financial openness measure is based on the index of capital account openness or KAOPEN, by @Chinn2006. KAOPEN is the first standardized principal component of the variables that indicate the presence of multiple exchange rates, restrictions on current account transactions, on capital account transactions, and the requirement of the surrender of export proceeds. The index is normalized between zero and one. Higher values of this index indicate that a country is more open to cross-border capital transactions.
+
+
+\textbf{Asset prices}
+I use data about house and share prices from OECD database.
+
+\textbf{GDP} - Source: World Development Index. Current US dollars
+
+\section{Bibliography}
+
