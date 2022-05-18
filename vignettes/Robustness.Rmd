@@ -1,9 +1,9 @@
 \subsection{Excluding GFC}
 
-The Great Financial Crises was an extraordinary event that significantly
+The Great Financial Crisis was an extraordinary event that significantly
 affected the synchronization of financial activity all over the world.
 To ensure that my results are not driven by this effect I exclude the period
-of the GFC (2008-2009) from my sample. The results are presented in column 1 in table \ref{robust_table}. This exercise leaves all the results practically unchanged (concerning coefficients and statistical significance).
+of the GFC (2008 - 2009) from my sample. The results are presented in column 1 in Table \ref{robust_table}. This exercise leaves all the results practically unchanged (concerning coefficients and statistical significance).
 
 ```{r estimation_no_GFC}
 
@@ -61,7 +61,7 @@ cat(star_no_GFC,sep = "\n")
 \subsection{Rolling correlation}
 
 In this section, I use a rolling window correlation as the synchronization measure
-to test the robustness of my analysis. The results are presented in column 2 in table \ref{robust_table}. I find that the main result (negative association of banking integration and financial activity) holds as well as the effect of financial development. However, the crisis effect becomes insignificant
+to test the robustness of my analysis. The results are presented in column 2 in Table \ref{robust_table}. I find that the main result (negative association of banking integration and financial activity) holds as well as the effect of financial development. However, the crisis effect becomes insignificant
 in this setting.
 
 ```{r rol_cor_estimation}
@@ -127,14 +127,14 @@ cat(star_rol_cor_reg,sep = "\n")
 
 
 
-\subsection{Flow vs Stock measures}
+\subsection{Flow vs, Stock measures}
 
 My measure of banking integration is a stock measure (the balance of normalized
-cross border credit). It may be the case the flow measures will capture a
+cross border credit). It may be that the flow measures will capture a
 different aspect of the banking integration, for example during crises the
 credit flows will presumably drop due to a credit crunch while the credit
-balance will stay the same. To capture this aspect of banking integration I  change my measure of integration to credit flows instead od credit stocks
-by differencing the cross border credit balance. Column 3 in table \ref{robust_table} shows the
+balance will stay the same. To capture this aspect of banking integration I  change my measure of integration to credit flows instead of credit stocks
+by differencing the cross-border credit balance. Column 3 in Table \ref{robust_table} shows the
 results of this exercise. Similarly to the case of rolling correlation test
 I find that the main result holds as well as the effect of financial
 development. The crisis effect is insignificant in this setting as well.
