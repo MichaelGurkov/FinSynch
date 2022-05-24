@@ -220,10 +220,10 @@ all_star_reg = stargazer(reg_list[c("no_GFC","roll_cor_reg", "delta_reg")],
                          paste0("The table presents three robustness",
                                 " specifications. Column 1 is the baseline",
                                 " specification excluding Global Financial",
-                                " Crises (2007-2009)."," Column 2 presents",
+                                " Crisis (2007 - 2009)."," Column 2 presents",
                                 " a specification wich uses rolling correlation",
-                                " as alternative measure",
-                                " of financial synchronization",
+                                " as an alternative measure",
+                                " of financial synchronization,",
                                 " and Column 3 uses differenced bank linkages",
                                 " in order to capture flow nature of cross",
                                 " border credit instead of stock.",
@@ -255,7 +255,7 @@ cat(all_star_reg,sep = "\n")
 
 ```
 
-Overall the robustness test show that the main result (negative association of banking linkages and financial synchronization) holds. The financial development
-effect is also consistent across all the specifications. However the crises
-effect turns insignificant in specifications that use alternative variable definitions (rolling correlation as measure of financial synchronization or differenced banking linkages).
+Overall the robustness tests show that the main result (negative association of banking linkages and financial synchronization) holds. The financial development
+effect is also consistent across all the specifications. However, the crisis
+effect turns insignificant in specifications that use alternative variable definitions (rolling correlation as a measure of financial synchronization or differenced banking linkages).
 

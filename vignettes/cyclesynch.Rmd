@@ -1,6 +1,5 @@
 ---
 title: "Financial cycles synchronization and financial integration ^[I thank Yossi Yakhin (discussant), Yossi Saadon, Nimrod Segev, Jonathan Benshimol, Osnat Zohar, Yaakov Chen-Zion and the participants of the Bank of Israel Research Department seminar for their helpful comments and suggestions.]"
-subtitle: 'Preliminary draft'
 author: "Michael Gurkov"
 fontsize: 11pt
 output:
@@ -10,7 +9,7 @@ output:
     includes:
             in_header: GlobalFinCyclePreambleDoc.tex
             
-abstract: "This paper studies the relationship between financial cycles synchronization and financial integration using data on 30 OECD countries. The results suggest that the relationship is state dependet: While financial integration acts as a \"shock absorber\" during normal times, I find that financial crises increase the \"shock propagation\" feature of banking integration. Overall, the findings show that while banking integration may be desired because it may facilitate risk diversification, additional macroprudential measures may be warranted to account for the risk exposure during crisis times."
+abstract: "This paper studies the relationship between financial cycles synchronization and financial integration using data on 30 OECD countries. The results suggest that the relationship is state dependent: While financial integration acts as a \"shock absorber\" during normal times, I find that financial crises increase the \"shock propagation\" feature of financial integration. Overall, the findings show that while financial integration may be desired because it may facilitate risk diversification, additional macroprudential measures may be warranted to account for the risk exposure during crisis times."
 
 bibliography: '`r stringr::str_replace_all(paste(file.path(Sys.getenv("USERPROFILE"),"\\OneDrive - Bank Of Israel\\References\\Financial_Cycle-Global_Financial_Cycle - Copy.bib")),"\\\\","\\\\\\\\\\")`'
 
@@ -684,17 +683,17 @@ the synchronization of financial cycles.
 
 \section{Summary and conclusions} \label{conclusions}
 
-This paper studies the effect of banking integration on the synchronization of financial cycles. Theory posits that there may be opposite effects ("shock absorption" vs "shock propagation") that make the identification of this effect difficult. In a real business cycle setting @Kalemli-Ozcan2013JF find that banking integration causes business cycles divergence, they suggest that credit flow from low to high return investments may be the mechanism that causes the divergence.
+This paper studies the effect of banking integration on the synchronization of financial cycles. Theory posits that there may be opposite effects ("shock absorption" vs. "shock propagation") that make the identification of this effect difficult. In a real business cycle setting, @Kalemli-Ozcan2013JF find that banking integration causes business cycles divergence, and they suggest that credit flows from low to high return investments may be the mechanism that causes the divergence.
 
-I hypothesize that the same credit flow will cause financial cycles divergence as well. I find corroborating evidence of a negative association between banking integration and financial cycles synchronization. Moreover my results suggest that there are other factors that contribute to financial cycle synchronization and make the relationship state depended.
+I hypothesize that the same credit flow will cause financial cycles divergence as well. I find corroborating evidence of a negative association between banking integration and financial cycles synchronization. Moreover, my results suggest that there are other factors that contribute to financial cycle synchronization and make the relationship state dependent.
 
-I find that financial crises increase the "shock propagation" feature of banking integration relative to baseline setting. This is an important result for
+I find that financial crises increase the "shock propagation" feature of banking integration relative to a baseline setting. This is an important result for
 policymakers. It suggests that while banking integration may be desired,
-additional macro prudential measures may be warranted to account for the risk
+additional macro-prudential measures may be warranted to account for the risk
 exposure during crisis times.
 
 Additional factors that contribute to financial cycle synchronization are the
-high development of financial markets that means that policy makers should take
+high development of financial markets, which means that policy makers should take
 the structural characteristics of their financial markets into account as well.
 
 
@@ -708,7 +707,7 @@ the structural characteristics of their financial markets into account as well.
 \subsection{Explanatory variables}
 
 \textbf{Total credit}
-Importantly, the data account for credit from all sources, not only that extended by domestic banks. Total credit from financial accounts, domestic bank credit, and cross-border bank credit are the three main building blocks underlying the construction of the total credit series. Trade credit (as well as other accounts payable and receivable) is excluded from the new total credit series because the quality of the underlying data is globally poor. In principle, nominal values are used for loans, corresponding to the origination price (historical cost) plus the interest that has accrued but not been paid if there has not been a default.  All other financial assets, including debt securities, are in principle valued at market prices. In practice, though, debt securities are often reported at nominal value. This may affect international comparability in cases of large volumes of debt securities and large price swings but is impossible to adjust for. As a rule, the total credit series are not adjusted for exchange rate movements. This correction is only possible for the international banking statistics where a currency breakdown is available but would be highly artificial for the long-run series.
+Importantly, the data account for credit from all sources, not only that extended by domestic banks. Total credit from financial accounts, domestic bank credit, and cross-border bank credit are the three main building blocks underlying the construction of the total credit series. Trade credit (as well as other accounts payable and receivable) is excluded from the new total credit series because the quality of the underlying data is globally poor. In principle, nominal values are used for loans, corresponding to the origination price (historical cost) plus the interest that has accrued but not been paid if there has not been a default.  All other financial assets, including debt securities, are in principle valued at market prices. In practice, though, debt securities are often reported at nominal value. This may affect international comparability in cases of large volumes of debt securities and large price swings but it is impossible to adjust for it. As a rule, the total credit series are not adjusted for exchange rate movements. This correction is only possible for the international banking statistics where a currency breakdown is available but would be highly artificial for the long-run series.
 
 
 \textbf{Bank linkages}
@@ -716,7 +715,7 @@ This variable is based on bilateral cross-border holdings (stocks) of banks. Dat
 
 \begin{enumerate}
   \item
-  Deflate the four series with the U.S. CPI index
+  Deflate the four series by the U.S. CPI index
   
   \item
   Standardize the series by dividing assets and liabilities by the sum of the
@@ -750,12 +749,12 @@ formula to normalize the index between 0 and 1:
 
 $ERS = \frac{0.01}{0.01 + SD(\Delta(ln(FX)))}$
 
-Merely applying this formula can easily create a downward bias in the index, that is, it would exaggerate the “flexibility” of the exchange rate especially when the rate usually follows a narrow band, but is de- or revalued infrequently. To avoid such downward bias, a threshold to the exchange rate movement is applied. That is, if the rate of monthly change in the exchange rate stayed within +/-0.33 percent bands, the exchange rate is considered “fixed” and the value of one is assigned for the ERS index. Furthermore, single year pegs are dropped because they are quite possibly not intentional ones. Higher values of this index indicate more stable movement of the exchange rate against the currency of the base country.
+Merely applying this formula can easily create a downward bias in the index. That is, it would exaggerate the “flexibility” of the exchange rate especially when the rate usually follows a narrow band, but is de- or revalued infrequently. To avoid such downward bias, a threshold to the exchange rate movement is applied. That is, if the rate of monthly change in the exchange rate stayed within +/-0.33 percent bands, the exchange rate is considered “fixed” and the value of one is assigned for the ERS index. Furthermore, single year pegs are dropped because they are quite possibly not intentional ones. Higher values of this index indicate more stable movement of the exchange rate against the currency of the base country.
 
 
 \textbf{Financial openness}
 
-Financial openness measure is based on the index of capital account openness or KAOPEN, by @Chinn2006. KAOPEN is the first standardized principal component of the variables that indicate the presence of multiple exchange rates, restrictions on current account transactions, on capital account transactions, and the requirement of the surrender of export proceeds. The index is normalized between zero and one. Higher values of this index indicate that a country is more open to cross-border capital transactions.
+The financial openness measure is based on the index of capital account openness or KAOPEN, by @Chinn2006. KAOPEN is the first standardized principal component of the variables that indicate the presence of multiple exchange rates, restrictions on current account transactions, on capital account transactions, and the requirement of the surrender of export proceeds. The index is normalized between zero and one. Higher values of this index indicate that a country is more open to cross-border capital transactions.
 
 
 \textbf{Asset prices}
@@ -763,5 +762,5 @@ I use data about house and share prices from OECD database.
 
 \textbf{GDP} - Source: World Development Index. Current US dollars
 
-\section{Bibliography}
+\section{References}
 
