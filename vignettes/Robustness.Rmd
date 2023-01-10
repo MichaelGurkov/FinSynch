@@ -127,7 +127,7 @@ cat(star_rol_cor_reg,sep = "\n")
 
 
 
-\subsection{Flow vs, Stock measures}
+\subsection{Flow vs Stock measures}
 
 My measure of banking integration is a stock measure (the balance of normalized
 cross border credit). It may be that the flow measures will capture a

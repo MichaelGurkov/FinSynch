@@ -24,7 +24,7 @@ vignette: >
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,echo = FALSE,
-  message = FALSE,warning = FALSE,
+  message = FALSE,warning = FALSE,cache = TRUE,
   comment = "#>"
 )
 ```
@@ -307,9 +307,9 @@ notes_str_ctrl = paste0(notes_str,
 
 roll_cor_len = 5
 
-lines_str = list(c("Country pair FE","Yes"),
-                           c("Year FE","Yes"),
-                           c("Country pair linear trend","Yes"))
+lines_str = list(c("Country pair FE",rep("Yes",3)),
+                           c("Year FE",rep("Yes",3)),
+                           c("Country pair linear trend",rep("Yes",3)))
 
 ```
 
@@ -435,7 +435,7 @@ This paper contributes to the literature in several ways: first, I contribute to
 
 <!-- paper outline -->
 
-The paper is structured as follows. In Section \ref{LitReview}, I review the relevant literature and theoretical considerations. Section \ref{Data} provides a description of the data. Empirical specification are formulated in Section \ref{EmpSpec}.  Estimation results are presented in section \ref{results} and robustness tests in Section \ref{Robust}. Section \ref{conclusions} concludes the paper.
+The paper is structured as follows. In Section \ref{LitReview}, I review the relevant literature and theoretical considerations. Section \ref{Data} provides a description of the data. Empirical specifications are formulated in Section \ref{EmpSpec}.  Estimation results are presented in section \ref{results} and robustness tests in Section \ref{Robust}. Section \ref{conclusions} concludes the paper.
 
 
 
@@ -445,7 +445,7 @@ The paper is structured as follows. In Section \ref{LitReview}, I review the rel
 This paper is related to both the financial cycles and financial integration strands of the literature. 
 
 The literature on financial cycles defines the components of the financial cycle and attempts to study the interactions between business and financial cycles.
-@Borio2014 stresses the role of the financial cycle in macroeconomics and suggests that the most parsimonious description of the financial cycle can be made in terms of credit and property prices. @Claessens2012 analyzes the interaction between business and financial cycles. They show that recessions in the business cycle that are related to financial cycle contraction tend to be deeper and longer relative to other recessions. @Meller2017 study the synchronization of credit cycles. They look at 14 advanced countries in 1906 - 2008 years using cluster analysis and find that there are several clusters with different synchronization patterns. They also find positive synchronization of the business and credit cycle. Unfortunately, cluster analysis is unable to provide insight into the factors that affect the synchronization of credit cycles. I attempt to make some progress in this direction.
+@Borio2014 stresses the role of the financial cycle in macroeconomics and suggests that the most parsimonious description of the financial cycle can be made in terms of credit and property prices. @Claessens2012 analyze the interaction between business and financial cycles. They show that recessions in the business cycle that are related to financial cycle contraction tend to be deeper and longer relative to other recessions. @Meller2017 study the synchronization of credit cycles. They look at 14 advanced countries in 1906 - 2008 years using cluster analysis and find that there are several clusters with different synchronization patterns. They also find positive synchronization of the business and credit cycle. Unfortunately, cluster analysis is unable to provide insight into the factors that affect the synchronization of credit cycles. I attempt to make some progress in this direction.
 
 Financial integration is a phenomenon in which financial markets in neighboring, regional or global economies are closely linked together. The literature in this field discusses the benefits and dangers of financial integration (see @Kose2009 for survey and summary).  Potential benefits of financial integration include efficient capital allocation, better governance, higher investment and growth, and risk-sharing. At the same time, financial integration can also have adverse effects. A higher degree of financial integration can generate severe financial contagion in integrated economies. @Popov2012 study banking integration and identify a mechanism by which financial shocks propagate through cross-border linkages. The authors show that a negative shock to a parent (foreign) bank leads to a reduction in lending provided by its subsidiaries abroad. @Degryse2010 analyze the extent of contagion risk through banking linkages. They focus on the 1999 - 2006 period and ran a simulation based on cross-border bank linkages and bank equity. The authors conclude that contagion risk had increased during that period. They also find that contagion is more widespread in geographical proximity. @Avdjiev2019 study the factors that affect the lending behavior of global banks’ subsidiaries throughout the world. The authors divide the influencing factors into two groups: "push" (global drivers) factors and "pull" factors such as macroeconomic conditions that measure the local cost of funding and the strength of the borrowers' balance sheets and the financial conditions of the global bank's subsidiaries. They find that the lending behavior of the subsidiaries is more closely related to local macroeconomic conditions and financial conditions than to those of their owner-specific counterparts, namely that the "pull" factors are more important relative to "push" factors. From a financial stability point of view, the "push" factors increase synchronization (the contagion or propagation effect) while the "pull" factors should reduce synchronization (absorption effect) due to idiosyncratic shocks. @Cerutti2015 analyze the composition and drivers of cross-border bank lending between 1995 and 2012, distinguishing between syndicated and non-syndicated loans. They find (among other results) that banking integration (cross-border credit) is closely related to the level of development and sophistication of the banking system, strength of balance sheets and regulation.
  
@@ -461,7 +461,7 @@ diverge. I use their methodology to analyze financial cycles synchronization.
 
 I use data on bilateral cross-border bank positions gathered from the Bank for International Settlements (BIS) data on the residence-based locational banking statistics (LBS). The LBS details at the country level, the geographical composition of banks’ balance sheets and capture outstanding claims and liabilities of banking offices located in the BIS reporting countries, including intragroup positions, and excludes local claims of foreign branches and subsidiaries. 
 
-The BIS statistics have possibly the most extensive time coverage of all similar databases on cross-border investment holdings (as a comparison to the IMF CPIS database that reports bilateral cross-border financial flows and stocks after 1999). The main limitation of the data set is that it reports the aggregate international exposure only of the banking system. Yet, cross-border banking activities continue to be a very significant component of cross-border investment. As long as there is a high correlation between international banking and other forms of portfolio investment (equity flows, FDI, and debt flows), my estimates will not be systematically biased. The BIS data are expressed originally in current US dollars (millions). I convert the data into constant US dollars by deflating the series with the US Consumer Price Index (CPI). Then I use the total stock of external assets and liabilities to construct a quantity-based measure of financial integration.\footnote {Stocks seem to be better measurements than flows for financial integration, see Prasad et al. (2003)} Following @Kalemli-Ozcan2013JF,
+The BIS statistics have possibly the most extensive time coverage of all similar databases on cross-border investment holdings (as a comparison to the IMF CPIS database that reports bilateral cross-border financial flows and stocks after 1999). The main limitation of the data set is that it reports the aggregate international exposure only of the banking system. Yet, cross-border banking activities continue to be a very significant component of cross-border investment. As long as there is a high correlation between international banking and other forms of portfolio investment (equity flows, FDI, and debt flows), my estimates will not be systematically biased. The BIS data are expressed originally in current US dollars (millions). I convert the data into constant US dollars by deflating the series with the US Consumer Price Index (CPI). Then I use the total stock of external assets and liabilities to construct a quantity-based measure of financial integration.\footnote {Stocks seem to be a better measurements than flows for financial integration, see Prasad et al. (2003)} Following @Kalemli-Ozcan2013JF,
 my main measure is the average of (the logs of) real bilateral asset and liability holdings as a share of the two countries’ GDP.
 
 \begin{equation}
@@ -478,19 +478,19 @@ where:
 \newline
 $B_{i,j,t}$ - bank linkages between bank $i$ and bank $j$ in year $t$
 \newline
-$A_{i,j,t}$ - total assets of banks in country $i$ in country $j$
+$A_{i,j,t}$ - total assets of banks in country $i$ in country $j$ in year $t$
 \newline
-$L_{i,j,t}$ - total liabilities of banks in country $j$ in country $i$
+$L_{i,j,t}$ - total liabilities of banks in country $j$ in country $i$ in year $t$
 \newline
-$G_{i,t}$ - gross domestic product of country $j$ in year $t$
+$G_{i,t}$ - gross domestic product of country $i$ in year $t$
 \newline
-$i,j$ - country index
+
 
 This measure captures the financial integration between two countries at an annual frequency. An increase in bank linkages means that more capital is moving between the countries.
 
 \subsection{Financial cycles synchronization}
 
-Credit and asset prices are considered the most fundamental components of the financial cycle and are extensively used in the literature (@Drehmann2012, @Grinderslev2017). @Borio2014 argues that the most parsimonious description of the financial cycle can be made in terms of credit and property prices. @Rey2015 and @MirandaRey2015 expand the definition of the financial cycle to include both home and share prices. Following this literature, I use total credit and assets (property and shares) price data to estimate the financial cycle. Importantly, total credit accounts for credit from all sources, namely credit from financial accounts, domestic bank credit, and cross-border bank credit are the three main building blocks underlying the construction of the total credit series. The credit data come from the BIS database while property and shares prices come from OECD database.
+Credit and asset prices are considered the most fundamental components of the financial cycle and are extensively used in the literature (@Drehmann2012, @Grinderslev2017). @Borio2014 argues that the most parsimonious description of the financial cycle can be made in terms of credit and property prices. @Rey2015 and @MirandaRey2015 expand the definition of the financial cycle to include both home and share prices. Following this literature, I use total credit and assets (property and share) price data to estimate the financial cycle. Importantly, total credit accounts for credit from all sources, namely credit from financial accounts, domestic bank credit, and cross-border bank credit are the three main building blocks underlying the construction of the total credit series. The credit data come from the BIS database while property and share prices come from OECD database.
 
 
 I calculate the logarithmic change of each variable and then take a simple average to obtain the growth of the financial cycle. 
@@ -536,7 +536,7 @@ It also does not contain an estimation error that emerges, for example, from sel
 The baseline specification (following along the lines of @Kalemli-Ozcan2013JF) is
 
 \begin{equation}
-FinSynch_{i,j,i} = \alpha_{i,j} + \delta_{t} + \beta BankLinkages_{i,j,t-1} + Controls_{i,j,t} + \varepsilon_{i,j,t}
+FinSynch_{i,j,t} = \alpha_{i,j} + \delta_{t} + \beta BankLinkages_{i,j,t-1} + Controls_{i,j,t} + \varepsilon_{i,j,t}
 \end{equation}
 
 where:
@@ -617,10 +617,6 @@ star = sub("\\textit{Note:}  & \\multicolumn{3}{l}{\\parbox[t]{8cm}{",
                     "\\multicolumn{4}{l}{\\parbox[t]{15cm}{\\textit{Note:} ",
                     star,fixed = TRUE)
 
-# star = sub("multicolumn{3}{l}{\\parbox[t]{8cm}{",
-#                     "multicolumn{4}{l}{\\parbox[t]{10cm}",
-#                     star,fixed = TRUE)
-
 
 ```
 
@@ -634,9 +630,9 @@ cat(star,sep = "\n")
 
 Estimation results are shown in Table \ref{baseline}. The table starts with the baseline specification and then interaction variables are added going left to right.
 
-Banking linkages enter the equation with a negative sign, meaning that integration is associated with less synchronized cycles. However, in baseline specification this result is not statistically significant, suggesting that in my sample the "risk absorber" feature is similar in magnitude to the "risk propagator" feature, thus rendering the final result inconclusive. 
+Banking linkages enter the equation with a negative sign, meaning that integration is associated with less synchronized cycles. However, in the baseline specification this result is not statistically significant, suggesting that in my sample the "risk absorber" feature is similar in magnitude to the "risk propagator" feature, thus rendering the final result inconclusive. 
 
-Introduction of the crisis indicator variable make it possible to disentangle the opposite effects. We see that during banking crisis periods integration is associated with higher synchronization relative to the baseline case (the overall effect remains negative). Banking (and financial) crises are often contagious events that are being hard to contain locally, and thus produce common shocks that result in higher synchronization. Addition of the financial development indicators further enhances the results. In highly developed financial markets, integration is  also associated with higher synchronization relative to the baseline case.
+Introduction of the crisis indicator variable makes it possible to disentangle the opposite effects. We see that during banking crisis periods integration is associated with higher synchronization relative to the baseline case (the overall effect remains negative). Banking (and financial) crises are often contagious events that are being hard to contain locally, and thus produce common shocks that result in higher synchronization. Addition of the financial development indicators further enhances the results. In highly developed financial markets, integration is  also associated with higher synchronization relative to the baseline case.
 
 The findings with respect to crisis periods as well as highly developed financial
 markets are in line with the theory that suggests that the "risk propagator" feature is present in these settings and thus the synchronization should increase relative to the baseline.
