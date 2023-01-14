@@ -1,30 +1,24 @@
 
 <!-- Import raw data -->
 
+
+```{r libraries}
+
+library(MiscImport)
+
+library(dplyr)
+
+```
+
+
 ```{r Import_raw_data}
 
 raw_data = list()
 
-raw_data$oecd_codes = read.csv(paste0(
-  file.path(Sys.getenv("USERPROFILE"),fsep ="\\"),
-  "\\OneDrive - Bank Of Israel\\Data\\ISO\\",
-  "iso_3digit_alpha_country","_codes.csv" ),
-  stringsAsFactors = FALSE) %>%
-  setNames(c("Code","Country")) %>% 
-  mutate(Country = gsub(Country,pattern = "\\s",
-      replacement = "_")) %>% 
-  mutate(Country = sub(Country,pattern = "Korea,_Republic_of",
-      replacement = "Korea", fixed = TRUE)) %>% 
-  mutate(Country = sub(Country,pattern = "Czechia",
-      replacement = "Czech_Republic", fixed = TRUE)) %>% 
-  mutate(Country = sub(Country,pattern = "Slovakia",
-      replacement = "Slovak_Republic", fixed = TRUE)) %>% 
-  mutate(Country = sub("The_Netherlands","Netherlands",
-                       Country,fixed = TRUE))
+raw_data$bis_codes = get_bis_country_codes()
 
-raw_data$TotalCredit = import.bis.tot.credit.data(
-  countries_vec = countries_list$oecd_countries) %>%
-  mutate(Date = as.yearqtr(Date, format = "%Y-Q%q"))
+raw_data$total_credit = get_total_credit_data()
+  
 
 raw_data$bis_lbs = import.bis.lbs.data(
   countries_vec = countries_list$oecd_countries) %>%

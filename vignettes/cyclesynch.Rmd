@@ -32,9 +32,7 @@ knitr::opts_chunk$set(
 
 ```{r load_package}
 
-devtools::load_all()
-
-# library(car)
+# devtools::load_all()
 
 library(tidyverse)
 

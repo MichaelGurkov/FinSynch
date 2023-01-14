@@ -466,59 +466,43 @@ calculate.gdp.df = function(growth_rates, gdp_balance){
 #' #' @import readr
 #'
 #'
-import.bis.lbs.data = function(filepath = paste0(
-  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-  "\\OneDrive - Bank Of Israel\\Data\\BIS\\",
-  "WEBSTATS_LBS_D_PUB_DATAFLOW_csv_col.csv"),
-  my_instruments = "All instruments",
-  my_measure = "Amounts outstanding / Stocks",
-  my_currency = "All currencies",
-  my_report_currency = "All currencies (=D+F+U)",
-  my_lending_position = "Cross-border",
-  my_reporting_institutions = paste0(
-    "All reporting"," banks/institutions ",
-    "(domestic, foreign, consortium and ",
-    "unclassified)"),
-  my_counter_sector = "All sectors",
-  countries_vec = NULL,
-  collapse_countrypair = TRUE){
+get_lbs_data = function(){
 
-  raw_df = read_csv(filepath, col_types = cols(), progress = FALSE)
+  bis_oecd_codes_df = raw_data %>%
+    pluck("bis_codes") %>%
+    filter(oecd_member == 1) %>%
+    select(country)
 
+  file_path = paste0("C:\\Users\\Home",
+                     "\\OneDrive - Bank Of Israel",
+                     "\\Data\\BIS\\international_banking",
+                     "\\WS_LBS_D_PUB_csv_col.csv")
 
-  temp_df = raw_df %>%
-    select(-c(grep("^([A-Z]*_*)+$",names(.), value = TRUE),
-              "Time Period", "Frequency"))
+  lbs_df = import_bis_lbs(
+    file_path,
+    my_frequency = "Quarterly",
+    my_measure = "Amounts outstanding / Stocks",
+    my_type_of_instruments = "All instruments",
+    my_currency_denomination = "All currencies",
+    my_currency_type_of_reporting_country = "All currencies (=D+F+U)",
+    my_counterparty_sector = "All sectors",
+    my_position_type = "Cross-border",
+    pivot_to_long = TRUE
+  )
 
+  temp = lbs_df %>%
+    select(-c("time_format","collection_indicator",
+              "organisation_visibility")) %>%
+    filter(complete.cases(.))
 
-  # Filter for default values
+  temp = temp %>%
+    mutate(parent_country = str_replace_all(parent_country," ","_")) %>%
+    mutate(counterparty_country = str_replace_all(counterparty_country," ","_"))
 
-  filtered_df = temp_df %>%
-    filter(`Type of instruments` %in% my_instruments) %>%
-    filter(Measure %in% my_measure) %>%
-    filter(`Currency denomination` %in% my_currency) %>%
-    filter(`Currency type of reporting country` %in% my_report_currency) %>%
-    filter(`Position type` %in% my_lending_position) %>%
-    filter(`Type of reporting institutions` %in% my_reporting_institutions) %>%
-    filter(`Counterparty sector` %in% my_counter_sector)
+  temp %>%
+    # inner_join(bis_oecd_codes_df, by = c("parent_country" = "country")) %>%
+    inner_join(bis_oecd_codes_df, by = c("counterparty_country" = "country"))
 
-  # Subsitute spaces in country names and filter for countries
-
-  filtered_df = filtered_df %>%
-    rename(Country = `Reporting country`,
-           Counter_Country = `Counterparty country`) %>%
-    mutate(Country = gsub("\\s","_",Country)) %>%
-    mutate(Counter_Country = gsub("\\s","_",Counter_Country)) %>%
-    {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec) %>%
-        filter(.,Counter_Country %in% countries_vec) else .} %>%
-    rename(Balance_Pos = `Balance sheet position`)
-
-
-  selected_df = filtered_df %>%
-    select(-c("Type of instruments","Measure","Currency denomination",
-             "Currency type of reporting country","Position type",
-             "Type of reporting institutions","Counterparty sector",
-             "Parent country"))
 
   if(collapse_countrypair){
 
@@ -552,50 +536,31 @@ import.bis.lbs.data = function(filepath = paste0(
 #' @import readr
 
 
-import.bis.tot.credit.data = function(filepath = paste0(
-  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-  "\\OneDrive - Bank Of Israel\\Data\\BIS\\",
-  "WEBSTATS_TOTAL_CREDIT_DATAFLOW_csv_col.csv"),
-  my_lending_sector = "All sectors",
-  my_unit_type = "US Dollar",
-  my_valuation = "Market value",
-  my_adjustment = "Adjusted for breaks",
-  my_sector = "Private non-financial sector",
-  countries_vec = NULL){
+get_total_credit_data = function(){
 
-  raw_df = read_csv(filepath, col_types = cols(), progress = FALSE)
+  file_path = paste0("C:\\Users\\Home",
+                     "\\OneDrive - Bank Of Israel\\Data",
+                     "\\BIS\\credit\\WS_TC_csv_col.csv")
 
+  tot_credit = import_bis_total_credit(file_path,
+                          my_frequency = "Quarterly",
+                          my_lending_sector = "All sectors",
+                          my_valuation_method = "Market value",
+                          my_unit_type = "US dollar",
+                          my_adjustment = "Adjusted for breaks",
+                          pivot_to_long = TRUE) %>%
+    select(-c(unit_multiplier, unit_of_measure)) %>%
+    filter(complete.cases(.))
 
-  temp_df = raw_df %>%
-    select(-c(grep("^([A-Z]*_*)+$",names(.), value = TRUE),
-              "Time Period", "Frequency"))
+  tot_credit = tot_credit %>%
+    inner_join(raw_data$bis_codes %>%
+                 filter(oecd_member == 1) %>%
+                 select(country), by = "country")
 
+  tot_credit = tot_credit%>%
+    mutate(date = as.yearqtr(date, "%Y-Q%q"))
 
-  # Filter for default values
-
-  filtered_df = temp_df %>%
-    filter(`Lending sector` %in% my_lending_sector) %>%
-    filter(`Unit type` %in% my_unit_type) %>%
-    filter(Valuation %in% my_valuation) %>%
-    filter(`Type of adjustment` %in% my_adjustment) %>%
-    filter(`Borrowing sector` %in% my_sector)
-
-  # Subsitute spaces in country names and filter for countries
-
-  filtered_df = filtered_df %>%
-    rename(Country = `Borrowers' country`) %>%
-    mutate(Country = gsub("\\s","_",Country)) %>%
-    {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec)}
-
-
-  selected_df = filtered_df %>%
-    select(-c("Lending sector","Valuation","Unit type",
-              "Type of adjustment","Borrowing sector"))
-
-  long_df = gather(selected_df,key = Date,value = Total_Credit,-Country)
-
-  return(long_df)
-
+  return(tot_credit)
 }
 #'
 #'
@@ -742,42 +707,24 @@ import.geodist.data = function(filepath = paste0(
 #' This function imports ISO codes for country names
 #'
 
-import.iso.codes = function(filepath = NULL, type = "3-digits"){
+get_bis_country_codes = function(filepath = NULL, oecd_members = TRUE){
 
 
-  if(!is.null(filepath)){
+  country_codes = read_csv(paste0(Sys.getenv("USERPROFILE"),
+                  "\\OneDrive - Bank Of Israel\\Data",
+                  "\\OECD\\country_codes.csv"),
+           show_col_types = FALSE)
 
-    df = read.csv(filepath)
+  country_codes = country_codes %>%
+    mutate(country = str_replace_all(country, " ","_"))
 
-    } else if(type == "3-digits"){
-
-      df = read.csv(paste0(
-        file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-        "\\OneDrive - Bank Of Israel\\Data\\ISO\\",
-        "iso_3digit_alpha_country_codes.csv"))
-
-    } else if(type == "2-digits"){
-
-    df = read.csv(paste0(
-      file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-      "\\OneDrive - Bank Of Israel\\Data\\ISO\\",
-      "iso_2digit_alpha_country_codes.csv"))
-    }
+  country_codes = country_codes %>%
+    mutate(country = str_replace(country,"South_Korea","Korea")) %>%
+    mutate(country = str_replace(country,"Czech_Republic","Czechia")) %>%
+    mutate(country = str_replace(country,"Slovak_Republic","Slovakia"))
 
 
-  df = df %>%
-   setNames(c("Code","Country")) %>%
-    mutate(Country = gsub("\\s","_",Country)) %>%
-    mutate(Country = sub("Korea,_Republic_of","Korea",
-                         Country,fixed = TRUE)) %>%
-    mutate(Country = sub("Czechia","Czech_Republic",
-                         Country,fixed = TRUE)) %>%
-    mutate(Country = sub("Slovakia","Slovak_Republic",
-                         Country,fixed = TRUE))
+  return(country_codes)
 
-  return(df)
+  }
 
-
-}
-#'
-#'
