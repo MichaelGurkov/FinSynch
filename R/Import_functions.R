@@ -485,48 +485,38 @@ get_lbs_data = function(){
     my_type_of_instruments = "All instruments",
     my_currency_denomination = "All currencies",
     my_currency_type_of_reporting_country = "All currencies (=D+F+U)",
+    my_parent_country = "All countries (total)",
+    my_type_of_reporting_institutions = paste0("All reporting banks/institutions",
+                                               " (domestic, foreign, consortium",
+                                               " and unclassified)"),
     my_counterparty_sector = "All sectors",
     my_position_type = "Cross-border",
     pivot_to_long = TRUE
   )
 
-  temp = lbs_df %>%
-    select(-c("time_format","collection_indicator",
-              "organisation_visibility")) %>%
+  lbs_df = lbs_df %>%
+    select(-any_of(c("time_format","collection_indicator",
+                     "organisation_visibility","series"))) %>%
     filter(complete.cases(.))
 
-  temp = temp %>%
-    mutate(parent_country = str_replace_all(parent_country," ","_")) %>%
-    mutate(counterparty_country = str_replace_all(counterparty_country," ","_"))
-
-  temp %>%
-    # inner_join(bis_oecd_codes_df, by = c("parent_country" = "country")) %>%
+  filtered_lbs_df = lbs_df %>%
+    mutate(reporting_country = str_replace_all(reporting_country, " ", "_")) %>%
+    mutate(counterparty_country = str_replace_all(counterparty_country, " ", "_")) %>%
+    inner_join(bis_oecd_codes_df, by = c("reporting_country" = "country")) %>%
     inner_join(bis_oecd_codes_df, by = c("counterparty_country" = "country"))
 
+  filtered_lbs_df = filtered_lbs_df %>%
+    mutate(country_pair = ifelse(
+      reporting_country < counterparty_country,
+      paste(reporting_country, counterparty_country, sep = "-"),
+      paste(counterparty_country, reporting_country, sep = "-"))) %>%
+    select(-any_of(c("reporting_country", "counterparty_country")))
 
-  if(collapse_countrypair){
 
-    res_df = selected_df %>%
-      mutate(CountryPair = ifelse(Country < Counter_Country,
-                                  paste(Country, Counter_Country, sep = "-"),
-                                  paste(Counter_Country,Country, sep = "-"))) %>%
-      select(-Country,-Counter_Country) %>%
-      gather(key = Date,value = Balance,
-             -c(Balance_Pos,CountryPair))
-
-  } else {
-
-    res_df = selected_df %>%
-      gather(key = Date,value = Balance,
-             -c(Balance_Pos,Country,Counter_Country))
-
+  return(filtered_lbs_df)
 
   }
 
-
-  return(res_df)
-
-}
 #'
 #'
 #' This function imports BIS total credit data from scratch
