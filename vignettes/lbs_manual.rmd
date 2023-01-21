@@ -1,8 +1,76 @@
 
+```{r load_libraries}
+
+library(MiscImport)
+
+library(tidyverse)
+
+```
+
+
+```{r import_data}
+
+
+
+```
+
+
+```{r filter_for_China}
+
+rep_inst_string = paste0("All reporting banks/institutions ",
+                         "(domestic, foreign, consortium ",
+                         "and unclassified)")
+
+china_total = lbs_df %>% 
+  filter(type_of_reporting_institutions == rep_inst_string) %>% 
+  select(-type_of_reporting_institutions) %>% 
+  select(-c("time_format","collection_indicator",
+            "organisation_visibility","series")) %>% 
+  filter(date == as.yearqtr("2017 Q1")) %>% 
+  filter(parent_country == "All countries (total)") %>%
+  filter(reporting_country == "All reporting countries") %>% 
+  filter(counterparty_country == "China")
+
+
+china_counterparty_country = lbs_df %>% 
+  filter(type_of_reporting_institutions == rep_inst_string) %>% 
+  select(-type_of_reporting_institutions) %>% 
+  select(-c("time_format","collection_indicator",
+            "organisation_visibility","series")) %>% 
+  filter(date == as.yearqtr("2017 Q1")) %>%
+  filter(counterparty_country == "China")
+
+
+china_reporting_country = lbs_df %>% 
+  filter(type_of_reporting_institutions == rep_inst_string) %>% 
+  select(-type_of_reporting_institutions) %>% 
+  select(-c("time_format","collection_indicator",
+            "organisation_visibility","series")) %>% 
+  filter(date == as.yearqtr("2017 Q1")) %>%
+  filter(reporting_country == "China")
+
+china_parent_country = lbs_df %>% 
+  filter(type_of_reporting_institutions == rep_inst_string) %>% 
+  select(-type_of_reporting_institutions) %>% 
+  select(-c("time_format","collection_indicator",
+            "organisation_visibility","series")) %>% 
+  filter(date == as.yearqtr("2017 Q1")) %>% 
+  filter(parent_country == "China")
+
+```
+
+The LBS capture outstanding claims (financial assets) and liabilities of internationally active banks located in reporting countries on counterparties residing in more than 200 countries. Currently banking offices located
+in 49 countries, including many offshore financial centres, report the LBS. The LBS
+capture around 95% of all cross-border interbank business
+
+
 According to BIS tutorial \hyperlink{https://youtu.be/fUcHBKVdC0Y}
 
 The figure of 850 billions USD is the amount that banks outside China have lent to borrowers inside China namely that is the amount that the Chinese own to foreigners.
 
 
 The figure of 720 billions USD is the amount that China banks have lent to borrowers outside China namely that is the amount that the foreigners own to Chinese.
+
+Those figures can be extracted by filtering for counterparty country as China and leaving the parent country to be "All countries (total)" and reporting country to be
+"All reporting countries".Now let's see whether all the subcatergories add to to total.
 
