@@ -74,3 +74,17 @@ The figure of 720 billions USD is the amount that China banks have lent to borro
 Those figures can be extracted by filtering for counterparty country as China and leaving the parent country to be "All countries (total)" and reporting country to be
 "All reporting countries".Now let's see whether all the subcatergories add to to total.
 
+# Specific cases
+
+```{r compare_to_KalemliOzcan}
+
+countries_df = tibble(country = c("Australia","Austria",
+                                       "Belgium","Canada","Switzerland","Germany",
+                                       "Denmark","Spain","Finland",
+                                       "France","United_Kingdom","Ireland",
+                                       "Italy","Japan","Netherlands",
+                                       "Portugal","Sweden","United_States"))
+
+
+```
+

@@ -32,7 +32,7 @@ knitr::opts_chunk$set(
 
 ```{r load_package}
 
-# devtools::load_all()
+devtools::load_all()
 
 library(tidyverse)
 
@@ -313,17 +313,6 @@ lines_str = list(c("Country pair FE",rep("Yes",3)),
 
 
 ```{r child="Import_Data.Rmd"}
-
-```
-
-
-```{r temp_import, eval=FALSE}
-
-raw_data = readRDS(paste0(
-  file.path(Sys.getenv("USERPROFILE")),
-  "\\desktop",
-  "\\FinSynchRawData.rds"
-))
 
 ```
 

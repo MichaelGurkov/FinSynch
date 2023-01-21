@@ -468,12 +468,16 @@ calculate.gdp.df = function(growth_rates, gdp_balance){
 #' @import readr
 #'
 #'
-get_lbs_data = function(){
+get_lbs_data = function(countries_df = NULL){
 
-  bis_oecd_codes_df = raw_data %>%
+  if(is.null(countries_df)){
+
+    countries_df = raw_data %>%
     pluck("bis_codes") %>%
     filter(oecd_member == 1) %>%
     select(country)
+
+  }
 
   file_path = paste0("C:\\Users\\Home",
                      "\\OneDrive - Bank Of Israel",
@@ -504,8 +508,8 @@ get_lbs_data = function(){
   filtered_lbs_df = lbs_df %>%
     mutate(reporting_country = str_replace_all(reporting_country, " ", "_")) %>%
     mutate(counterparty_country = str_replace_all(counterparty_country, " ", "_")) %>%
-    inner_join(bis_oecd_codes_df, by = c("reporting_country" = "country")) %>%
-    inner_join(bis_oecd_codes_df, by = c("counterparty_country" = "country"))
+    inner_join(countries_df, by = c("reporting_country" = "country")) %>%
+    inner_join(countries_df, by = c("counterparty_country" = "country"))
 
   filtered_lbs_df = filtered_lbs_df %>%
     mutate(country_pair = ifelse(
