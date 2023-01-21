@@ -64,6 +64,8 @@ country_df = left_join(country_df, raw_data$fin_dev_data,
 
 ```{r make_bank_list}
 
+bank_gdp = preprocess_lbs_data(raw_data)
+
 bank_list = list()
 
 raw_data$bank_balance_real_norm = raw_data$bis_lbs %>% 

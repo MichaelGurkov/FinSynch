@@ -459,11 +459,13 @@ calculate.gdp.df = function(growth_rates, gdp_balance){
 }
 #'
 #'
-#' #' This function imports BIS LBS from scratch
-#' #'
-#' #' @import dplyr
-#' #'
-#' #' @import readr
+
+
+#' This function imports BIS LBS from scratch
+#'
+#' @import dplyr
+#'
+#' @import readr
 #'
 #'
 get_lbs_data = function(){
@@ -509,13 +511,36 @@ get_lbs_data = function(){
     mutate(country_pair = ifelse(
       reporting_country < counterparty_country,
       paste(reporting_country, counterparty_country, sep = "-"),
-      paste(counterparty_country, reporting_country, sep = "-"))) %>%
-    select(-any_of(c("reporting_country", "counterparty_country")))
+      paste(counterparty_country, reporting_country, sep = "-")))
 
 
   return(filtered_lbs_df)
 
-  }
+}
+
+
+#' This function imports US cpi
+#'
+get_us_cpi = function(){
+
+
+  bis_cpi = import_bis_cpi_index(paste0(Sys.getenv("USERPROFILE"),
+                                       "\\OneDrive - Bank Of Israel\\Data",
+                                       "\\BIS\\cpi\\WS_LONG_CPI_csv_col.csv"),
+    my_frequency = "Monthly",
+    my_unit_of_measure = "Index, 2010 = 100",
+    pivot_to_long = TRUE)
+
+  us_cpi = bis_cpi %>%
+    filter(country == "United_States") %>%
+    group_by(date = as.yearqtr(date)) %>%
+    summarise(us_cpi = mean(cpi), .groups = "drop")
+
+  return(us_cpi)
+
+}
+
+
 
 #'
 #'

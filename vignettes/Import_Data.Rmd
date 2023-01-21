@@ -8,6 +8,8 @@ library(MiscImport)
 
 library(dplyr)
 
+devtools::load_all()
+
 ```
 
 
@@ -18,37 +20,28 @@ raw_data = list()
 raw_data$bis_codes = get_bis_country_codes()
 
 raw_data$total_credit = get_total_credit_data()
-  
 
-raw_data$bis_lbs = import.bis.lbs.data(
-  countries_vec = countries_list$oecd_countries) %>%
-  mutate(Date = as.yearqtr(Date, format = "%Y-Q%q"))
+raw_data$bis_lbs = get_lbs_data()
 
-raw_data$GDP_constant = import.wdi.gdp(
-  filepath = paste0(
-    file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-    "\\OneDrive - Bank Of Israel\\Data\\World ",
-    "Bank\\API_NY.GDP.MKTP.KD_DS2_en_csv_v2_316073.csv"),
-  message_gdp_type = FALSE,
-  countries_codes = raw_data$oecd_codes %>%
-    filter(Country %in% countries_list$oecd_countries) %>% 
-    select(Code) %>% 
-    unlist()) %>% 
-  mutate(GDP = GDP * 10 ^ (-6)) %>% 
-  mutate(Country = gsub("\\s","_",Country))
+raw_data$cpi = get_us_cpi()  
 
-raw_data$GDP_current = import.wdi.gdp(
-  filepath = paste0(
-    file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-    "\\OneDrive - Bank Of Israel\\Data\\World ",
-    "Bank\\API_NY.GDP.MKTP.CD_DS2_en_csv_v2_315857.csv"),
-  message_gdp_type = FALSE,
-  countries_codes = raw_data$oecd_codes %>%
-    filter(Country %in% countries_list$oecd_countries) %>% 
-    select(Code) %>% 
-    unlist()) %>% 
-  mutate(GDP = GDP * 10 ^ (-6)) %>% 
-  mutate(Country = gsub("\\s","_",Country))
+raw_data$GDP_constant = import_wdi_gdp(
+  paste0(
+    Sys.getenv("USERPROFILE"),
+    "\\OneDrive - Bank Of Israel\\Data",
+    "\\World Bank\\gdp",
+    "\\constant_gdp.csv"
+  )
+)
+
+raw_data$GDP_current = import_wdi_gdp(
+  paste0(
+    Sys.getenv("USERPROFILE"),
+    "\\OneDrive - Bank Of Israel\\Data",
+    "\\World Bank\\gdp",
+    "\\current_gdp.csv"
+  )
+)
 
 raw_data$HousePrice = import.oecd.houseprice() %>% 
   rename(Code = Country) %>% 
@@ -63,12 +56,6 @@ raw_data$SharePrice = import.oecd.shareprice() %>%
   select(-Code) %>% 
   select(Country, Date, SharePrice)
 
-
-raw_data$cpi = import.bis.cpi.data(annual_freq = FALSE) %>% 
-  mutate(Date = as.yearqtr(Date, format = "%Y.%m")) %>% 
-  group_by(Date) %>% 
-  summarise(US_CPI = mean(US_CPI)) %>% 
-  ungroup()
 
 
 

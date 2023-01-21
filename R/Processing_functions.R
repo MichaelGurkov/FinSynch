@@ -1,3 +1,47 @@
+#' This function preprocesses lbs data
+#' The preprocessing is performed in two stages:
+#' 1. Deflate lbs with US CPI
+#' 2. Normalize lbs with corresponding GDP
+#'
+#' @import lubridate
+
+preprocess_lbs_data = function(raw_data){
+
+  lbs_df = raw_data$bis_lbs
+
+  cpi_df = raw_data$cpi
+
+  gdp_df = raw_data$GDP_constant
+
+  lbs_deflated = lbs_df %>%
+    left_join(cpi_df, by = "date") %>%
+    mutate(balance_real = balance / us_cpi)
+
+  lbs_normalized = lbs_deflated %>%
+    filter(quarter(date) == 4) %>%
+    mutate(year = as.character(year(date))) %>%
+    select(-date) %>%
+    left_join(gdp_df,
+              by = c("reporting_country" = "country", "year")) %>%
+    left_join(gdp_df,
+              by = c("counterparty_country" = "country", "year"),
+              suffix = c("_reporting","_counterparty"))
+
+  lbs_processed = lbs_normalized %>%
+    mutate(gdp_sum = gdp_usd_reporting + gdp_usd_counterparty) %>%
+    mutate(balance_gdp = balance_real / gdp_sum) %>%
+    group_by(country_pair, year) %>%
+    summarise(balance_gdp = mean(log(balance_gdp)), .groups = "drop")
+
+  return(lbs_processed)
+
+
+
+
+
+}
+
+
 #' This helper function deflates bis data by US CPI
 #'
 #'
@@ -33,10 +77,6 @@ deflate.data = function(df, vars_to_deflate,
 
 
 }
-
-
-
-
 
 #' This function appends to (Date, CountryPair) format data frame
 #' data from (Date, Country) format
