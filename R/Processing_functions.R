@@ -11,7 +11,7 @@ preprocess_lbs_data = function(raw_data){
 
   cpi_df = raw_data$cpi
 
-  gdp_df = raw_data$GDP_constant
+  gdp_df = raw_data$gdp_constant
 
   lbs_deflated = lbs_df %>%
     left_join(cpi_df, by = "date") %>%
@@ -42,41 +42,101 @@ preprocess_lbs_data = function(raw_data){
 }
 
 
-#' This helper function deflates bis data by US CPI
+#' This function preprocesses imf trade data
+#' The preprocessing is performed in two stages:
+#' 1. Deflate lbs with US CPI
+#' 2. Normalize lbs with corresponding GDP
 #'
-#'
-#' @import dplyr
-#'
-#'
-#' @export
+#' @import lubridate
+
+preprocess_imf_trade_data = function(raw_data){
+
+  imf_trade_df = raw_data$imf_trade_df
+
+  cpi_df = raw_data$cpi
+
+  gdp_df = raw_data$gdp_constant
+
+  cpi_df = cpi_df %>%
+    group_by(date = as.character(year(date))) %>%
+    summarise(us_cpi = mean(us_cpi), .groups = "drop")
+
+  trade_df_deflated = imf_trade_df %>%
+    left_join(cpi_df, by = "date") %>%
+    mutate(total_trade_real = total_trade / us_cpi)
+
+  trade_df_normalized = trade_df_deflated %>%
+    rename(year = date) %>%
+    left_join(gdp_df,
+              by = c("country", "year")) %>%
+    left_join(gdp_df,
+              by = c("counterparty_country" = "country", "year"),
+              suffix = c("_reporting","_counterparty"))
+
+  trade_df_processed = trade_df_normalized %>%
+    mutate(gdp_sum = gdp_usd_reporting + gdp_usd_counterparty) %>%
+    mutate(total_trade_gdp = total_trade / gdp_sum) %>%
+    group_by(country_pair, year) %>%
+    summarise(total_trade_gdp = mean(log(total_trade_gdp)), .groups = "drop")
+
+  return(trade_df_processed)
 
 
-deflate.data = function(df, vars_to_deflate,
-                        cpi = NULL,
-                        remove_cpi_col = TRUE){
 
-  if(is.null(cpi)){cpi = import.bis.cpi.data()}
-
-
-  df = left_join(df, cpi, by = "Date")
-
-  for(temp_var in vars_to_deflate){
-
-    temp_var_name = paste(temp_var, "real", sep = "_")
-
-    temp_var = quo(!!sym(temp_var))
-
-    df = df %>%
-      mutate(!!temp_var_name := !!temp_var / US_CPI * 100)
-
-  }
-
-  if(remove_cpi_col){df = df %>% select(-US_CPI)}
-
-  return(df)
 
 
 }
+
+#' This function calculates the financial cycle for countries
+#'
+get_fin_cycle = function(raw_data){
+
+  codes = raw_data %>%
+    pluck("country_codes") %>%
+    select(country_code = code, country) %>%
+    mutate(country_code = str_replace_all(country_code,"KOREA-NS","KOR")) %>%
+    mutate(country_code = str_replace_all(country_code,"CSFR-CZE","CZE")) %>%
+    mutate(country_code = str_replace_all(country_code,"CSFR-SVK","SVK")) %>%
+    mutate(country_code = str_replace_all(country_code,"USSR-EST","EST")) %>%
+    mutate(country_code = str_replace_all(country_code,"USSR-LVA","LVA")) %>%
+    mutate(country_code = str_replace_all(country_code,"USSR-RUS","RUS")) %>%
+    mutate(country_code = str_replace_all(country_code,"FYUG-SVN","SVN"))
+
+
+  country_df = raw_data[c("house_price","share_price")] %>%
+    reduce(inner_join, by = c("country_code","date")) %>%
+    left_join(codes, by = "country_code") %>%
+    select(-country_code) %>%
+    relocate(country) %>%
+    inner_join(raw_data$total_credit, by = c("country", "date"))
+
+
+  cycles_df = country_df %>%
+    left_join(raw_data$cpi, by = "date") %>%
+    mutate(total_credit = total_credit / us_cpi) %>%
+    select(-us_cpi) %>%
+    filter(quarter(date) == 4) %>%
+    mutate(year = as.character(year(date))) %>%
+    select(-date) %>%
+    pivot_longer(-c("country","year"),names_to = "component") %>%
+    group_by(country, component) %>%
+    arrange(year) %>%
+    mutate(value = log(value / dplyr::lag(value))) %>%
+    filter(!is.na(value)) %>%
+    group_by(country, year) %>%
+    summarise(fin_cycle = mean(value), .groups = "drop")
+
+
+  return(cycles_df)
+
+
+
+
+
+
+
+}
+
 
 #' This function appends to (Date, CountryPair) format data frame
 #' data from (Date, Country) format
@@ -111,90 +171,6 @@ append.countrypair.dataframe = function(countrypair_df, country_df){
 
 }
 
-#' This function normalizes the BIS country pairs data
-#' The function divides each country pair position by the
-#' sum of the countries  population (or GDP) in each year
-#' BIS df's structure should be (Date, CountryPair, Balance_Pos, )
-
-
-normalize.bis.data = function(bis_df,norm_df, norm_val = "GDP"){
-
-  norm_df = norm_df %>%
-    select(Country,Date, !!enquo(norm_val))
-
-  var = names(bis_df)[!names(bis_df) %in% c("Date",
-                                            "CountryPair",
-                                            "Balance_Pos")]
-
-
-  stopifnot(length(var) == 1)
-
-  var_name = var
-
-  var = quo(!!sym(var))
-
-  bis_df = bis_df %>%
-    separate(.,CountryPair, into = c("Country_A","Country_B"),
-             sep = "-",remove = FALSE)
-
-  bis_df = left_join(bis_df, norm_df, by = c("Date" = "Date",
-                                            "Country_A" = "Country"))
-
-  bis_df = left_join(bis_df,suffix = c("_A","_B"),
-                     norm_df, by = c("Date" = "Date",
-                                    "Country_B" = "Country"))
-
-  bis_df = bis_df %>%
-    mutate(Denom = rowSums(select(.,starts_with(norm_val)))) %>%
-    mutate(!!var_name := !!var / Denom) %>%
-    select(Date, CountryPair,Balance_Pos,!!var_name)
-
-
-  return(bis_df)
-
-}
-
-
-#' This function normalizes IMF country pairs data
-#' The function divides each country pair position by the
-#' sum of the countries  population (or GDP) in each year
-
-
-normalize.imf.data = function(imf_df,wdi_df, norm_val = "GDP"){
-
-  wdi_df = wdi_df %>%
-    select(Country,Date, !!enquo(norm_val))
-
-  var = names(imf_df)[!names(imf_df) %in% c("Date",
-                                            "CountryPair", "Balance_Pos")]
-
-
-  stopifnot(length(var) == 1)
-
-  var_name = var
-
-  var = quo(!!sym(var))
-
-  imf_df = imf_df %>%
-    separate(.,CountryPair, into = c("Country_A","Country_B"),
-             sep = "-",remove = FALSE)
-
-  imf_df = left_join(imf_df, wdi_df, by = c("Date" = "Date",
-                                            "Country_A" = "Country"))
-
-  imf_df = left_join(imf_df,suffix = c("_A","_B"),
-                     wdi_df, by = c("Date" = "Date",
-                                    "Country_B" = "Country"))
-
-  imf_df = imf_df %>%
-    mutate(Denom = rowSums(select(.,starts_with(norm_val)))) %>%
-    mutate(!!var_name := !!var / Denom) %>%
-    select(Date, CountryPair,!!var_name)
-
-
-  return(imf_df)
-
-}
 
 
 #' This function calculates all the synch measures and merges them

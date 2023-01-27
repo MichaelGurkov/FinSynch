@@ -6,45 +6,12 @@ library(lubridate)
 ```
 
 
-
 <!-- Construct Country level data frame -->
 
 ```{r make_country_df}
 
-# Import and deflate data
+cycles_df = get_fin_cycle(raw_data)
 
-country_df = list(raw_data$TotalCredit %>% 
-                    deflate.data(vars_to_deflate = "Total_Credit",
-                                 cpi = raw_data$cpi),
-                  raw_data$SharePrice %>% 
-                    deflate.data(vars_to_deflate = "SharePrice",
-                                 cpi = raw_data$cpi),
-                  raw_data$HousePrice %>% 
-                    rename(HousePrice_real = HousePrice)) %>%
-  reduce(inner_join, by = c("Date", "Country")) %>% 
-  select(c("Country","Date",grep("_real$",names(.),value = TRUE))) %>% 
-  group_by(Country) %>% 
-  filter_all(all_vars(!is.na(.)))
-
-
-# Calculate YoY returns and average to get financial cycle
-
-country_df = country_df %>% 
-  mutate_at(grep("_real$",names(.),value = TRUE),
-          list(ret = ~ (. / dplyr::lag(.,4)) - 1)) %>% 
-  rowwise() %>% 
-  mutate(Fin_ret = mean(c(!!!syms(grep("ret$",names(.),
-                                       value = TRUE))))) %>% 
-  arrange(Country) %>% 
-  filter(!is.na(Fin_ret))
-
-country_df = country_df %>%
-  filter(quarters(Date) == "Q4") %>%
-  mutate(Date = format(Date, "%Y")) %>%
-  left_join(.,raw_data$GDP_current %>% 
-              deflate.data(vars_to_deflate = "GDP") %>% 
-              select(Country, Date, GDP_real),
-            by = c("Country","Date"))
 
 ```
 
@@ -70,80 +37,11 @@ country_df = left_join(country_df, raw_data$fin_dev_data,
 <!-- Construct Country pair level data frame -->
 
 
-```{r make_bank_list}
+```{r make_bank_and_trade_gdp_df}
 
 bank_gdp = preprocess_lbs_data(raw_data)
 
-bank_list = list()
-
-raw_data$bank_balance_real_norm = raw_data$bis_lbs %>% 
-  deflate.data(.,vars_to_deflate = "Balance",
-               cpi = raw_data$cpi) %>%
-  select(Date, CountryPair,Balance_Pos, Balance_real) %>%
-  filter(quarters(Date) == "Q4") %>% 
-  mutate(Date = format(Date, "%Y")) %>% 
-  normalize.bis.data(norm_df = country_df[,c("Date","Country", "GDP_real")],
-                     norm_val = "GDP_real")
-
-bank_list$bank_gdp = raw_data$bank_balance_real_norm %>% 
-  group_by(Date, CountryPair) %>%
-  summarise(bank_gdp = mean(log(Balance_real), na.rm = TRUE)) %>%
-  filter(!is.na(bank_gdp))
-
-
-```
-
-
-```{r Import_IMF_Data}
-
-trade_list = list()
-
-export_df = lapply(list.files(paste0(
-  file.path(Sys.getenv("USERPROFILE"), fsep = "\\"),
-  "\\OneDrive - Bank Of Israel\\Data",
-  "\\IMF\\Export-Import\\Export"),
-                              full.names = TRUE),
-                   import_imf_df,
-                   countries_vec = countries_list$oecd_countries) %>%
-  bind_rows() %>%
-  mutate(Exports = as.numeric(Exports)) %>%
-  group_by(Date, CountryPair) %>%
-  summarise(Exports = sum(Exports, na.rm = TRUE))
-
-
-import_df = lapply(list.files(paste0(
-  file.path(Sys.getenv("USERPROFILE"), fsep = "\\"),
-  "\\OneDrive - Bank Of Israel\\Data",
-  "\\IMF\\Export-Import\\Import"),
-                              full.names = TRUE),
-                   import_imf_df,
-                   countries_vec = countries_list$oecd_countries) %>%
-  bind_rows() %>%
-  mutate(Imports = as.numeric(Imports)) %>%
-  group_by(Date, CountryPair) %>%
-  summarise(Imports = sum(Imports, na.rm = TRUE))
-
-trade_df = full_join(export_df,import_df,
-                     by = c("Date", "CountryPair")) %>%
-  gather(.,key = Balance_Pos, value = Trade, -Date, - CountryPair) %>%
-  deflate.data(.,vars_to_deflate = "Trade") %>%
-  select(-Trade)
-
-
-trade_list$trade_gdp = trade_df %>%
-  ungroup() %>%
-  normalize.imf.data(.,wdi_df = country_df[,c("Date","Country",
-                                              "GDP_real")],
-                     norm_val = "GDP_real") %>%
-  group_by(Date, CountryPair) %>%
-  summarise(trade_gdp = mean(log(Trade_real), na.rm = TRUE),
-            .groups = "drop") %>%
-  filter(!is.na(trade_gdp)) %>%
-  filter(is.finite(trade_gdp))
-
-rm(export_df, import_df, trade_df)
-
-
+trade_gdp = preprocess_imf_trade_data(raw_data)
 
 ```
 

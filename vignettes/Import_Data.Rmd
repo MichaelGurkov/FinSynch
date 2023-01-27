@@ -17,7 +17,7 @@ devtools::load_all()
 
 raw_data = list()
 
-raw_data$bis_codes = get_bis_country_codes()
+raw_data$country_codes = get_country_codes()
 
 raw_data$total_credit = get_total_credit_data()
 
@@ -25,7 +25,7 @@ raw_data$bis_lbs = get_lbs_data()
 
 raw_data$cpi = get_us_cpi()  
 
-raw_data$GDP_constant = import_wdi_gdp(
+raw_data$gdp_constant = get_wdi_gdp(
   paste0(
     Sys.getenv("USERPROFILE"),
     "\\OneDrive - Bank Of Israel\\Data",
@@ -34,27 +34,20 @@ raw_data$GDP_constant = import_wdi_gdp(
   )
 )
 
-raw_data$GDP_current = import_wdi_gdp(
-  paste0(
-    Sys.getenv("USERPROFILE"),
-    "\\OneDrive - Bank Of Israel\\Data",
-    "\\World Bank\\gdp",
-    "\\current_gdp.csv"
-  )
-)
+# raw_data$gdp_current = get_wdi_gdp(
+#   paste0(
+#     Sys.getenv("USERPROFILE"),
+#     "\\OneDrive - Bank Of Israel\\Data",
+#     "\\World Bank\\gdp",
+#     "\\current_gdp.csv"
+#   )
+# )
 
-raw_data$HousePrice = import.oecd.houseprice() %>% 
-  rename(Code = Country) %>% 
-  left_join(raw_data$oecd_codes, by = "Code") %>% 
-  select(-Code) %>% 
-  select(Country, Date, HousePrice)
+raw_data$house_price = get_oecd_house_price()
 
+raw_data$share_price = get_oecd_share_price()
 
-raw_data$SharePrice = import.oecd.shareprice() %>% 
-  rename(Code = Country) %>% 
-  left_join(raw_data$oecd_codes, by = "Code") %>% 
-  select(-Code) %>% 
-  select(Country, Date, SharePrice)
+raw_data$imf_trade_df = get_imf_trade_data()
 
 
 

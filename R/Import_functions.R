@@ -473,7 +473,7 @@ get_lbs_data = function(countries_df = NULL){
   if(is.null(countries_df)){
 
     countries_df = raw_data %>%
-    pluck("bis_codes") %>%
+    pluck("country_codes") %>%
     filter(oecd_member == 1) %>%
     select(country)
 
@@ -508,6 +508,8 @@ get_lbs_data = function(countries_df = NULL){
   filtered_lbs_df = lbs_df %>%
     mutate(reporting_country = str_replace_all(reporting_country, " ", "_")) %>%
     mutate(counterparty_country = str_replace_all(counterparty_country, " ", "_")) %>%
+    mutate(across(c("reporting_country","counterparty_country"),
+                  ~str_replace_all(.,"Turkey","Turkiye"))) %>%
     inner_join(countries_df, by = c("reporting_country" = "country")) %>%
     inner_join(countries_df, by = c("counterparty_country" = "country"))
 
@@ -564,6 +566,7 @@ get_total_credit_data = function(){
   tot_credit = import_bis_total_credit(file_path,
                           my_frequency = "Quarterly",
                           my_lending_sector = "All sectors",
+                          my_borrowing_sector = "Private non-financial sector",
                           my_valuation_method = "Market value",
                           my_unit_type = "US dollar",
                           my_adjustment = "Adjusted for breaks",
@@ -572,7 +575,8 @@ get_total_credit_data = function(){
     filter(complete.cases(.))
 
   tot_credit = tot_credit %>%
-    inner_join(raw_data$bis_codes %>%
+    mutate(country = str_replace_all(country,"Turkey","Turkiye")) %>%
+    inner_join(raw_data$country_codes %>%
                  filter(oecd_member == 1) %>%
                  select(country), by = "country")
 
@@ -726,7 +730,7 @@ import.geodist.data = function(filepath = paste0(
 #' This function imports ISO codes for country names
 #'
 
-get_bis_country_codes = function(filepath = NULL, oecd_members = TRUE){
+get_country_codes = function(filepath = NULL, oecd_members = TRUE){
 
 
   country_codes = read_csv(paste0(Sys.getenv("USERPROFILE"),
@@ -740,7 +744,8 @@ get_bis_country_codes = function(filepath = NULL, oecd_members = TRUE){
   country_codes = country_codes %>%
     mutate(country = str_replace(country,"South_Korea","Korea")) %>%
     mutate(country = str_replace(country,"Czech_Republic","Czechia")) %>%
-    mutate(country = str_replace(country,"Slovak_Republic","Slovakia"))
+    mutate(country = str_replace(country,"Slovak_Republic","Slovakia")) %>%
+    mutate(country = str_replace(country,"Turkey","Turkiye"))
 
 
   return(country_codes)

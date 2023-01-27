@@ -74,22 +74,35 @@
 #' ratio of price to rent - PRICERENT). The default is NOMINAL
 
 
-import.oecd.houseprice = function(
-  filepath = paste0(
-    file.path(Sys.getenv("USERPROFILE"), fsep = "\\"),
-    "\\OneDrive - Bank Of Israel\\Data",
-    "\\OECD\\House_prices.csv"),
-  my_frequency = "Q",
-  my_subject = "NOMINAL"){
+get_oecd_house_price = function(file_path = NULL,
+                               my_frequency = "Q",
+                               my_subject = "NOMINAL"){
 
-  df = read.csv(file = filepath, stringsAsFactors = FALSE)
+  if(is.null(file_path)){
+
+    file_path = paste0(Sys.getenv("USERPROFILE"),
+                       "\\OneDrive - Bank Of Israel\\Data",
+                       "\\OECD\\house_prices",
+                       "\\DP_LIVE_27012023121005154.csv")
+
+
+  }
+
+
+  df = read_csv(file = file_path, show_col_types = FALSE)
 
   df = df %>%
     filter(FREQUENCY == my_frequency) %>%
     filter(SUBJECT == my_subject) %>%
-    select(ï..LOCATION,TIME, Value) %>%
-    rename(Country = ï..LOCATION, Date = TIME, HousePrice = Value) %>%
-    mutate(Date = as.yearqtr(Date, format = "%Y-Q%q"))
+    select(country_code = LOCATION, date = TIME, house_price = Value)
+
+  if(my_frequency == "Q"){
+
+    df = df %>%
+      mutate(date = as.yearqtr(date, format = "%Y-Q%q"))
+
+
+  }
 
   return(df)
 
@@ -120,25 +133,44 @@ import.oecd.houseprice = function(
 #'
 #' @import zoo
 #'
-#'
 #' @param my_frequency filters the required frequency
 #' (annual - A , quarter - Q or monthly - M). The default is Q
 
 
-import.oecd.shareprice = function(
-  filepath = paste0(
-    file.path(Sys.getenv("USERPROFILE"), fsep = "\\"),
-    "\\OneDrive - Bank Of Israel\\Data",
-    "\\OECD\\Share_prices.csv"),
-  my_frequency = "Q"){
+get_oecd_share_price = function(file_path = NULL,
+                                my_frequency = "Q"){
 
-  df = read.csv(file = filepath, stringsAsFactors = FALSE)
+  if(is.null(file_path)){
+
+    file_path = paste0(Sys.getenv("USERPROFILE"),
+                       "\\OneDrive - Bank Of Israel\\Data",
+                       "\\OECD\\share_prices",
+                       "\\DP_LIVE_27012023121050170.csv")
+
+
+  }
+
+
+  df = read_csv(file = file_path, show_col_types = FALSE,col_select = -8)
 
   df = df %>%
-  filter(FREQUENCY == my_frequency) %>%
-  select(ï..LOCATION,TIME, Value) %>%
-  rename(Country = ï..LOCATION, Date = TIME, SharePrice = Value) %>%
-  mutate(Date = as.yearqtr(Date, format = "%Y-Q%q"))
+    filter(FREQUENCY == my_frequency) %>%
+    select(country_code = LOCATION, date = TIME, share_price = Value)
+
+  if(my_frequency == "Q"){
+
+    df = df %>%
+      mutate(date = as.yearqtr(date, format = "%Y-Q%q"))
+
+
+  } else if(my_frequency == "M"){
+
+    df = df %>%
+      mutate(date = as.yearmon(date, format = "%Y-%m"))
+
+
+  }
+
 
   return(df)
 

@@ -26,13 +26,12 @@
 #' @param countries_codes vector of codes of required countries
 
 
-import_wdi_gdp = function(file_path){
+get_wdi_gdp = function(file_path){
 
-  bis_oecd_codes_df = raw_data %>%
-    pluck("bis_codes") %>%
+  country_codes_df = raw_data %>%
+    pluck("country_codes") %>%
     filter(oecd_member == 1) %>%
-    select(country) %>%
-    mutate(country = str_replace(country,"Turkey","Turkiye"))
+    select(country)
 
   raw_df = read_csv(file = file_path, show_col_types = FALSE, skip = 4)
 
@@ -42,7 +41,8 @@ import_wdi_gdp = function(file_path){
     mutate(country = str_replace_all(country, " ","_")) %>%
     mutate(country = str_replace(country, "Korea,_Rep\\.","Korea")) %>%
     mutate(country = str_replace(country, "Slovak_Republic","Slovakia")) %>%
-    inner_join(bis_oecd_codes_df, by = "country") %>%
+    mutate(country = str_replace(country, "Turkey","Turkiye")) %>%
+    inner_join(country_codes_df, by = "country") %>%
     pivot_longer(-country,names_to = "year",values_to = "gdp_usd")
 
   df = df %>%
