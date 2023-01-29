@@ -697,8 +697,60 @@ import.crises.dates.df = function(filepath = paste0(
 
 
 }
+
+
+#' This function imports data from Nguen
 #'
-#'
+get_fin_crises_data = function(file_path = NULL){
+
+  extract_years = function(temp_str){
+
+    if(is.na(temp_str)){return(NA)}
+
+    if(nchar(temp_str) < 9){return(temp_str)}
+
+    years_vec = unlist(str_extract_all(temp_str,"[0-9]{4}-[0-9]{4}"))
+
+    years_seq = map(years_vec, function(temp_seq){
+
+      seq_range = unlist(str_split(temp_seq,pattern = "-"))
+
+      return(as.character(seq(from = seq_range[1],to = seq_range[2])))
+
+
+
+    }) %>%
+      unlist()
+
+    return(years_seq)
+
+
+
+
+  }
+
+  if(is.null(file_path)){
+
+    file_path = paste0("C:\\Users\\Home",
+                       "\\OneDrive - Bank Of Israel\\Data",
+                       "\\Nguyen\\fin_crises_database.csv")
+
+  }
+
+  raw_df = read_csv(file_path, show_col_types = FALSE)
+
+  processed_df = raw_df %>%
+    rename_with(.cols = everything(), ~tolower(str_replace_all(.," ","_"))) %>%
+    pivot_longer(-country) %>%
+    mutate(years = map(value, extract_years)) %>%
+    select(-value) %>%
+    unnest(years)
+
+  return(processed_df)
+
+}
+
+
 #' This function imports geo dist data from cepii
 #'
 #' @import readxl
