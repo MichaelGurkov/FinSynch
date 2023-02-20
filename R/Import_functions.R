@@ -514,11 +514,8 @@ get_lbs_data = function(countries_df = NULL){
     inner_join(countries_df, by = c("counterparty_country" = "country"))
 
   filtered_lbs_df = filtered_lbs_df %>%
-    mutate(country_pair = ifelse(
-      reporting_country < counterparty_country,
-      paste(reporting_country, counterparty_country, sep = "-"),
-      paste(counterparty_country, reporting_country, sep = "-")))
-
+    mutate(country_pair = paste_country_pair(reporting_country,
+                                             counterparty_country))
 
   return(filtered_lbs_df)
 
@@ -670,30 +667,50 @@ import.wgi.ind = function(filepath = paste0(
 #' @import dplyr
 #'
 
-import.crises.dates.df = function(filepath = paste0(
-  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-  "\\OneDrive - Bank Of Israel\\Data\\LavaenValencia\\SYSTEMIC BANKING ",
-  "CRISES DATABASE_2018.xlsx"),
-  countries_vec = NULL){
+get_fin_crises_data_Lavaen = function(file_path = NULL){
 
-  temp = read_xlsx(filepath,
+  countries_df = raw_data %>%
+    pluck("country_codes") %>%
+    filter(oecd_member == 1) %>%
+    select(country)
+
+
+  if(is.null(file_path)){
+
+    file_path = paste0(Sys.getenv("USERPROFILE"),
+                       "\\OneDrive - Bank Of Israel\\Data",
+                       "\\LavaenValencia\\SYSTEMIC BANKING ",
+                       "CRISES DATABASE_2018.xlsx")
+    }
+
+
+  fin_crises_df = read_xlsx(file_path,
                    sheet = "Crisis Resolution and Outcomes",
                    range = "A1:K152")
 
 
-  df = temp %>%
-    setNames(gsub(pattern = "[0-9/\r\n]","", names(.))) %>%
-    mutate(End = gsub(pattern = "[0-9]{1}/$","", End)) %>%
-    mutate(End = gsub("\\s","",End)) %>%
-    mutate(Country = gsub("\\s","_",Country)) %>%
-    {if(!is.null(countries_vec)) filter(., Country %in% countries_vec) else .} %>%
-    mutate_at(.vars = vars(-Country, -Start, -End),
-              .funs = list(~round(as.numeric(.),2))) %>%
-    mutate_at(.vars = vars(Start, End),
-              .funs = list(~as.character(.)))
+  fin_crises_df = fin_crises_df %>%
+    select(country = Country, start_year = Start, end_year = End) %>%
+    mutate(across(everything(),
+                  ~str_remove_all(.,pattern = " [0-9]{1}/"))) %>%
+    mutate(country = str_replace_all(country," ","_"))%>%
+    mutate(country = str_replace(country, "Slovak_Rep", "Slovakia")) %>%
+    mutate(country = str_replace(country, "Turkey", "Turkiye")) %>%
+    mutate(country = str_replace(country, "Czech_Republic", "Czechia"))
+
+  fin_crises_df = fin_crises_df %>%
+    inner_join(countries_df, by = "country")
+
+  fin_crises_df = fin_crises_df %>%
+    mutate(year = map2(start_year, end_year,
+                           .f = function(start_year, end_year)
+                             {seq(start_year, end_year)})) %>%
+    select(-c("start_year", "end_year")) %>%
+    unnest(year) %>%
+    mutate(crisis_ind = 1)
 
 
-  return(df)
+  return(fin_crises_df)
 
 
 }
@@ -701,7 +718,7 @@ import.crises.dates.df = function(filepath = paste0(
 
 #' This function imports data from Nguen
 #'
-get_fin_crises_data = function(file_path = NULL){
+get_fin_crises_data_Nguen = function(file_path = NULL, crisis_category = NULL){
 
   extract_years = function(temp_str){
 
@@ -739,14 +756,26 @@ get_fin_crises_data = function(file_path = NULL){
 
   raw_df = read_csv(file_path, show_col_types = FALSE)
 
-  processed_df = raw_df %>%
+  df = raw_df %>%
     rename_with(.cols = everything(), ~tolower(str_replace_all(.," ","_"))) %>%
-    pivot_longer(-country) %>%
-    mutate(years = map(value, extract_years)) %>%
+    pivot_longer(-country,names_to = "category") %>%
+    mutate(year = map(value, extract_years)) %>%
     select(-value) %>%
-    unnest(years)
+    unnest(year)
 
-  return(processed_df)
+  if(!is.null(crisis_category)){
+
+    df = df %>%
+      filter(category == crisis_category) %>%
+      select(-category)
+
+  }
+
+  df = df %>%
+    filter(complete.cases(.)) %>%
+    mutate(crises_ind = 1)
+
+  return(df)
 
 }
 

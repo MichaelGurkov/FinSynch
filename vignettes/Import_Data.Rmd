@@ -55,6 +55,13 @@ raw_data$imf_trade_df = get_imf_trade_data()
 ```
 
 
+```{r Import_raw_data_crises_dates}
+
+raw_data$crises_df = get_fin_crises_data_Lavaen()
+
+```
+
+
 ```{r Import_raw_data_EU_membership}
 
 eu_df = read.csv(paste0(
@@ -134,14 +141,6 @@ raw_data$geodist = import.geodist.data() %>%
   distinct()
 
 ```
-
-
-```{r Import_raw_data_crises_dates}
-
-raw_data$crises_df =  import.crises.dates.df(countries_vec = countries_list$oecd_countries)
-
-```
-
 
 ```{r Import_raw_data_IMF}
 
