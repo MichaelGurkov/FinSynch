@@ -239,3 +239,60 @@ preprocess_fin_dev = function(raw_data, countries_df = NULL){
 
 
 }
+
+#' This function calculates the trilemma indices level for
+#' each country-pair
+#'
+preprocess_controls = function(raw_data, countries_df = NULL){
+
+  if(is.null(countries_df)){
+
+    countries_df = raw_data %>%
+      pluck("country_codes") %>%
+      filter(oecd_member == 1) %>%
+      select(country)
+
+  }
+
+  trilemma_df = raw_data$trilemma_ind
+
+  trilemma_df = trilemma_df %>%
+    select(country, date, fx_stab, fo_ind)
+
+  gdp_df = raw_data$gdp_constant %>%
+    rename(date = year)
+
+  country_pair_trilemma_df = trilemma_df %>%
+    inner_join(countries_df, by = "country") %>%
+    expand_to_country_pairs()%>%
+    left_join(trilemma_df, by = c("country","date")) %>%
+    left_join(trilemma_df, by = c("counter_country" = "country","date"),
+              suffix = c("_country","_counter")) %>%
+    filter(complete.cases(.)) %>%
+    mutate(fx_stab = fx_stab_country + fx_stab_counter) %>%
+    mutate(fo_ind = fo_ind_country + fo_ind_counter) %>%
+    select(country_pair,date,fx_stab,fo_ind)
+
+  country_pair_gdp_df = gdp_df %>%
+    inner_join(countries_df, by = "country") %>%
+    expand_to_country_pairs()%>%
+    left_join(gdp_df, by = c("country","date")) %>%
+    left_join(gdp_df, by = c("counter_country" = "country","date"),
+              suffix = c("_country","_counter")) %>%
+    filter(complete.cases(.)) %>%
+    mutate(gdp_usd = gdp_usd_country + gdp_usd_counter) %>%
+    select(country_pair, date, gdp_usd)
+
+  controls_df = list(country_pair_trilemma_df,
+                     country_pair_gdp_df) %>%
+    reduce(full_join, by = c("country_pair","date"))
+
+
+
+  return(controls_df)
+
+
+
+
+
+}

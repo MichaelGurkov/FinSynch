@@ -36,6 +36,18 @@ trade_link = preprocess_imf_trade_data(raw_data)
 
 ```{r financial_development}
 
+fin_dev_df - preprocess_fin_dev(raw_data)
+
+```
+
+```{r controls}
+
+controls_df = preprocess_con(raw_data)
+
+```
+
+```{r gdp}
+
 
 
 ```
