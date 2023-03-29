@@ -203,3 +203,39 @@ prepocess_crisis_dates = function(raw_data){
 
 
 }
+
+#' This function calculates the financial development level for
+#' each country-pair
+#'
+preprocess_fin_dev = function(raw_data, countries_df = NULL){
+
+  if(is.null(countries_df)){
+
+    countries_df = raw_data %>%
+      pluck("country_codes") %>%
+      filter(oecd_member == 1) %>%
+      select(country)
+
+  }
+
+  fin_dev_df = raw_data$fin_dev_ind
+
+  fin_dev_df = fin_dev_df %>%
+    select(country, date, FD)
+
+  country_pair_fin_df = fin_dev_df %>%
+    inner_join(countries_df, by = "country") %>%
+    expand_to_country_pairs()%>%
+    left_join(fin_dev_df, by = c("country","date")) %>%
+    left_join(fin_dev_df, by = c("counter_country" = "country","date"),
+              suffix = c("_country","_counter")) %>%
+    mutate(fd = FD_country + FD_counter) %>%
+    select(country,counter_country,date,fd)
+
+  return(country_pair_fin_df)
+
+
+
+
+
+}

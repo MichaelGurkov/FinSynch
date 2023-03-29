@@ -237,23 +237,30 @@ import_cross_border_balance = function(filepath = NULL,
 #'  @import stringr
 #'
 
-import.trilemma.ind = function(filepath = paste0(
-  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-  "\\OneDrive - Bank Of Israel\\Data",
-  "\\AizenmanChinnIto\\trilemma_indexes_update2018.xlsx")){
+get_trilemma_ind = function(file_path = NULL){
 
-  temp_df = read_xlsx(filepath)
+  if(is.null(file_path)){
+
+    file_path = paste0(Sys.getenv("USERPROFILE"),
+                      "\\OneDrive - Bank Of Israel\\Data",
+                      "\\AizenmanChinnIto",
+                      "\\trilemma_indexes_update2020.xlsx")
+  }
+
+  temp_df = read_xlsx(file_path)
 
   temp_df = temp_df %>%
     select(-`IMF-World Bank Country Code`) %>%
-    rename(Date = year) %>%
-    mutate(Date = as.character(Date)) %>%
-    rename(FX_stab = `Exchange Rate Stability Index`) %>%
-    rename(MI_ind = `Monetary Independence Index`) %>%
-    rename(FO_ind = `Financial Openness Index`) %>%
-    rename(Country = `Country Name`) %>%
-    mutate(Country = gsub("\\s","_", Country)) %>%
-    mutate(Country = str_replace(Country,"Korea, Rep.","Korea"))
+    rename(date = year) %>%
+    mutate(date = as.character(date)) %>%
+    rename(fx_stab = `Exchange Rate Stability Index`) %>%
+    rename(mi_ind = `Monetary Independence Index`) %>%
+    rename(fo_ind = `Financial Openness Index`) %>%
+    rename(country = `Country Name`) %>%
+    mutate(country = str_replace_all(country, "\\s","_")) %>%
+    mutate(country = str_replace(country,"Korea, Rep.","Korea"))
+
+  return(temp_df)
 
 
 
@@ -329,20 +336,20 @@ import.kaopen.ind = function(filepath = paste0(
 #'  @import dplyr
 #'
 
-import.fin.dev.ind = function(filepath = paste0(
-  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-  "\\OneDrive - Bank Of Israel\\Data\\Svirydzenka\\FinDev.xlsx"),
-  countries_vec = NULL){
+get_fin_dev_ind = function(){
 
-  temp_df = read_xlsx(filepath)
+  file_path = paste0(Sys.getenv("USERPROFILE"),
+                     "\\OneDrive - Bank Of Israel",
+                     "\\Data\\IMF\\financial_development",
+                     "\\FD Index Database (Excel).xlsx")
+
+  temp_df = read_xlsx(file_path)
 
   df = temp_df %>%
     select(year, country, FD, FI, FM) %>%
-    rename(Country = country) %>%
-    mutate(Country = gsub("\\s","_", Country)) %>%
-    {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec) else .} %>%
-    rename(Date = year) %>%
-    mutate(Date = as.character(Date))
+    mutate(country = str_replace_all(country,"\\s","_")) %>%
+    rename(date = year) %>%
+    mutate(date = as.character(date))
 
 
   return(df)

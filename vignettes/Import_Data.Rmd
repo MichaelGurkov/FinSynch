@@ -49,36 +49,32 @@ raw_data$share_price = get_oecd_share_price()
 
 raw_data$imf_trade_df = get_imf_trade_data()
 
+raw_data$trilemma_ind = get_trilemma_ind()
 
-
-
-```
-
-
-```{r Import_raw_data_crises_dates}
+raw_data$fin_dev_ind = get_fin_dev_ind()
 
 raw_data$crises_df = get_fin_crises_data_Lavaen()
 
+
 ```
 
 
-```{r Import_raw_data_EU_membership}
+```{r Import_raw_data_EU_membership, eval=FALSE}
 
-eu_df = read.csv(paste0(
-  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
+eu_df = read_csv(paste0(Sys.getenv("USERPROFILE"),
   "\\OneDrive - Bank Of Israel\\Data\\Misc\\EU_membership.csv"),
-                 stringsAsFactors = FALSE) %>%
-  setNames(c("Country","Euro_area","EU")) %>%
-  mutate(Country = gsub("\\s","_",Country)) %>%
-  mutate(Country = sub("The_Netherlands","Netherlands",
-                       Country,fixed = TRUE)) %>%
-  mutate(Country = sub("Slovakia","Slovak_Republic",
-                       Country,fixed = TRUE))
+  show_col_types = FALSE) %>%
+  rename_with(tolower) %>%
+  mutate(country = str_replace_all("\\s","_",country)) %>%
+  mutate(country = str_replace_all("The_Netherlands","Netherlands",
+                       country)) %>%
+  mutate(country = str_replace_all("Slovakia","Slovak_Republic",
+                       country))
 
 
 eu_dates_vec = seq.Date(
-  from = as.Date(min(raw_data$bis_lbs$Date)),
-  to = as.Date(max(raw_data$bis_lbs$Date)),
+  from = as.Date(min(raw_data$bis_lbs$date)),
+  to = as.Date(max(raw_data$bis_lbs$date)),
   by = "year") %>%
   format(.,"%Y")
 
@@ -126,8 +122,7 @@ rm(eu_df, eu_dates_vec)
 
 ```
 
-
-```{r Import_raw_data_common_language}
+```{r Import_raw_data_common_language, eval=FALSE}
 
 raw_data$geodist = import.geodist.data() %>%
   filter(Country %in% countries_list$oecd_countries) %>%
@@ -142,23 +137,9 @@ raw_data$geodist = import.geodist.data() %>%
 
 ```
 
-```{r Import_raw_data_IMF}
+```{r Import_raw_data_IMF, eval=FALSE}
 
 raw_data$trade = import.imf.trade.data()
-
-```
-
-
-```{r Import_raw_data_trilemma}
-
-raw_data$trilemma_data = import.trilemma.ind()
-
-```
-
-
-```{r Import_fin_dev_data}
-
-raw_data$fin_dev_data = import.fin.dev.ind()
 
 ```
 

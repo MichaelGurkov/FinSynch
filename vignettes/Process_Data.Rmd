@@ -16,125 +16,26 @@ fin_synch_df = preprocess_synch_df(cycles_df)
 
 ```
 
+```{r banking_linkages}
 
-```{r add_trilemma_data}
-
-country_df = left_join(country_df, raw_data$trilemma_data,
-                       by = c("Country","Date"))
+bank_link = preprocess_lbs_data(raw_data)
 
 ```
 
+```{r crises_dates}
 
-```{r Import_fin_development_data}
-
-country_df = left_join(country_df, raw_data$fin_dev_data,
-                       by = c("Country","Date"))
-
-
+crises_df = prepocess_crisis_dates(raw_data)
 
 ```
 
+```{r trade_linkages}
 
-<!-- Construct Country pair level data frame -->
-
-
-```{r make_bank_and_trade_gdp_df}
-
-bank_gdp = preprocess_lbs_data(raw_data)
-
-trade_gdp = preprocess_imf_trade_data(raw_data)
-
+trade_link = preprocess_imf_trade_data(raw_data)
 
 ```
 
+```{r financial_development}
 
-```{r make_indicators_list}
-
-ind_list = list()
-
-ind_list$EU_both = raw_data$EU_both
-
-ind_list$EU_one =  raw_data$EU_one
-
-ind_list$Euro_both =  raw_data$Euro_both
-
-ind_list$Euro_one = raw_data$Euro_one
-
-
-```
-
-
-```{r country_pair_df_add_crises_indicator}
-
-country_pair_crises_df = prepocess_crisis_dates(raw_data)
-
-
-```
-
-
-```{r country_pair_df_add_eu_indicators}
-
-country_pair_df = country_pair_df %>%
-  left_join(.,raw_data$EU_both,
-            by = c("Date","CountryPair"))
-
-country_pair_df = country_pair_df %>%
-  left_join(.,raw_data$Euro_both,
-            by = c("Date","CountryPair"))
-
-```
-
-
-```{r country_pair_df_add_geodist}
-
-country_pair_df = country_pair_df %>%
-  left_join(.,raw_data$geodist %>%
-              select(CountryPair, comlang_ethno) %>%
-              rename(Common_Lang = comlang_ethno) %>%
-              distinct(), by = "CountryPair")
-```
-
-
-```{r country_pair_df_add_controls}
-
-controls =  c("FX_stab","MI_ind","FO_ind","FD","GDP_real")
-
-country_pair_df = append.countrypair.dataframe(
-  country_pair_df,
-  country_df %>%
-    select(Date,Country,all_of(controls)) %>%
-    mutate(GDP_real = log(GDP_real))) %>%
-  collapse_pair_controls(controls,collapse_funcs = "sum")
-
-rm(controls)
-
-
-```
-
-
-<!-- Construct regression dataset -->
-
-```{r make_fin_df}
-
-fin_reg_df = list(country_pair_df,
-                  get.neg.abs.diff(country_df[, c("Date","Country",
-                                                  "Fin_ret")]) %>%
-                    rename(Fin_synch = Fin_ret)) %>%
-  reduce(left_join, by = c("CountryPair","Date")) %>%
-  group_by(CountryPair) %>%
-  mutate(Time_Trend = seq_along(Date)) %>%
-  ungroup() %>%
-  mutate(Fin_synch = 100 * Fin_synch)
-
-
-#Filter outliers
-
-fin_reg_df = fin_reg_df %>% 
-  filter(bank_gdp >= quantile(bank_gdp,0.05) &
-           bank_gdp <= quantile(bank_gdp,0.99))
-
-fin_reg_df = fin_reg_df %>% 
-  filter(Date < 2018)
 
 
 ```
