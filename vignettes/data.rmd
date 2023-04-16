@@ -1,0 +1,66 @@
+
+\subsection{Bank linkages}
+
+I use data on bilateral cross-border bank positions gathered from the Bank for International Settlements (BIS) data on the residence-based locational banking statistics (LBS). The LBS details at the country level, the geographical composition of banks’ balance sheets and capture outstanding claims and liabilities of banking offices located in the BIS reporting countries, including intragroup positions, and excludes local claims of foreign branches and subsidiaries. 
+
+The BIS statistics have possibly the most extensive time coverage of all similar databases on cross-border investment holdings (as a comparison to the IMF CPIS database that reports bilateral cross-border financial flows and stocks after 1999). The main limitation of the data set is that it reports the aggregate international exposure only of the banking system. Yet, cross-border banking activities continue to be a very significant component of cross-border investment. As long as there is a high correlation between international banking and other forms of portfolio investment (equity flows, FDI, and debt flows), my estimates will not be systematically biased. The BIS data are expressed originally in current US dollars (millions). I convert the data into constant US dollars by deflating the series with the US Consumer Price Index (CPI). Then I use the total stock of external assets and liabilities to construct a quantity-based measure of financial integration.\footnote {Stocks seem to be a better measurements than flows for financial integration, see Prasad et al. (2003)} Following @Kalemli-Ozcan2013JF,
+my main measure is the average of (the logs of) real bilateral asset and liability holdings as a share of the two countries’ GDP.
+
+\begin{equation}
+	B_{i,j,t} = \frac{1}{4} \bigg[
+	ln\left(\frac{A_{i,j,t}}{G_{i,t} + 
+		G_{j,t}}\right)  + ln\left(\frac{L_{i,j,t}}{G_{i,t} + 
+		G_{j,t}}\right)  + \\ ln\left(\frac{A_{j,i,t}}{G_{i,t} +
+		G_{j,t}}\right)  + ln\left(\frac{L_{j,i,t}}{G_{i,t} +
+		G_{j}}\right) \bigg]
+\end{equation}
+	
+
+where:
+\newline
+$B_{i,j,t}$ - bank linkages between bank $i$ and bank $j$ in year $t$
+\newline
+$A_{i,j,t}$ - total assets of banks in country $i$ in country $j$ in year $t$
+\newline
+$L_{i,j,t}$ - total liabilities of banks in country $j$ in country $i$ in year $t$
+\newline
+$G_{i,t}$ - gross domestic product of country $i$ in year $t$
+\newline
+
+
+This measure captures the financial integration between two countries at an annual frequency. An increase in bank linkages means that more capital is moving between the countries.
+
+\subsection{Financial cycles synchronization}
+
+Credit and asset prices are considered the most fundamental components of the financial cycle and are extensively used in the literature (@Drehmann2012, @Grinderslev2017). @Borio2014 argues that the most parsimonious description of the financial cycle can be made in terms of credit and property prices. @Rey2015 and @MirandaRey2015 expand the definition of the financial cycle to include both home and share prices. Following this literature, I use total credit and assets (property and share) price data to estimate the financial cycle. Importantly, total credit accounts for credit from all sources, namely credit from financial accounts, domestic bank credit, and cross-border bank credit are the three main building blocks underlying the construction of the total credit series. The credit data come from the BIS database while property and share prices come from OECD database.
+
+
+I calculate the logarithmic change of each variable and then take a simple average to obtain the growth of the financial cycle. 
+
+\begin{equation*}
+R_{i,t} = \frac{1}{3} \cdot ln \left(  \frac{C_{i,t}}{C_{i,t-1}} \right) 
++\frac{1}{3} \cdot ln\left( \frac{H_{i,t}}{H_{i,t-1}} \right) 
++\frac{1}{3} \cdot ln\left( \frac{S_{i,t}}{S_{i,t-1}} \right)
+\end{equation*}    
+
+where:
+\newline
+$C_{t}$ -  total credit to private sector in year $t$.
+\newline
+$H_{t}$ -  index of prices of residential property in country $i$ in year $t$.
+\newline
+$S_{t}$ -  index of common shares traded in country $i$ in year $t$.
+\newline
+$i,j$ - country index
+
+
+As a measure of synchronization of financial cycles, I use the negative of divergence in growth rates defined as the absolute value of financial cycle growth differences between country \textit{i} and country \textit{j} in period \textit{t}.
+
+\begin{equation}
+FinSynch_{i,j,i} = -\lvert R_{i,t}  - R_{j,t} \rvert
+\end{equation}
+
+
+
+This index is simple and quite popular (@Kalemli-Ozcan2013, @Giannone2010). In contrast to the correlation measures, it is not sensitive to the various filtering methods that have been criticized on many grounds (e.g.,@Canova1998).
+It also does not contain an estimation error that emerges, for example, from self-selecting a rolling estimating window. Nevertheless, in order to test the robustness of the results in Section \ref{Robust}, I use a rolling (`r roll_cor_len` year) correlation as the synchronization measure. The results are similar to the main results of the paper. 

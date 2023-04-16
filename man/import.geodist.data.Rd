@@ -6,7 +6,7 @@
 \usage{
 import.geodist.data(
   filepath = paste0(file.path(Sys.getenv("USERPROFILE"), fsep = "\\\\"),
-    "\\\\Documents\\\\Data\\\\CEPII\\\\", "dist_cepii.xls")
+    "\\\\OneDrive - Bank Of Israel\\\\Data\\\\CEPII\\\\", "dist_cepii.xls")
 )
 }
 \description{

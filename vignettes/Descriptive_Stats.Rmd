@@ -2,9 +2,21 @@
 
 ```{r define_fig_captions}
 
-country_pairs = length(unique(fin_reg_df$CountryPair))
+country_pairs = length(unique(country_pair_df$country_pair))
 
-countries = length(unique(country_df$Country))
+countries = map(c("gdp_constant","trilemma_ind"),
+                function(temp_name){
+
+  temp_col = raw_data %>% 
+    pluck(temp_name) %>% 
+    select(country) %>% 
+    distinct()
+  
+  return(temp_col)
+  
+}) %>% 
+  reduce(inner_join, by = "country") %>% 
+  nrow()
 
 bank_gdp_cap = paste0(
   "Cross-border bank claims over time. ",
@@ -36,23 +48,20 @@ avg_cycle_synch_cap = paste0(
 
 
 Summary statistics of the data are presented in Table \ref{summary_table}.
-The sample includes `r format(nrow(fin_reg_df),big.mark = ",")` country pair-year observations for `r paste(range(fin_reg_df$Date), collapse = " - ")` period. The average divergence in financial cycle growth over the sample period is `r round(mean(fin_reg_df$Fin_synch, na.rm = TRUE),2)` (Fin cycles synch), with significant variation (the standard deviation is `r round(sd(fin_reg_df$Fin_synch, na.rm = TRUE),2)`). Banking linkages are characterized by similiar average level (`r round(mean(fin_reg_df$bank_gdp),2)`) with much smaller variation (the stadandard deviation is `r round(sd(fin_reg_df$bank_gdp),2)`).
-About `r format(mean(fin_reg_df$Crises) * 100,digits = 3)` percent of the observations in the sample refer to crisis periods (where at least one country in the country pair undergoes a financial crisis during this year).
+The sample includes `r format(nrow(country_pair_df),big.mark = ",")` country pair-year observations for `r paste(range(country_pair_df$year), collapse = " - ")` period. The average divergence in financial cycle growth over the sample period is `r round(mean(country_pair_df$fin_synch, na.rm = TRUE),2)` (Fin cycles synch), with significant variation (the standard deviation is `r round(sd(country_pair_df$fin_synch, na.rm = TRUE),2)`). Banking linkages are characterized by similar average level (`r round(mean(country_pair_df$bank_gdp),2)`) with much smaller variation (the standard deviation is `r round(sd(country_pair_df$bank_gdp),2)`).
+About `r format(mean(country_pair_df$crisis_ind) * 100,digits = 3)` percent of the observations in the sample refer to crisis periods (where at least one country in the country pair undergoes a financial crisis during this year).
 
 ```{r countrypair_table_summary, include=FALSE}
 
-desc_df = fin_reg_df %>%
-  select(Fin_synch, bank_gdp, Crises,FD_tot,trade_gdp, FX_stab_tot,
-         FO_ind_tot,GDP_real_tot) %>% 
-  mutate(Fin_synch = if_else(Fin_synch == max(Fin_synch),
-                             0, Fin_synch)) %>%
-  rename(`Financial synchronization` = Fin_synch,
+desc_df = country_pair_df %>%
+  rename(`Financial synchronization` = fin_synch,
          `Banking linkages` = bank_gdp,
-         FD = FD_tot,
+         Crises = crisis_ind, 
+         FD = fd_ind,
          `Trade linkages` = trade_gdp,
-         `FX stability` = FX_stab_tot,
-         `Financial openness` = FO_ind_tot,
-         `GDP total` = GDP_real_tot) %>% 
+         `FX stability` = fx_stab,
+         `Financial openness` = fo_ind,
+         `GDP total` = gdp_usd) %>% 
     as.data.frame()
 
 star = stargazer(desc_df,
@@ -113,20 +122,21 @@ Figure \ref{plot_bank_gdp} shows the average cross-border (bilateral) bank linka
 
 ```{r plot_bank_gdp,fig.cap=bank_gdp_cap,fig.height=5}
 
+bank_plot_df = country_pair_df %>%
+  select(year, bank_gdp) %>%
+  group_by(year) %>%
+  summarise(avg_bank = mean(bank_gdp,
+                            na.rm = TRUE),
+            .groups = "drop") %>%
+  filter(complete.cases(.))
+
 ggplot() + 
   labs(title = "Average bank linkages \n (real, normalized by gdp)",
        y = "", x = "") + 
-  geom_line(fin_reg_df %>% 
-              select(Date, bank_gdp) %>% 
-              group_by(Date) %>% 
-              summarise(Avg_bank = mean(bank_gdp,
-                                        na.rm = TRUE)) %>% 
-              ungroup() %>% 
-              filter(complete.cases(.)),
-            mapping = aes(x = Date, y = Avg_bank, group = 1)) + 
-  geom_rect(data = raw_data$crises_df %>% 
-              select(Start,End),
-            mapping = aes(xmin = Start,xmax = End,
+  geom_line(data = bank_plot_df,
+            mapping = aes(x = year, y = avg_bank, group = 1)) + 
+  geom_rect(data = raw_data$crises_df,
+            mapping = aes(xmin = start_year,xmax = end_year,
                           ymin = -Inf, ymax = Inf),
             fill = "lightgray", alpha = 0.1) +
   theme_bw() + 
@@ -135,42 +145,23 @@ ggplot() +
         plot.title = element_text(hjust = 0.5),
         axis.title.x = element_blank())
 
-
-```
-
-
-```{r plot_bank_gdp_strata,fig.cap=bank_gdp_strata_cap,fig.height=3, eval=FALSE}
-
-ggplot(fin_reg_df %>% 
-         mutate(FSAP = as.numeric(CountryPair %in% countries_list$fsap_countries_pairs)) %>% 
-         group_by(Date,FSAP) %>% 
-         summarise(avg_bank_gdp = mean(bank_gdp)),
-       aes(x = Date, y = avg_bank_gdp, group = 1)) + 
-  geom_line() + 
-  labs(y = "", x = "") + 
-  theme_bw() + 
-  labs(title = "Bank linkages by country groups") + 
-  theme(axis.ticks = element_blank(),
-        axis.text = element_blank(),
-        panel.grid = element_blank(), plot.title = element_text(hjust = 0.5)) + 
-  facet_grid(~FSAP)
+rm(bank_plot_df)
 
 ```
 
 
 ```{r plot_average_cycle_synch,fig.cap=avg_cycle_synch_cap,fig.pos="H"}
 
-ggplot(fin_reg_df %>% 
-         select(Date, Fin_synch) %>% 
-         group_by(Date) %>% 
-         summarise(Avg_Fin_synch = mean(Fin_synch, na.rm = TRUE)) %>% 
-         ungroup() %>% 
+ggplot(country_pair_df %>% 
+         select(year, fin_synch) %>% 
+         group_by(year) %>% 
+         summarise(avg_fin_synch = mean(fin_synch, na.rm = TRUE),
+                   .groups = "drop") %>% 
          filter(complete.cases(.)) %>% 
-         filter(is.finite(Avg_Fin_synch)),
-       aes(x = Date, y = Avg_Fin_synch, group = 1)) + 
+         filter(is.finite(avg_fin_synch)),
+       aes(x = year, y = avg_fin_synch, group = 1)) + 
   labs(title = "Average financial cycle synchronization",y = "", x = "") + 
   geom_line() + 
-  theme_bw() + 
   theme(axis.text.x = element_text(angle = 45, vjust = 0, size = 7),
         legend.position = "bottom", plot.title = element_text(hjust = 0.5))
 
@@ -179,50 +170,4 @@ ggplot(fin_reg_df %>%
 
 
 Figure \ref{plot_Fin_synch} shows the average synchronization (measured as the difference between credit and home price growth rates for each country pair). The synchronization seems to be quite volatile with no specific trend until 2007 - 2008 (the Great Financial Crisis) and trending upward since. 
-
-
-
-<!-- Correlations -->
-
-```{r plot_correlations, eval=FALSE}
-
-ggplot(country_df %>% 
-  select(Country,Total_Credit_real_ret, HousePrice_real_ret) %>% 
-  group_by(Country) %>% 
-  summarise(Cor = cor(Total_Credit_real_ret, HousePrice_real_ret)),
-  aes(x = reorder(Country, Cor), y = Cor)) + 
-  geom_bar(stat = "identity") + 
-  labs(x = "", y = "",
-       title = "Correlation between credit and house growth rates") + 
-  coord_flip() + 
-  theme_bw() + 
-  theme(plot.title = element_text(hjust = 0.5))
-
-
-ggplot(country_df %>% 
-  select(Country,Total_Credit_real_ret, SharePrice_real_ret) %>% 
-  group_by(Country) %>% 
-  summarise(Cor = cor(Total_Credit_real_ret, SharePrice_real_ret)),
-  aes(x = reorder(Country, Cor), y = Cor)) + 
-  geom_bar(stat = "identity") + 
-  labs(x = "", y = "",
-       title = "Correlation between credit and share growth rates") + 
-  coord_flip() + 
-  theme_bw() + 
-  theme(plot.title = element_text(hjust = 0.5))
-
-
-ggplot(country_df %>% 
-  select(Country,HousePrice_real_ret, SharePrice_real_ret) %>% 
-  group_by(Country) %>% 
-  summarise(Cor = cor(HousePrice_real_ret, SharePrice_real_ret)),
-  aes(x = reorder(Country, Cor), y = Cor)) + 
-  geom_bar(stat = "identity") + 
-  labs(x = "", y = "",
-       title = "Correlation between house and share growth rates") + 
-  coord_flip() + 
-  theme_bw() + 
-  theme(plot.title = element_text(hjust = 0.5))
-
-```
 

@@ -1,0 +1,38 @@
+
+The baseline specification (following along the lines of @Kalemli-Ozcan2013JF) is
+
+\begin{equation}
+FinSynch_{i,j,t} = \alpha_{i,j} + \delta_{t} + \beta BankLinkages_{i,j,t-1} + Controls_{i,j,t} + \varepsilon_{i,j,t}
+\end{equation}
+
+where:
+\newline
+$FinSynch$ - a measure of synchronization of financial cycles.
+\newline
+$BankLinkages$ - a measure of banking integration between two countries.
+
+This specification includes time and country pair fixed effect to control for unobservable time and country pair specific factors (such as cultural difference or turmoil years). The time fixed effects account for the effect of global shocks and other common time varying factors that affect both financial cycle patterns and banking integration. The country pair effects account for hard to measure factors such as cultural ties and similarities, informational frictions, and other time invariant unobservable factors that affect both financial integration and financial cycle patterns. To account for the trend and the non-stationary nature of banking integration (see Figure \ref{plot_bank_gdp}), I add a country pair specific linear time trend\footnote{I choose a linear trend for reasons of simplicity and comparability with Kalemli-Ozcan, Papaioannou, and Peydro (2013); see Bouvatier, Vincent and Delatte and Anne-Laure (2015) for use of trends in banking integration measures.}. It should be noted that it may be the case that the trend picks up the effect of some other omitted variable. Since I'm only interested in estimating the bank linkage effect in the regression (as opposed to explicitly modeling all the factors that affect financial synchronization), controlling for other variables (trend or another omitted variable) seems required.
+
+
+The estimation results can be subject to an endogeneity problem for reasons of omitting relevant variables or reverse causality. In order to address this issue, I take several steps: first, the specified regression is augmented with a set of variables to control for other economic factors that can affect both financial cycle synchronization and banking integration. As control variables I use measures of foreign exchange stability, and financial (capital account) openness (see @Chinn2010). I also include trading linkages to control for cross-country trading activity.\footnote{All the variables are explained in the Appendix.} Second, bank linkages enter in my specification in a lagged form, which should attenuate the reverse causality problem.
+
+
+\subsection{Crisis effect}
+Several papers (see @Kalemli-Ozcan2013, @Aysun2019, and @Fratzscher2012) find that during financial crises times the effect of global ("push") factors in cross-border bank lending increases. If during financial crises times common (global) shocks are prevalent, that should induce more synchronized financial cycles. That means that the crisis effect should be positive and the "shock propagator" role of banking integration should increase during crisis times. @Stremmel2015 analyze financial cycles of 21 EU economies and find that during stress periods the similarity of financial cycles increases.
+
+To test the role of crises I introduce an indicator variable for a bank crisis period. The indicator equals 1 if at least one country of the country pair is going through banking crises at period \textit{t}. The data comes from an updated version of @Laeven2013 and includes the start and end year of banking crises in the OECD countries for the entire sample period. I expect that the effect of banking integration will be different in crises vs normal times and to capture this difference I add an interaction variable between bank linkages and crisis indicator to the estimation equation.
+
+
+
+\subsection{Financial development}
+
+@Mendoza2009 study the relationship between financial development and global imbalances. The authors show that financial development varies widely even among industrial countries, and that financial integration can have different effects when countries differ in financial markets development. Countries with deeper financial markets react to financial integration by borrowing from abroad and investing in high return foreign risky assets while countries that are less financially developed accumulate positions in safer assets.
+
+@Bahadir2015 show that financial development convergence takes place. Countries with a high level of financial development exhibit lower credit growth rates in comparison to countries with a low level of financial development. @Kil2017 confirm the financial development convergence for 15 EU countries. They find that both credit and stock markets exhibit convergence, meaning that growth rates of these markets decrease at high levels of development. 
+
+@Fisman2004 analyze the role of financial development in allocating resources. They argue that global (productivity) shocks will induce comovement of growth rates among countries with a high level of financial development, since undeveloped countries will not be able to react to the shocks of other countries. Thus, financial development at a high level can transmit global shocks and induce comovement in economic activity.
+
+I hypothesize that this phenomenon (comovement induced by a high level of financial development) holds with respect to financial activity as well. An example is given in @Acharya2010. The authors analyze an investment strategy of large commercial banks that set up asset-backed commercial paper (ABCP) conduits. This strategy involved selling to investors short-term asset-backed commercial paper and investing the proceeds mainly in US asset-backed longer-term securities. Once negative news about US assets emerged, all the banks suffered significant losses, thus inducing comovement. This investment strategy required a highly developed domestic financial market (financing through commercial paper instruments), and it is not surprising that the list of countries whose banks were pursuing this strategy includes the US, UK, Germany, France, Belgium, and Portugal - highly developed countries.
+
+To account for the fact that the effect of financial integration depends on the level of domestic financial development, I include an index of financial development (the sum of the financial development index of each country in the country pair) and an interaction term between financial development and banking integration. Data on financial development index comes from @Sviry2016 and includes an index of financial development of all the countries in my sample for `r paste(range(country_pair_df$year[!is.na(country_pair_df$fd_ind)]), collapse = " - ")` period.
+

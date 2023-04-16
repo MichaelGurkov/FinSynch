@@ -6,7 +6,7 @@
 \usage{
 import.wgi.ind(
   filepath = paste0(file.path(Sys.getenv("USERPROFILE"), fsep = "\\\\"),
-    "\\\\Documents\\\\Data\\\\World Bank\\\\WGIData.csv"),
+    "\\\\OneDrive - Bank Of Israel\\\\Data\\\\World Bank\\\\WGIData.csv"),
   countries_vec = NULL
 )
 }

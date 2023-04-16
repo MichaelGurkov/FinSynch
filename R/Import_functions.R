@@ -486,7 +486,7 @@ get_lbs_data = function(countries_df = NULL){
 
   }
 
-  file_path = paste0("C:\\Users\\Home",
+  file_path = paste0(Sys.getenv("USERPROFILE"),
                      "\\OneDrive - Bank Of Israel",
                      "\\Data\\BIS\\international_banking",
                      "\\WS_LBS_D_PUB_csv_col.csv")
@@ -563,7 +563,7 @@ get_us_cpi = function(){
 
 get_total_credit_data = function(){
 
-  file_path = paste0("C:\\Users\\Home",
+  file_path = paste0(Sys.getenv("USERPROFILE"),
                      "\\OneDrive - Bank Of Israel\\Data",
                      "\\BIS\\credit\\WS_TC_csv_col.csv")
 
@@ -707,14 +707,6 @@ get_fin_crises_data_Lavaen = function(file_path = NULL){
 
   fin_crises_df = fin_crises_df %>%
     inner_join(countries_df, by = "country")
-
-  fin_crises_df = fin_crises_df %>%
-    mutate(year = map2(start_year, end_year,
-                           .f = function(start_year, end_year)
-                             {seq(start_year, end_year)})) %>%
-    select(-c("start_year", "end_year")) %>%
-    unnest(year) %>%
-    mutate(crisis_ind = 1)
 
 
   return(fin_crises_df)

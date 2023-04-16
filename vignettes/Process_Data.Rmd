@@ -24,7 +24,7 @@ bank_link = preprocess_lbs_data(raw_data)
 
 ```{r crises_dates}
 
-crises_df = prepocess_crisis_dates(raw_data)
+crises_df = preprocess_crisis_dates(raw_data)
 
 ```
 
@@ -36,7 +36,7 @@ trade_link = preprocess_imf_trade_data(raw_data)
 
 ```{r financial_development}
 
-fin_dev_df - preprocess_fin_dev(raw_data)
+fin_dev_df = preprocess_fin_dev(raw_data)
 
 ```
 
@@ -45,3 +45,20 @@ fin_dev_df - preprocess_fin_dev(raw_data)
 controls_df = preprocess_controls(raw_data)
 
 ```
+
+```{r join_to_country_pair_df}
+
+country_pair_df = list(fin_synch_df, bank_link, trade_link,
+                       crises_df,fin_dev_df, controls_df) %>% 
+  reduce(full_join, by = c("country_pair","year")) %>% 
+  mutate(crisis_ind = replace_na(crisis_ind,0))
+
+country_pair_df = country_pair_df %>% 
+  filter(complete.cases(.)) %>% 
+  filter(is.finite(trade_gdp)) %>% 
+  mutate(gdp_usd = gdp_usd * 10 ^ -6)
+
+# rm(list = ls()[!ls()%in% c("country_pair_df","raw_data")])
+
+```
+

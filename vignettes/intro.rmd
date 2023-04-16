@@ -1,0 +1,27 @@
+<!-- What do you do -->
+
+This work analyzes the relationship between financial integration and financial cycles synchronization. Financial integration refers to the linkage of different financial markets, while financial cycles synchronization refers to the comovement of the main components of the financial cycle (credit, home and share prices). I identify the 
+synchronization between cross-border banking flows of 30 OECD countries,
+and find that the level of the synchronization generally decreases with
+the increase in banking linkages between the countries.
+
+<!-- Why is it important -->
+The theory provides ambiguous predictions regarding the effect of financial integration on financial cycles synchronization. Financial integration can help diversify risk, redirect capital to more profitable investment opportunities and act as a country-specific "shock absorber" [@Kose2009]. In that case, the association between banking integration and financial synchronization should be negative. In contrast banking integration can induce contagion effects and act as a global "shock propagator" [@Degryse2010; @Popov2012]. In that case, a positive association should be observed. This paper examines which effect dominates by studying the connection between banking integration and financial cycles synchronization.
+
+<!-- How do you do it (methodology) -->
+
+A recent line of research studies the relationship between business synchronization and financial integration. For example, @Kalemli-Ozcan2013JF find that output synchronization is negatively affected by financial integration. The authors explain the connection as follows: if a country is hit with a negative productivity shock, global banks will reduce credit to that country and increase credit to another country, thus, exacerbating the negative output effect in the former country and facilitating positive output effect in the latter. This paper tests whether the same mechanism applies to financial synchronization. To this end, I follow the methodology suggested by @Kalemli-Ozcan2013JF. Specifically, I use their measures of cycles synchronization and banking linkages and run a panel regression controlling for common and time invariant unobservable factors. I also control for other economic factors that can affect both financial cycles synchronization and banking integration. Since the theory is ambiguous on the issue of the effect of banking integration
+on financial synchronization, the question becomes an empirical one. The theory does provide
+predictions with respect to the direction of the association between cycles synchronization and banking linkages in more specific setups, such as during financial crises as well as in highly developed markets. I analyze those setups in addition to a baseline analysis.
+
+<!-- What do you find -->
+I find evidence that financial integration is negatively associated with cycles synchronization, thus on average it acts as a shock absorber. However, the results show that the relationship is state-dependent: I find that during financial crises financial integration is associated with more synchronized financial cycles relative to normal times, indicating that during crises synchronization propagates shocks. In a highly developed financial market, integration is also associated with more synchronized cycles relative to a low level of financial development. 
+
+<!-- Contribution and policy implications -->
+
+This paper contributes to the literature in several ways: first, I contribute to the literature on financial cycles by identifying the situations in which financial cycles become more synchronized. Second, I contribute to the strand of literature that studies financial integration. The literature stresses that financial integration can function as "shock absorber" or "shock propagator", I identify the conditions that characterize each of the effects.
+
+<!-- paper outline -->
+
+The paper is structured as follows. In Section \ref{LitReview}, I review the relevant literature and theoretical considerations. Section \ref{Data} provides a description of the data. Empirical specifications are formulated in Section \ref{EmpSpec}.  Estimation results are presented in section \ref{results} and robustness tests in Section \ref{Robust}. Section \ref{conclusions} concludes the paper.
+

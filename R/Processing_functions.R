@@ -31,7 +31,7 @@ preprocess_lbs_data = function(raw_data){
     mutate(gdp_sum = gdp_usd_reporting + gdp_usd_counterparty) %>%
     mutate(balance_gdp = balance_real / gdp_sum) %>%
     group_by(country_pair, year) %>%
-    summarise(balance_gdp = mean(log(balance_gdp)), .groups = "drop")
+    summarise(bank_gdp = mean(log(balance_gdp)), .groups = "drop")
 
   return(lbs_processed)
 
@@ -75,9 +75,9 @@ preprocess_imf_trade_data = function(raw_data){
 
   trade_df_processed = trade_df_normalized %>%
     mutate(gdp_sum = gdp_usd_reporting + gdp_usd_counterparty) %>%
-    mutate(total_trade_gdp = total_trade / gdp_sum) %>%
+    mutate(trade_gdp = total_trade / gdp_sum) %>%
     group_by(country_pair, year) %>%
-    summarise(total_trade_gdp = mean(log(total_trade_gdp)), .groups = "drop")
+    summarise(trade_gdp = mean(log(trade_gdp)), .groups = "drop")
 
   return(trade_df_processed)
 
@@ -176,9 +176,17 @@ preprocess_synch_df = function(cycles_df){
 
 #' This function classifies crisis period in countrypairs
 #'
-prepocess_crisis_dates = function(raw_data){
+preprocess_crisis_dates = function(raw_data){
 
   crises_df = raw_data$crises_df
+
+  crises_df = crises_df %>%
+    mutate(year = map2(start_year, end_year,
+                       .f = function(start_year, end_year)
+                       {seq(start_year, end_year)})) %>%
+    select(-c("start_year", "end_year")) %>%
+    unnest(year) %>%
+    mutate(crisis_ind = 1)
 
   crises_country_pair_df = crises_df %>%
     distinct() %>%
@@ -196,8 +204,10 @@ prepocess_crisis_dates = function(raw_data){
     left_join(crises_df, by = c("counter_country" = "country","year"),
               suffix = c("_country","_counter")) %>%
     mutate(across(starts_with("crisis_ind"), ~replace_na(.,0))) %>%
-    mutate(crisis_ind = map2_dbl(crisis_ind_country,crisis_ind_counter, max)) %>%
-    select("country_pair", "year", "crisis_ind")
+    mutate(crisis_ind = map2_dbl(crisis_ind_country,
+                                 crisis_ind_counter, max)) %>%
+    select("country_pair", "year", "crisis_ind") %>%
+    mutate(year = as.character(year))
 
   return(crises_country_pair_df)
 
@@ -229,8 +239,10 @@ preprocess_fin_dev = function(raw_data, countries_df = NULL){
     left_join(fin_dev_df, by = c("country","date")) %>%
     left_join(fin_dev_df, by = c("counter_country" = "country","date"),
               suffix = c("_country","_counter")) %>%
-    mutate(fd = FD_country + FD_counter) %>%
-    select(country,counter_country,date,fd)
+    mutate(fd_ind = FD_country + FD_counter) %>%
+    mutate(country_pair = paste_country_pair(country,counter_country)) %>%
+    select(country_pair,year = date,fd_ind) %>%
+
 
   return(country_pair_fin_df)
 
@@ -285,9 +297,8 @@ preprocess_controls = function(raw_data, countries_df = NULL){
 
   controls_df = list(country_pair_trilemma_df,
                      country_pair_gdp_df) %>%
-    reduce(full_join, by = c("country_pair","date"))
-
-
+    reduce(full_join, by = c("country_pair","date")) %>%
+    rename(year = date)
 
   return(controls_df)
 

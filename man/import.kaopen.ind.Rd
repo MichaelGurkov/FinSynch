@@ -6,7 +6,7 @@
 \usage{
 import.kaopen.ind(
   filepath = paste0(file.path(Sys.getenv("USERPROFILE"), fsep = "\\\\"),
-    "\\\\Documents\\\\Data\\\\Chin-Ito\\\\kaopen_2016.xls"),
+    "\\\\OneDrive - Bank Of Israel\\\\Data\\\\Chin-Ito\\\\kaopen_2016.xls"),
   countries_vec = NULL
 )
 }
