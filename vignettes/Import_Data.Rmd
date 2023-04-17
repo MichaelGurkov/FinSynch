@@ -34,14 +34,14 @@ raw_data$gdp_constant = get_wdi_gdp(
   )
 )
 
-# raw_data$gdp_current = get_wdi_gdp(
-#   paste0(
-#     Sys.getenv("USERPROFILE"),
-#     "\\OneDrive - Bank Of Israel\\Data",
-#     "\\World Bank\\gdp",
-#     "\\current_gdp.csv"
-#   )
-# )
+raw_data$gdp_current = get_wdi_gdp(
+  paste0(
+    Sys.getenv("USERPROFILE"),
+    "\\OneDrive - Bank Of Israel\\Data",
+    "\\World Bank\\gdp",
+    "\\current_gdp.csv"
+  )
+)
 
 raw_data$house_price = get_oecd_house_price()
 

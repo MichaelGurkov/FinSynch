@@ -1,64 +1,4 @@
 
-#' This helper function imports BIS cpi data and converts it to tidy format
-#'
-#' @import dplyr
-#'
-#' @export
-#'
-
-
-import.bis.cpi.data = function(filepath = NULL,
-                               annual_freq = TRUE){
-
-  if(is.null(filepath)){filepath = paste0(
-    file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-    "\\OneDrive - Bank Of Israel\\Data\\BIS",
-    "\\WEBSTATS_LONG_",
-    "CPI_DATAFLOW_csv_col.csv")}
-
-
-
-  if(annual_freq){
-
-    my_freq = "Annual"
-
-    my_regex = "^X\\d{4}$"
-
-  } else {
-
-
-    my_freq = "Monthly"
-
-    my_regex = "^X\\d{4}\\.\\d{2}$"
-
-
-  }
-
-
-  cpi = read.csv(filepath)
-
-  cpi = cpi %>%
-    filter(Frequency == my_freq) %>%
-    filter(Unit.of.measure == "Index, 2010 = 100") %>%
-    select(c("Reference.area",
-             na.omit(str_extract(names(.),
-                                 pattern = my_regex)))) %>%
-    rename(Country = Reference.area) %>%
-    gather(.,key = Date,value = US_CPI,-Country) %>%
-    mutate(Country = gsub("\\s","_",Country)) %>%
-    filter(Country == "United_States") %>%
-    mutate(Date = gsub("X","",Date)) %>%
-    filter(!is.na(US_CPI)) %>%
-    select(Date,US_CPI) %>%
-    mutate(US_CPI = US_CPI / 100)
-
-
-  return(cpi)
-
-
-}
-
-
 #' This helper function imports GDP and population data from
 #' WDI  data base
 #'
@@ -228,7 +168,7 @@ import_cross_border_balance = function(filepath = NULL,
 }
 #'
 #'
-#' This function imports indexes of financial trilemma (capital openess)
+#' This function imports indexes of financial trillemma (capital openness)
 #'
 #'  @import readxl
 #'
@@ -267,74 +207,6 @@ get_trilemma_ind = function(file_path = NULL){
 
 }
 
-#'
-#' This function imports macroprudential (Cerutti) data
-#'
-#'  @import readxl
-#'
-#'  @import dplyr
-#'
-
-import.macropru.ind = function(filepath = paste0(
-  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-  "\\Documents",
-  "\\Data\\Cerutti\\prudential_ind_3.xlsx"),
-  countries_vec = NULL){
-
-  temp_df = read_xlsx(filepath, sheet = "Data")
-
-   df = temp_df %>%
-    select(year, country, PruC, PruC2) %>%
-    rename(Country = country) %>%
-    mutate(Country = gsub("\\s","_", Country)) %>%
-    {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec) else .} %>%
-    rename(Date = year) %>%
-    mutate(Date = as.character(Date)) %>%
-    group_by(Date, Country) %>%
-    summarise_all(.,.funs = list(~max))
-
-
-  return(df)
-
-
-}
-#'
-#'
-#' This function imports capital account openess (Chinn Ito) data
-#'
-#'  @import readxl
-#'
-#'  @import dplyr
-#'
-
-import.kaopen.ind = function(filepath = paste0(
-  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-  "\\OneDrive - Bank Of Israel\\Data\\Chin-Ito\\kaopen_2016.xls"),
-  countries_vec = NULL){
-
-  temp_df = read_xls(filepath)
-
-  df = temp_df %>%
-    select(year, country_name, kaopen, ka_open) %>%
-    rename(Country = country_name) %>%
-    mutate(Country = gsub("\\s","_", Country)) %>%
-    {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec) else .} %>%
-    rename(Date = year) %>%
-    mutate(Date = as.character(Date))
-
-
-  return(df)
-
-
-}
-#'
-#'
-#' This function imports financial development data
-#'
-#'  @import readxl
-#'
-#'  @import dplyr
-#'
 
 get_fin_dev_ind = function(){
 
@@ -589,85 +461,10 @@ get_total_credit_data = function(){
 
   return(tot_credit)
 }
-#'
-#'
-#' This function imports BIS house price data from scratch
-#'
-#' @import dplyr
-#'
-#' @import readr
 
 
-import.bis.property.price.data = function(filepath = paste0(
-  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-  "\\OneDrive - Bank Of Israel\\Data\\BIS\\",
-  "WEBSTATS_SELECTED_PP_DATAFLOW_csv_col.csv"),
-  my_value = "Real",
-  my_measure = "Index, 2010 = 100",
-  countries_vec = NULL){
-
-  raw_df = read_csv(filepath, col_types = cols(), progress = FALSE)
 
 
-  temp_df = raw_df %>%
-    select(-c(grep("^([A-Z]*_*)+$",names(.), value = TRUE),
-              "Time Period", "Frequency"))
-
-
-  # Filter for default values
-
-  filtered_df = temp_df %>%
-    filter(Value %in% my_value) %>%
-    filter(`Unit of measure` %in% my_measure)
-
-  # Subsitute spaces in country names and filter for countries
-
-  filtered_df = filtered_df %>%
-    rename(Country = `Reference area`) %>%
-    mutate(Country = gsub("\\s","_",Country)) %>%
-    {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec)}
-
-
-  selected_df = filtered_df %>%
-    select(-c("Value","Unit of measure"))
-
-  long_df = gather(selected_df,key = Date,value = HousePrice,-Country)
-
-  return(long_df)
-
-}
-#'
-#'
-#' This helper function imports Worldwide Governance Indicators data
-#'
-#' @import readr
-#'
-#' @import dplyr
-#'
-
-import.wgi.ind = function(filepath = paste0(
-  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-  "\\OneDrive - Bank Of Israel\\Data\\World Bank\\WGIData.csv"),
-  countries_vec = NULL){
-
-  temp_df = read_csv(filepath, col_types = NULL)
-
-  df = temp_df %>%
-    select(-`Country Code`,-`Indicator Code`) %>%
-    rename(Country = `Country Name`, Indicator = `Indicator Name`) %>%
-    mutate(Country = gsub("\\s","_", Country)) %>%
-    {if(!is.null(countries_vec)) filter(.,Country %in% countries_vec) else .} %>%
-    select(-X24) %>%
-    gather(.,key = Date,value = Val, -Country,-Indicator)
-
-
-  return(df)
-
-
-}
-#'
-#'
-#' This helper function imports banking crises dates data
 #'
 #' @import readxl
 #'
@@ -715,9 +512,10 @@ get_fin_crises_data_Lavaen = function(file_path = NULL){
 }
 
 
-#' This function imports data from Nguen
+
 #'
-get_fin_crises_data_Nguen = function(file_path = NULL, crisis_category = NULL){
+get_fin_crises_data_Nguen = function(file_path = NULL,
+                                     crisis_category = NULL){
 
   extract_years = function(temp_str){
 
@@ -779,32 +577,6 @@ get_fin_crises_data_Nguen = function(file_path = NULL, crisis_category = NULL){
 }
 
 
-#' This function imports geo dist data from cepii
-#'
-#' @import readxl
-#'
-#' @import dplyr
-#'
-
-import.geodist.data = function(filepath = paste0(
-  file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-  "\\OneDrive - Bank Of Israel\\Data\\CEPII\\",
-  "dist_cepii.xls")){
-
-  df = read_xls(filepath, col_types = c(rep("text",2),
-                                        rep("numeric",12)))
-
-  codes = import.iso.codes()
-
-  df = df %>%
-    left_join(.,codes, by = c("iso_o" = "Code")) %>%
-    left_join(.,codes, by = c("iso_d" = "Code")) %>%
-    select(-iso_o,-iso_d) %>%
-    rename(Country = Country.x) %>%
-    rename(Counter_Country = Country.y)
-
-  return(df)
-}
 #'
 #'
 #' This function imports ISO codes for country names

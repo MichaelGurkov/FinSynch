@@ -5,19 +5,29 @@
 #'
 #' @import lubridate
 
-preprocess_lbs_data = function(raw_data){
+preprocess_lbs_data = function(raw_data, deflate_data = FALSE){
 
   lbs_df = raw_data$bis_lbs
 
-  cpi_df = raw_data$cpi
+  if(deflate_data){
 
-  gdp_df = raw_data$gdp_constant
+    cpi_df = raw_data$cpi
 
-  lbs_deflated = lbs_df %>%
-    left_join(cpi_df, by = "date") %>%
-    mutate(balance_real = balance / us_cpi)
+    gdp_df = raw_data$gdp_constant
 
-  lbs_normalized = lbs_deflated %>%
+    lbs_df = lbs_df %>%
+      left_join(cpi_df, by = "date") %>%
+      mutate(balance = balance / us_cpi)
+
+  } else {
+
+
+    gdp_df = raw_data$gdp_current
+
+  }
+
+
+  lbs_gdp = lbs_df %>%
     filter(quarter(date) == 4) %>%
     mutate(year = as.character(year(date))) %>%
     select(-date) %>%
@@ -27,13 +37,13 @@ preprocess_lbs_data = function(raw_data){
               by = c("counterparty_country" = "country", "year"),
               suffix = c("_reporting","_counterparty"))
 
-  lbs_processed = lbs_normalized %>%
+  lbs_normalized = lbs_gdp %>%
     mutate(gdp_sum = gdp_usd_reporting + gdp_usd_counterparty) %>%
-    mutate(balance_gdp = balance_real / gdp_sum) %>%
+    mutate(bank_gdp = balance / gdp_sum) %>%
     group_by(country_pair, year) %>%
-    summarise(bank_gdp = mean(log(balance_gdp)), .groups = "drop")
+    summarise(bank_gdp = mean(log(bank_gdp)), .groups = "drop")
 
-  return(lbs_processed)
+  return(lbs_normalized)
 
 
 
