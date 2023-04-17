@@ -18,7 +18,7 @@ fin_synch_df = preprocess_synch_df(cycles_df)
 
 ```{r banking_linkages}
 
-bank_link = preprocess_lbs_data(raw_data)
+bank_link = preprocess_lbs_data(raw_data,deflate_data = FALSE)
 
 ```
 
