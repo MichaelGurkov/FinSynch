@@ -49,7 +49,78 @@ library(scales)
 ```
 
 
-```{r params_setup}
+```{r set_output_table_params}
+
+notes_str = paste0(" Financial cycles synchronization",
+                   " is the ",
+                   "negative of the absolute difference of ",
+                   "financial cycle growth between country",
+                   " \\textit{i}",
+                   " and country \\textit{j} in year \\textit{t}. ",
+                   "Bank linkages is the log of total bilateral ",
+                   "cross-border banking claims ",
+                   "as a share of the two countries’ GDP. ",
+                   "Crises is an indicator variable ",
+                   "that equals 1 if at least one country ",
+                   "undergoes ",
+                   "a banking crisis at that year. ",
+                   "FD is the sum of the ",
+                   "level of each country's financial development ",
+                   "index. ",
+                   "Trade linkages is the log of bilateral real exports  ",
+                   "and imports as a share of the two countries’ GDP. ",
+                   "FX stability is a measure of exchange rate stability. ",
+                   "Financial openness is a measure of capital account ",
+                   "openness. ",
+                   "GDP total is the sum of GDP of both countries.")
+
+estimation_table_notes = paste0(
+    "\\parbox[t]{8cm}{",
+    paste0(
+      "The table presents panel estimation that ",
+      "includes two-way fixed effects and country pair ",
+      " specific linear time trend. ",
+      notes_str ,
+      "}"
+    )
+  )
+
+
+temp_names = c(
+  "lag\\(bank_gdp, 1\\)",
+  "crisis_ind",
+  "fd_ind",
+  "lag\\(bank_gdp, 1\\):crisis_ind",
+  "lag\\(bank_gdp, 1\\):fd_ind",
+  "trade_gdp",
+  "fx_stab",
+  "fo_ind",
+  "gdp_usd"
+)
+
+
+temp_labels = c(
+  "Bank linkages (lag)",
+  "Crises",
+  "FD",
+  "Bank linkages (lag) * Crises",
+  "Bank linkages (lag) * FD",
+  "Trade linkages",
+  "FX stability",
+  "Financial openness",
+  "GDP total"
+)
+
+lines_str = list(c("Country pair FE",rep("Yes",3)),
+                           c("Year FE",rep("Yes",3)),
+                           c("Country pair linear trend",rep("Yes",3)))
+
+
+
+```
+
+
+```{r params_setup, eval=FALSE}
 
 countries_list = list(
   oecd_countries = c(
@@ -203,58 +274,7 @@ reg_list = list()
 hyp_test_list = list()
 
 
-control_vars = c("trade_gdp","FX_stab_tot","FO_ind_tot","GDP_real_tot")
 
-
-reg_formula_list = list(
-  baseline = paste(
-    "Fin_synch ~ lag(bank_gdp,1)",
-    paste(control_vars,
-          collapse = "+"),
-    "CountryPair:Time_Trend",
-    sep = "+"
-  ),
-  crises = paste(
-    "Fin_synch ~ lag(bank_gdp,1) * Crises",
-    paste(control_vars,
-          collapse = "+"),
-    "CountryPair:Time_Trend",
-    sep = "+"
-  ),
-  full_spec = paste(
-    "Fin_synch ~ lag(bank_gdp,1) * Crises",
-    "lag(bank_gdp,1) * FD_tot",
-    paste(control_vars,
-          collapse = "+"),
-    "CountryPair:Time_Trend",
-    sep = "+"
-  )
-)
-
-temp_names = c(
-  "lag\\(bank_gdp, 1\\)",
-  "Crises",
-  "FD_tot",
-  "lag\\(bank_gdp, 1\\):Crises",
-  "lag\\(bank_gdp, 1\\):FD_tot",
-  "trade_gdp",
-  "FX_stab_tot",
-  "FO_ind_tot",
-  "GDP_real_tot"
-)
-
-
-temp_labels = c(
-  "Bank linkages (lag)",
-  "Crises",
-  "FD",
-  "Bank linkages (lag) * Crises",
-  "Bank linkages (lag) * FD",
-  "Trade linkages",
-  "FX stability",
-  "Financial openness",
-  "GDP total"
-)
 
 
 temp_names_lag = c("lag\\(bank_gdp, 1\\)",
@@ -268,28 +288,6 @@ temp_names_lag = c("lag\\(bank_gdp, 1\\)",
 
 
 
-notes_str = paste0(" Financial cycles synchronization",
-                   " is the ",
-                   "negative of the absolute difference of ",
-                   "financial cycle growth between country",
-                   " \\textit{i}",
-                   " and country \\textit{j} in year \\textit{t}. ",
-                   "Bank linkages is the log of total bilateral ",
-                   "cross-border banking claims ",
-                   "as a share of the two countries’ GDP. ",
-                   "Crises is an indicator variable ",
-                   "that equals 1 if at least one country ",
-                   "undergoes ",
-                   "a banking crisis at that year. ",
-                   "FD is the sum of the ",
-                   "level of each country's financial development ",
-                   "index. ",
-                   "Trade linkages is the log of bilateral real exports  ",
-                   "and imports as a share of the two countries’ GDP. ",
-                   "FX stability is a measure of exchange rate stability. ",
-                   "Financial openness is a measure of capital account ",
-                   "openness. ",
-                   "GDP total is the sum of GDP of both countries.")
 
 
 
@@ -303,9 +301,6 @@ notes_str_ctrl = paste0(notes_str,
 
 roll_cor_len = 5
 
-lines_str = list(c("Country pair FE",rep("Yes",3)),
-                           c("Year FE",rep("Yes",3)),
-                           c("Country pair linear trend",rep("Yes",3)))
 
 ```
 
@@ -387,7 +382,7 @@ load("C:\\Users\\internet\\Desktop\\cyclesynch.RData")
 
 
 
-```{r child="estimation.rmd", eval=FALSE}
+```{r child="estimation.rmd"}
 
 ```
 

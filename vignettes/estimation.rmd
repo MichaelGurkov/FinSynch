@@ -1,3 +1,11 @@
+```{r estimation_libraries}
+
+library(stargazer)
+
+```
+
+
+
 ```{r define_reg_formula_list}
 
 control_vars = c("trade_gdp","fx_stab","fo_ind","gdp_usd")
@@ -8,12 +16,14 @@ reg_formula_list = list(
     "fin_synch ~ lag(bank_gdp,1)",
     paste(control_vars,
           collapse = "+"),
+    "country_pair:time_trend",
     sep = "+"
   ),
   crises = paste(
     "fin_synch ~ lag(bank_gdp,1) * crisis_ind",
     paste(control_vars,
           collapse = "+"),
+    "country_pair:time_trend",
     sep = "+"
   ),
   full_spec = paste(
@@ -21,28 +31,14 @@ reg_formula_list = list(
     "lag(bank_gdp,1) * fd_ind",
     paste(control_vars,
           collapse = "+"),
+    "country_pair:time_trend",
     sep = "+"
   )
 )
 ```
 
 
-
-
-
-```{r estimation, eval=FALSE}
-
-filter_vars = c(
-      "Fin_synch",
-      "bank_gdp",
-      "Crises",
-      "Time_Trend",
-      "CountryPair",
-      "Date",
-      control_vars
-    )
-
-
+```{r estimation}
 
 reg_list = map(reg_formula_list, function(temp_formula){
   
@@ -58,14 +54,14 @@ reg_list = map(reg_formula_list, function(temp_formula){
 coef_vec = coefficients(reg_list$full_spec)
 
 coef_vec = coef_vec[names(coef_vec) %in% c("lag(bank_gdp, 1)",
-                                           "lag(bank_gdp, 1):Crises",
-                                           "lag(bank_gdp, 1):FD_tot")]
+                                           "lag(bank_gdp, 1):crisis_ind",
+                                           "lag(bank_gdp, 1):fd_ind")]
 
-sd_ratio = sd(fin_reg_df$bank_gdp) / sd(fin_reg_df$Fin_synch)
+sd_ratio = sd(country_pair_df$bank_gdp) / sd(country_pair_df$fin_synch)
 
-isr_ind = grepl("Israel",fin_reg_df$CountryPair)
+isr_ind = str_detect("Israel",country_pair_df$country_pair)
 
-sd_ratio_isr = sd(fin_reg_df$bank_gdp[isr_ind]) / sd(fin_reg_df$Fin_synch[isr_ind])
+sd_ratio_isr = sd(country_pair_df$bank_gdp[isr_ind]) / sd(country_pair_df$fin_synch[isr_ind])
 
 
 
@@ -75,16 +71,6 @@ sd_ratio_isr = sd(fin_reg_df$bank_gdp[isr_ind]) / sd(fin_reg_df$Fin_synch[isr_in
 
 ```{r output_reg, include=FALSE}
 
-estimation_table_notes = paste0(
-    "\\parbox[t]{8cm}{",
-    paste0(
-      "The table presents panel estimation that ",
-      "includes two-way fixed effects and country pair ",
-      " specific linear time trend. ",
-      notes_str ,
-      "}"
-    )
-  )
 
 robust_se = map(reg_list, function(temp_model){
   
@@ -119,7 +105,7 @@ star = sub("\\textit{Note:}  & \\multicolumn{3}{l}{\\parbox[t]{8cm}{",
 ```
 
 
-```{r output_baseline_table}
+```{r output_baseline_table, results='asis'}
 
 cat(star,sep = "\n")
 
@@ -141,8 +127,8 @@ associated with a change of
 `r abs(round(coef_vec[names(coef_vec) == "lag(bank_gdp, 1)"] * sd_ratio,2))` 
 standard deviations in financial synchronization.
 During banking crises one standard deviation change in integration contributes
-`r abs(round(coef_vec[names(coef_vec) == "lag(bank_gdp, 1):Crises"] * sd_ratio,2))` standard deviations to the synchronization. In highly developed financial markets, one standard deviation change in integration contributes
-`r abs(round(coef_vec[names(coef_vec) == "lag(bank_gdp, 1):FD_tot"] * sd_ratio,2))` standard deviations to the synchronization of financial cycles.
+`r abs(round(coef_vec[names(coef_vec) == "lag(bank_gdp, 1):crisis_ind"] * sd_ratio,2))` standard deviations to the synchronization. In highly developed financial markets, one standard deviation change in integration contributes
+`r abs(round(coef_vec[names(coef_vec) == "lag(bank_gdp, 1):fd_ind"] * sd_ratio,2))` standard deviations to the synchronization of financial cycles.
 
 Looking at the control variables, we see that FX stability contributes to the synchronization of financial cycles, possibly because stable FX facilitates
 cross-border financial transactions. Financial openness works in the same direction, however it is statistically significant only in the baseline specification.
