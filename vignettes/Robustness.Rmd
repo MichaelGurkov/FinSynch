@@ -1,3 +1,9 @@
+```{r libraries_}
+
+```
+
+
+
 \subsection{Excluding GFC}
 
 The Great Financial Crisis was an extraordinary event that significantly
@@ -8,10 +14,10 @@ of the GFC (2008 - 2009) from my sample. The results are presented in column 1 i
 ```{r estimation_no_GFC}
 
 reg_list$no_GFC = plm(formula = formula(reg_formula_list$full_spec),
-                        data = fin_reg_df %>% 
-                          filter(!Date %in% c(2007,2008,2009)),
+                        data = country_pair_df %>% 
+                          filter(!year %in% c(2007,2008,2009)),
           model = "within",effect = "twoways",
-          index = c("CountryPair","Date"))
+          index = c("country_pair","year"))
 
 ```
 
@@ -66,8 +72,20 @@ in this setting.
 
 ```{r rol_cor_estimation}
 
-roll_cor = get.roll.cor(country_df %>% 
-                            select(Date, Country,Fin_ret),
+
+cycles_df %>% 
+  full_join(cycles_df, by = "year", suffix = c("","_counter")) %>% 
+  filter(!country == country_counter) %>% 
+  mutate(country_pair = paste_country_pair(country, country_counter)) %>% 
+  filter(country_pair == "Denmark-Portugal") %>% 
+  distinct(year, country_pair, .keep_all = TRUE) %>% 
+  select(country_pair, year, fin_cycle) %>% 
+  group_by(country_pair) %>% 
+  arrange(year) %>% 
+  mutate(roll_corr = )
+
+
+roll_cor = get.roll.cor(cycles_df,
                         win_len = roll_cor_len) %>% 
   rename(Fin_roll_cor = Fin_ret)
 
