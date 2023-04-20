@@ -1,9 +1,15 @@
 
-```{r captions_setup}
+```{r libraries_selected_countries}
 
-theme_set(theme_bw())
+library(ggplot2)
 
 library(cowplot)
+
+```
+
+
+```{r captions_setup}
+
 
 plot_cycles_cap = paste0(
   "This figure plots the financial cycles of the US, UK and Israel",
@@ -42,17 +48,17 @@ net_df = map(
   c("United_States","United_Kingdom","Israel"),function(temp_country){
   
   temp_df = raw_data$bis_lbs %>%
-    filter(grepl(temp_country,CountryPair)) %>%
-    filter(Date == as.yearqtr("2018 Q4")) %>% 
-    select(CountryPair, Balance) %>%
-    group_by(CountryPair) %>%
-    summarise(Balance = mean(Balance, na.rm = TRUE) * 10 ^ (-3),
+    filter(grepl(temp_country,country_pair)) %>%
+    filter(date == as.yearqtr("2018 Q4")) %>% 
+    select(country_pair, balance) %>%
+    group_by(country_pair) %>%
+    summarise(balance = mean(balance, na.rm = TRUE) * 10 ^ (-3),
               .groups = "drop") %>%
-    mutate(CountryPair = str_remove_all(CountryPair,temp_country)) %>%
-    mutate(CountryPair = str_remove_all(CountryPair,"-")) %>%
-    mutate(CountryPair = str_replace_all(CountryPair,"_"," ")) %>%
-    rename(Country = CountryPair) %>% 
-    mutate(Source = temp_country)
+    mutate(country_pair = str_remove_all(country_pair,temp_country)) %>%
+    mutate(country_pair = str_remove_all(country_pair,"-")) %>%
+    mutate(country_pair = str_replace_all(country_pair,"_"," ")) %>%
+    rename(country = country_pair) %>% 
+    mutate(source = temp_country)
 
 }) %>% 
   bind_rows()
@@ -62,19 +68,21 @@ net_df = map(
 
 ```{r make_correl_df}
 
-bank_clean = plm(sub("Fin_synch","bank_gdp",
-                     gsub("lag(bank_gdp,1) *","",reg_formula_list$full_spec,
+bank_clean = plm(sub("fin_synch","bank_gdp",
+                     gsub("lag(bank_gdp,1) *","",
+                          reg_formula_list$full_spec,
                           fixed = TRUE),
                      fixed = TRUE),
-                 data = fin_reg_df, index = c("CountryPair","Date"),
+                 data = country_pair_df, index = c("country_pair","year"),
                  model = "within", effect = "twoways")
 
-synch_clean = plm(gsub("lag(bank_gdp,1) *","",reg_formula_list$full_spec,
+synch_clean = plm(gsub("lag(bank_gdp,1) *","",
+                       reg_formula_list$full_spec,
                        fixed = TRUE),
-                  data = fin_reg_df, index = c("CountryPair","Date"),
+                  data = country_pair_df, index = c("country_pair","year"),
                   model = "within", effect = "twoways")
 
-correl_df = list(bank_clean$model$CountryPair,
+correl_df = list(bank_clean$model$country_pair,
                 bank_clean$residuals, synch_clean$residuals) %>%
   reduce(cbind.data.frame) %>%
   setNames(c("CountryPair","Bank","FinSynch"))
@@ -86,12 +94,12 @@ For illustration purpose, This section presents the result of the analysis for t
 
 ```{r plot_bank_linkages,fig.cap=plot_bank_linkages_cap,out.extra=""}
 
-plot_list = map(unique(net_df$Source),function(temp_name){
+plot_list = map(unique(net_df$source),function(temp_name){
   
   net_df %>% 
-    filter(Source == temp_name) %>% 
-    slice_max(Balance,n = 5) %>% 
-    ggplot(aes(x = reorder(Country, Balance), y = Balance)) + 
+    filter(source == temp_name) %>% 
+    slice_max(balance,n = 5) %>% 
+    ggplot(aes(x = reorder(country, balance), y = balance)) + 
     geom_col(width = 0.3) +
     labs(title = str_replace(temp_name,"_"," ")) + 
     xlab(NULL) + 
@@ -113,13 +121,12 @@ plot_grid(plotlist = plot_list,ncol = 3)
 
 ```{r plot_cycles, fig.cap=plot_cycles_cap, out.extra=""}
 
-ggplot(country_df %>% 
-  select(Date, Country, Fin_ret) %>% 
-  filter(Country %in% c("Israel","United_States",
+ggplot(cycles_df %>% 
+  filter(country %in% c("Israel","United_States",
                         "United_Kingdom")) %>% 
-  filter(Date >= 1995),
-  aes(x = Date, y = Fin_ret * 100, color = Country,
-      group = Country)) + 
+  filter(year >= 1995),
+  aes(x = year, y = fin_cycle * 100, color = country,
+      group = country)) + 
   geom_line() + 
   labs(x = "", y = "Rate of change (YoY)",
        title = paste0("Financial cycles of the US, UK and Israel")) + 

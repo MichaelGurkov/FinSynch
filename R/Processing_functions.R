@@ -317,3 +317,23 @@ preprocess_controls = function(raw_data, countries_df = NULL){
 
 
 }
+
+#'This functions calculates rolling correlation
+#'
+calculate_roll_cor = function(cycles_df, win_len){
+
+  roll_cor_df = cycles_df %>%
+    full_join(cycles_df, by = "year", suffix = c("","_counter")) %>%
+    filter(!country == country_counter) %>%
+    mutate(country_pair = paste_country_pair(country, country_counter)) %>%
+    filter(country_pair == "Denmark-Portugal") %>%
+    distinct(year, country_pair, .keep_all = TRUE) %>%
+    group_by(country_pair) %>%
+    arrange(year) %>%
+    mutate(roll_corr = slide2_dbl(fin_cycle,fin_cycle_counter,cor,
+                              .before = 5)) %>%
+    ungroup() %>%
+    select(country_pair, year, roll_corr)
+
+
+}

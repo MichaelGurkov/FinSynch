@@ -120,6 +120,39 @@ lines_str = list(c("Country pair FE",rep("Yes",3)),
 ```
 
 
+```{r define_reg_formula_list}
+
+control_vars = c("trade_gdp","fx_stab","fo_ind","gdp_usd")
+
+
+reg_formula_list = list(
+  baseline = paste(
+    "fin_synch ~ lag(bank_gdp,1)",
+    paste(control_vars,
+          collapse = "+"),
+    "country_pair:time_trend",
+    sep = "+"
+  ),
+  crises = paste(
+    "fin_synch ~ lag(bank_gdp,1) * crisis_ind",
+    paste(control_vars,
+          collapse = "+"),
+    "country_pair:time_trend",
+    sep = "+"
+  ),
+  full_spec = paste(
+    "fin_synch ~ lag(bank_gdp,1) * crisis_ind",
+    "lag(bank_gdp,1) * fd_ind",
+    paste(control_vars,
+          collapse = "+"),
+    "country_pair:time_trend",
+    sep = "+"
+  )
+)
+```
+
+
+
 ```{r params_setup, eval=FALSE}
 
 countries_list = list(
@@ -390,7 +423,7 @@ load("C:\\Users\\internet\\Desktop\\cyclesynch.RData")
 \subsection{Graphical results} \label{Israel}
 
 
-```{r, child="Selected_countries.Rmd", eval=FALSE}
+```{r, child="Selected_countries.Rmd"}
 
 ```
 
