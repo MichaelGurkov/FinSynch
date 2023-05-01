@@ -1,0 +1,120 @@
+
+```{r library}
+
+library(tidyverse)
+
+library(zoo)
+
+library(lubridate)
+
+```
+
+
+```{r import_data}
+
+new_data = read_rds("C:\\Users\\internet\\Desktop\\new_data.rds")
+
+old_data = read_rds("C:\\Users\\internet\\Desktop\\old_data.rds")
+
+
+```
+
+
+```{r compare_total_credit}
+
+# credit_df = new_data %>%
+#   pluck("total_credit") %>%
+#   full_join(
+#     old_data %>%
+#       pluck("TotalCredit") %>%
+#       rename_with(tolower),
+#     by = c("country", "date"),
+#     suffix = c("_new", "_old")
+#   )
+# 
+# credit_df %>% 
+#   mutate(diff_percent = (total_credit_new - total_credit_old) /
+#            (0.5 * total_credit_new + 0.5 * total_credit_old))  %>% 
+#   filter(year(date) >= 1980) %>% 
+#   filter(abs(diff_percent) >= 0.04)
+  
+print("Total credit data is approximately (up to 4%) equal")  
+
+```
+
+```{r compare_lbs}
+
+# lbs_df = new_data %>%
+#   pluck("bis_lbs")  %>% 
+#   select(-c("reporting_country", "counterparty_country")) %>% 
+#   group_by(balance_sheet_position, date, country_pair) %>% 
+#   summarise(balance = mean(balance), .groups = "drop") %>% 
+#   full_join(
+#     old_data %>%
+#       pluck("bis_lbs")  %>% 
+#       filter(complete.cases(.)) %>% 
+#       group_by(Balance_Pos, Date, CountryPair) %>% 
+#       summarise(Balance = mean(Balance), .groups = "drop"),
+#     by = c("country_pair" = "CountryPair",
+#            "date" = "Date",
+#            "balance_sheet_position" = "Balance_Pos"),
+#     suffix = c("_new", "_old")
+#   )
+# 
+# lbs_df = lbs_df %>% 
+#   mutate(diff_percent = (balance - Balance) /
+#            (0.5 * balance + 0.5 * Balance))
+# 
+# 
+# lbs_df %>% 
+#   filter(!is.na(diff_percent)) %>% 
+#   filter(diff_percent >= 0.03) %>% 
+#   count(date)
+
+
+print(paste0("LBS data has discrepancies after 2018",
+             " (mainly in 2018 Q4 and 2020 Q3)"))  
+
+```
+
+```{r compare_trade_data}
+
+imf_df = new_data %>%
+  pluck("imf_trade_df")  %>%
+  mutate(total_trade = total_trade * 10 ^ - 6) %>% 
+  group_by(date, country_pair) %>%
+  summarise(total_trade = mean(total_trade), .groups = "drop") %>%
+  full_join(
+    old_data %>%
+      pluck("trade")  %>%
+      ungroup() %>% 
+      filter(complete.cases(.)) %>%
+      group_by(Date, CountryPair) %>%
+      summarise(Trade = mean(Trade), .groups = "drop"),
+    by = c("country_pair" = "CountryPair",
+           "date" = "Date")) %>% 
+  filter(complete.cases(.))
+
+
+imf_df = imf_df %>% 
+  mutate(diff_percent = (total_trade - Trade) /
+           (0.5 * total_trade + 0.5 * Trade))
+
+
+imf_df %>%
+  filter(complete.cases(.)) %>% 
+  filter(abs(diff_percent) >= 0.03) %>% 
+  count(country_pair, sort = TRUE)
+
+imf_df %>% 
+  filter(country_pair %in% c("Australia-Korea",
+                             "Australia-New_Zealand",
+                             "Canada-New_Zealand",
+                             "Chile-Portugal")) %>% 
+  pivot_longer(cols = c("total_trade", "Trade")) %>% 
+  ggplot(aes(as.numeric(date), value, color = name)) + 
+  geom_line() + 
+  facet_wrap(~country_pair, scales = "free")
+
+```
+
