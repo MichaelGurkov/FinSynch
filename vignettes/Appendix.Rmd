@@ -109,71 +109,6 @@
 
 <!-- ``` -->
 
-\subsection{No trend}
-
-In this section, I exclude the country-pair specific linear trend in order to test the robustness of my estimation. Table \ref{no_trend} presents the results.
-
-
-```{r estimation_no_trend}
-
-# reg_no_trend_formula = paste("Fin_synch ~ lag(bank_gdp,1) * Crises",
-#                              "lag(bank_gdp,1) * FD_tot",
-#                              "lag(bank_gdp,1) * Euro_both",
-#                              "lag(bank_gdp,1) * Common_Lang",
-#                              paste(control_vars, collapse = "+"),
-#                              sep = "+")
-
-
-# reg_list$no_trend = plm(formula = formula(reg_no_trend_formula),
-#                    data = fin_reg_df,
-#                    model = "within",effect = "twoways",
-#                    index = c("CountryPair","Date"))
-
-
-reg_list$no_trend = plm(formula = sub("+CountryPair:Time_Trend","",
-                                      reg_formula, fixed = TRUE),
-                   data = fin_reg_df,
-                   model = "within",effect = "twoways",
-                   index = c("CountryPair","Date"))
-
-
-```
-
-
-```{r output_no_trend, include=FALSE}
-
-
-star_no_trend = stargazer(reg_list$no_trend, header = FALSE,digits = 2,
-          label = "no_trend",table.placement = "H",
-          title = paste0("Financial synchronization and banking integration: ",
-                         "specification with no trend"),
-          dep.var.caption = "Fin cycles synch",
-          model.numbers = FALSE,
-          dep.var.labels.include = FALSE,
-          notes = paste0("\\parbox[t]{8cm}{",
-                         paste0("The table presents panel estimation that ",
-                                "includes twoway fixed effects. ",
-                                notes_str_ctrl),"}"),
-          notes.align = "l",
-          notes.append = FALSE,
-          se = list(sqrt(diag(vcovHC(reg_list$no_trend,cluster = "group")))),
-          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
-          covariate.labels = temp_labels,
-          omit.stat = c("f","adj.rsq"))
-
-star_no_trend = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
-                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
-                    star_no_trend,fixed = TRUE)
-
-
-```
-
-
-```{r output_no_trend_table, results="asis"}
-
-cat(star_no_trend,sep = "\n")
-
-```
 
 
 
@@ -252,3 +187,61 @@ cat(star_reg_lag,sep = "\n")
 
 ```
 
+
+\subsection{Explanatory variables}
+
+\textbf{Total credit}
+Importantly, the data account for credit from all sources, not only that extended by domestic banks. Total credit from financial accounts, domestic bank credit, and cross-border bank credit are the three main building blocks underlying the construction of the total credit series. Trade credit (as well as other accounts payable and receivable) is excluded from the new total credit series because the quality of the underlying data is globally poor. In principle, nominal values are used for loans, corresponding to the origination price (historical cost) plus the interest that has accrued but not been paid if there has not been a default.  All other financial assets, including debt securities, are in principle valued at market prices. In practice, though, debt securities are often reported at nominal value. This may affect international comparability in cases of large volumes of debt securities and large price swings but it is impossible to adjust for it. As a rule, the total credit series are not adjusted for exchange rate movements. This correction is only possible for the international banking statistics where a currency breakdown is available but would be highly artificial for the long-run series.
+
+
+\textbf{Bank linkages}
+This variable is based on bilateral cross-border holdings (stocks) of banks. Data on banks’ cross-border bilateral stocks of assets and liabilities come from BIS’s Locational Banking Statistics. For each country pair and year there are up to four observations: i) asset holdings (stocks) of banks located in country i in all sectors of the economy in country j, ii) asset holdings (stocks) of banks located in country j in all sectors of the economy in country i, iii) liabilities (stocks) of banks located in country i to country j, and iv) liabilities (stocks) of banks located in country j to country i. The data are originally expressed in (millions) current U.S. dollars. I normalize the data with the following steps:
+
+\begin{enumerate}
+  \item
+  Deflate the four series by the U.S. CPI index
+  
+  \item
+  Standardize the series by dividing assets and liabilities by the sum of the
+two countries’ GDP in each year (using data from World Bank’s World
+Development Indicators).
+
+  \item
+  Take the average of the log value of real bilateral assets and liabilities in each year.
+
+\end{enumerate}
+
+\textbf{House Prices}
+
+The housing prices indicator shows indices of residential property prices over time. The real house price is given by the ratio of nominal price to the consumers’ expenditure deflator in each country, both seasonally adjusted, from the OECD national accounts database. This indicator is an index with base year 2015. The source is OECD (2019), Housing prices (indicator).
+
+\textbf{Share Prices}
+Share price indices are calculated from the prices of common shares of companies traded on national or foreign stock exchanges. They are usually determined by the stock exchange, using the closing daily values for the monthly data, and normally expressed as simple arithmetic averages of the daily data. The source is OECD (2019), Share prices (indicator).
+
+
+
+\textbf{Trading linkages} The measure is the log of bilateral real (deflated with the U.S. CPI) exports and imports as a share of the two countries’ GDP. Source: IMF Direction of Trade Database (2008).
+
+\textbf{Financial openness} and \textbf{Exchange Rate Stability} measures are based on the work of @Chinn2010.
+  
+
+\textbf{Exchange Rate Stability}
+
+To measure exchange rate stability, annual standard deviations of the monthly exchange rate
+between the home country and the base country are calculated and included in the following
+formula to normalize the index between 0 and 1:
+
+$ERS = \frac{0.01}{0.01 + SD(\Delta(ln(FX)))}$
+
+Merely applying this formula can easily create a downward bias in the index. That is, it would exaggerate the “flexibility” of the exchange rate especially when the rate usually follows a narrow band, but is de- or revalued infrequently. To avoid such downward bias, a threshold to the exchange rate movement is applied. That is, if the rate of monthly change in the exchange rate stayed within +/-0.33 percent bands, the exchange rate is considered “fixed” and the value of one is assigned for the ERS index. Furthermore, single year pegs are dropped because they are quite possibly not intentional ones. Higher values of this index indicate more stable movement of the exchange rate against the currency of the base country.
+
+
+\textbf{Financial openness}
+
+The financial openness measure is based on the index of capital account openness or KAOPEN, by @Chinn2006. KAOPEN is the first standardized principal component of the variables that indicate the presence of multiple exchange rates, restrictions on current account transactions, on capital account transactions, and the requirement of the surrender of export proceeds. The index is normalized between zero and one. Higher values of this index indicate that a country is more open to cross-border capital transactions.
+
+
+\textbf{Asset prices}
+I use data about house and share prices from OECD database.
+
+\textbf{GDP} - Source: World Development Index. Current US dollars

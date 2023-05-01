@@ -1,3 +1,4 @@
+
 <!-- What do you do -->
 
 This work analyzes the relationship between financial integration and financial cycles synchronization. Financial integration refers to the linkage of different financial markets, while financial cycles synchronization refers to the comovement of the main components of the financial cycle (credit, home and share prices). I identify the 

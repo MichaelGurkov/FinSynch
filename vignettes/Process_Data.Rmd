@@ -40,6 +40,13 @@ fin_dev_df = preprocess_fin_dev(raw_data)
 
 ```
 
+```{r euro_membership}
+
+euro_memebership_df = calculate_euro_membership(raw_data)
+
+```
+
+
 ```{r controls}
 
 controls_df = preprocess_controls(raw_data)
@@ -64,6 +71,10 @@ country_pair_df = country_pair_df %>%
   arrange(year) %>% 
   mutate(time_trend = 1:length(country_pair)) %>% 
   ungroup()
+
+country_pair_df = country_pair_df %>% 
+  left_join(euro_memebership_df, by = "country_pair") %>% 
+  mutate(euro_member = as_factor(euro_member))
 
 # rm(list = ls()[!ls()%in% c("country_pair_df","raw_data")])
 

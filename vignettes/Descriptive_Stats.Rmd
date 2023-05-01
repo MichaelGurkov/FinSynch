@@ -1,21 +1,19 @@
-
-
 ```{r define_fig_captions}
 
 country_pairs = length(unique(country_pair_df$country_pair))
 
 countries = map(c("gdp_constant","trilemma_ind"),
                 function(temp_name){
-
-  temp_col = raw_data %>% 
-    pluck(temp_name) %>% 
-    select(country) %>% 
-    distinct()
-  
-  return(temp_col)
-  
-}) %>% 
-  reduce(inner_join, by = "country") %>% 
+                  
+                  temp_col = raw_data %>%
+                    pluck(temp_name) %>%
+                    select(country) %>%
+                    distinct()
+                  
+                  return(temp_col)
+                  
+                }) %>%
+  reduce(inner_join, by = "country") %>%
   nrow()
 
 bank_gdp_cap = paste0(
@@ -27,10 +25,10 @@ bank_gdp_cap = paste0(
   country_pairs,
   " country pairs (the sample spans ",countries,
   " countries).",
-
+  
   " Shaded areas are banking crisis periods.",
   " \\label{plot_bank_gdp}"
-  )
+)
 
 
 avg_cycle_synch_cap = paste0(
@@ -56,53 +54,53 @@ About `r format(mean(country_pair_df$crisis_ind) * 100,digits = 3)` percent of t
 desc_df = country_pair_df %>%
   rename(`Financial synchronization` = fin_synch,
          `Banking linkages` = bank_gdp,
-         Crises = crisis_ind, 
+         Crises = crisis_ind,
          FD = fd_ind,
          `Trade linkages` = trade_gdp,
          `FX stability` = fx_stab,
          `Financial openness` = fo_ind,
-         `GDP total` = gdp_usd) %>% 
-    as.data.frame()
+         `GDP total` = gdp_usd) %>%
+  as.data.frame()
 
 star = stargazer(desc_df,
-  title = "Summary statistics of the main variables",
-  label = "summary_table",
-  header = FALSE,
-  summary = TRUE,
-  digits = 2,
-  digits.extra = 0,
-  summary.stat = c("max", "min", "mean", "median", "sd", "n"),
-  notes = paste0(
-    "\\parbox[t]{16cm}{",
-    paste0(
-      "Note: The table reports summary statistics of ",
-      "the main variables used in the empirical ",
-      "analysis.",
-      notes_str ,
-      "}"
-    )
-  )
+                 title = "Summary statistics of the main variables",
+                 label = "summary_table",
+                 header = FALSE,
+                 summary = TRUE,
+                 digits = 2,
+                 digits.extra = 0,
+                 summary.stat = c("max", "min", "mean", "median", "sd", "n"),
+                 notes = paste0(
+                   "\\parbox[t]{16cm}{",
+                   paste0(
+                     "Note: The table reports summary statistics of ",
+                     "the main variables used in the empirical ",
+                     "analysis.",
+                     notes_str ,
+                     "}"
+                   )
+                 )
 )
 
-star = star %>% 
+star = star %>%
   sub(pattern = "Fin\\_synch",replacement = "Fin cycles synch",
-      fixed = TRUE) %>% 
+      fixed = TRUE) %>%
   sub(pattern = "bank\\_gdp",replacement = "Banking linkages",
-      fixed = TRUE) %>% 
+      fixed = TRUE) %>%
   sub(pattern = "FD\\_tot",replacement = "Financial development",
-      fixed = TRUE) %>% 
+      fixed = TRUE) %>%
   sub(pattern = "Crises\\_tot",replacement = "Crises",
-      fixed = TRUE) %>% 
+      fixed = TRUE) %>%
   sub(pattern = "Euro\\_both",replacement = "Euro",
-      fixed = TRUE) %>% 
-sub(pattern = "0.00",replacement = "0",
+      fixed = TRUE) %>%
+  sub(pattern = "0.00",replacement = "0",
       fixed = TRUE)
 
 
 # star = sub("Fin\\_synch","Fin cycles synch",star,fixed = TRUE)
-# 
+#
 # star = sub("bank\\_gdp","Banking linkages",star,fixed = TRUE)
-# 
+#
 # star = sub("FD\\_tot","Financial development",star,fixed = TRUE)
 
 
@@ -130,16 +128,16 @@ bank_plot_df = country_pair_df %>%
             .groups = "drop") %>%
   filter(complete.cases(.))
 
-ggplot() + 
+ggplot() +
   labs(title = "Average bank linkages \n (real, normalized by gdp)",
-       y = "", x = "") + 
+       y = "", x = "") +
   geom_line(data = bank_plot_df,
-            mapping = aes(x = year, y = avg_bank, group = 1)) + 
+            mapping = aes(x = year, y = avg_bank, group = 1)) +
   geom_rect(data = raw_data$crises_df,
             mapping = aes(xmin = start_year,xmax = end_year,
                           ymin = -Inf, ymax = Inf),
             fill = "lightgray", alpha = 0.1) +
-  theme_bw() + 
+  theme_bw() +
   theme(axis.text.x = element_text(angle = 45, vjust = 0,size = 7),
         legend.position = "bottom",
         plot.title = element_text(hjust = 0.5),
@@ -152,16 +150,16 @@ rm(bank_plot_df)
 
 ```{r plot_average_cycle_synch,fig.cap=avg_cycle_synch_cap,fig.pos="H"}
 
-ggplot(country_pair_df %>% 
-         select(year, fin_synch) %>% 
-         group_by(year) %>% 
+ggplot(country_pair_df %>%
+         select(year, fin_synch) %>%
+         group_by(year) %>%
          summarise(avg_fin_synch = mean(fin_synch, na.rm = TRUE),
-                   .groups = "drop") %>% 
-         filter(complete.cases(.)) %>% 
+                   .groups = "drop") %>%
+         filter(complete.cases(.)) %>%
          filter(is.finite(avg_fin_synch)),
-       aes(x = year, y = avg_fin_synch, group = 1)) + 
-  labs(title = "Average financial cycle synchronization",y = "", x = "") + 
-  geom_line() + 
+       aes(x = year, y = avg_fin_synch, group = 1)) +
+  labs(title = "Average financial cycle synchronization",y = "", x = "") +
+  geom_line() +
   theme(axis.text.x = element_text(angle = 45, vjust = 0, size = 7),
         legend.position = "bottom", plot.title = element_text(hjust = 0.5))
 
@@ -169,5 +167,6 @@ ggplot(country_pair_df %>%
 ```
 
 
-Figure \ref{plot_Fin_synch} shows the average synchronization (measured as the difference between credit and home price growth rates for each country pair). The synchronization seems to be quite volatile with no specific trend until 2007 - 2008 (the Great Financial Crisis) and trending upward since. 
+Figure \ref{plot_Fin_synch} shows the average synchronization (measured as the difference between credit and home price growth rates for each country pair). The synchronization seems to be quite volatile with no specific trend until 2007 - 2008 (the Great Financial Crisis) and trending upward since.
+
 

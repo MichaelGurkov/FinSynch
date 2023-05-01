@@ -74,6 +74,15 @@ notes_str = paste0(" Financial cycles synchronization",
                    "openness. ",
                    "GDP total is the sum of GDP of both countries.")
 
+notes_str_ctrl = paste0(notes_str,
+                       "Controls include foreign exchange ",
+                       "stability, financial ",
+                       "openness, trade linkages and GDP (log). ",
+                       "The standard errors are clustered ",
+                       "at country pair level and ",
+                       "heteroscedasticity robust.")
+
+
 estimation_table_notes = paste0(
     "\\parbox[t]{8cm}{",
     paste0(
@@ -143,6 +152,7 @@ reg_formula_list = list(
   full_spec = paste(
     "fin_synch ~ lag(bank_gdp,1) * crisis_ind",
     "lag(bank_gdp,1) * fd_ind",
+    "lag(bank_gdp,1) * euro_member",
     paste(control_vars,
           collapse = "+"),
     "country_pair:time_trend",
@@ -152,185 +162,177 @@ reg_formula_list = list(
 ```
 
 
+```{r params_setup}
 
-```{r params_setup, eval=FALSE}
-
-countries_list = list(
-  oecd_countries = c(
-    "Australia",
-    "Austria",
-    "Belgium",
-    "Canada",
-    "Chile",
-    "Czech_Republic",
-    "Denmark",
-    "Estonia",
-    "Finland",
-    "France",
-    "Germany",
-    "Greece",
-    "Hungary",
-    "Iceland",
-    "Ireland",
-    "Israel",
-    "Italy",
-    "Japan",
-    "Korea",
-    "Latvia",
-    "Lithuania",
-    "Luxembourg",
-    "Mexico",
-    "Netherlands",
-    "New_Zealand",
-    "Norway",
-    "Poland",
-    "Portugal",
-    "Slovak_Republic",
-    "Slovenia",
-    "Spain",
-    "Sweden",
-    "Switzerland",
-    "Turkey",
-    "United_Kingdom"
-    ,
-    "United_States"
-  ),
-  kpp_countries = c(
-    "Australia",
-    "Austria",
-    "Belgium",
-    "Canada",
-    "Switzerland",
-    "Germany",
-    "Denmark",
-    "Spain",
-    "Finland",
-    "France",
-    "United_Kingdom",
-    "Ireland",
-    "Italy",
-    "Japan",
-    "Netherlands",
-    "Portugal",
-    "Sweden",
-    "United_States"
-  ),
-  fsap_countries = c(
-    "Austria",
-    "Belgium",
-    "Germany",
-    "Denmark",
-    "Spain",
-    "France",
-    "Finland",
-    "Greece",
-    "Ireland",
-    "Italy",
-    "Luxembourg",
-    "Netherlands",
-    "Portugal",
-    "Sweden",
-    "United_Kingdom"
-  ),
-  eu_countries = c(
-    "Austria",
-    "Belgium",
-    "Bulgaria",
-    "Croatia",
-    "Cyprus",
-    "Czech_Republic",
-    "Denmark",
-    "Estonia",
-    "Finland",
-    "France",
-    "Germany",
-    "Greece",
-    "Hungary",
-    "Ireland",
-    "Italy",
-    "Latvia",
-    "Lithuania",
-    "Luxembourg",
-    "Malta",
-    "Netherlands",
-    "Poland",
-    "Portugal",
-    "Romania",
-    "Slovak_Republic",
-    "Slovenia",
-    "Spain",
-    "Sweden",
-    "United_Kingdom"
-  ),
-  euro_countries = c(
-    "Austria",
-    "Belgium",
-    "Cyprus",
-    "Estonia",
-    "Finland",
-    "France",
-    "Germany",
-    "Greece",
-    "Ireland",
-    "Italy",
-    "Latvia",
-    "Lithuania",
-    "Luxembourg",
-    "Malta",
-    "Netherlands",
-    "Portugal",
-    "Slovak_Republic",
-    "Slovenia",
-    "Spain"
-  )
-)
-
-
-pairs_list = lapply(names(countries_list),
-                    function(temp_name){
-                      apply(combn(countries_list[[temp_name]],2), 2,
-                            function(temp_col){
-                              ifelse(temp_col[1]<temp_col[2],
-                                     paste(temp_col[1],temp_col[2],sep = "-"),
-                                     paste(temp_col[2],temp_col[1],sep = "-"))})
-
-                    })
-
-names(pairs_list) = paste(names(countries_list), "pairs", sep = "_")
-
-countries_list = c(countries_list, pairs_list)
-
-rm(pairs_list)
-
-reg_list = list()
-
-hyp_test_list = list()
-
-
-
-
-
-temp_names_lag = c("lag\\(bank_gdp, 1\\)",
-                   "lag\\(Crises, 1\\)",
-                   "lag\\(FD_tot, 1\\)",
-                   "lag\\(Euro_both, 1\\)",
-                   "lag\\(bank_gdp, 1\\):lag\\(Crises, 1\\)",
-                   "lag\\(bank_gdp, 1\\):lag\\(FD_tot, 1\\)",
-                   "lag\\(bank_gdp, 1\\):lag\\(Euro_both, 1\\)")
-
-
-
-
+# countries_list = list(
+#   oecd_countries = c(
+#     "Australia",
+#     "Austria",
+#     "Belgium",
+#     "Canada",
+#     "Chile",
+#     "Czech_Republic",
+#     "Denmark",
+#     "Estonia",
+#     "Finland",
+#     "France",
+#     "Germany",
+#     "Greece",
+#     "Hungary",
+#     "Iceland",
+#     "Ireland",
+#     "Israel",
+#     "Italy",
+#     "Japan",
+#     "Korea",
+#     "Latvia",
+#     "Lithuania",
+#     "Luxembourg",
+#     "Mexico",
+#     "Netherlands",
+#     "New_Zealand",
+#     "Norway",
+#     "Poland",
+#     "Portugal",
+#     "Slovak_Republic",
+#     "Slovenia",
+#     "Spain",
+#     "Sweden",
+#     "Switzerland",
+#     "Turkey",
+#     "United_Kingdom"
+#     ,
+#     "United_States"
+#   ),
+#   kpp_countries = c(
+#     "Australia",
+#     "Austria",
+#     "Belgium",
+#     "Canada",
+#     "Switzerland",
+#     "Germany",
+#     "Denmark",
+#     "Spain",
+#     "Finland",
+#     "France",
+#     "United_Kingdom",
+#     "Ireland",
+#     "Italy",
+#     "Japan",
+#     "Netherlands",
+#     "Portugal",
+#     "Sweden",
+#     "United_States"
+#   ),
+#   fsap_countries = c(
+#     "Austria",
+#     "Belgium",
+#     "Germany",
+#     "Denmark",
+#     "Spain",
+#     "France",
+#     "Finland",
+#     "Greece",
+#     "Ireland",
+#     "Italy",
+#     "Luxembourg",
+#     "Netherlands",
+#     "Portugal",
+#     "Sweden",
+#     "United_Kingdom"
+#   ),
+#   eu_countries = c(
+#     "Austria",
+#     "Belgium",
+#     "Bulgaria",
+#     "Croatia",
+#     "Cyprus",
+#     "Czech_Republic",
+#     "Denmark",
+#     "Estonia",
+#     "Finland",
+#     "France",
+#     "Germany",
+#     "Greece",
+#     "Hungary",
+#     "Ireland",
+#     "Italy",
+#     "Latvia",
+#     "Lithuania",
+#     "Luxembourg",
+#     "Malta",
+#     "Netherlands",
+#     "Poland",
+#     "Portugal",
+#     "Romania",
+#     "Slovak_Republic",
+#     "Slovenia",
+#     "Spain",
+#     "Sweden",
+#     "United_Kingdom"
+#   ),
+#   euro_countries = c(
+#     "Austria",
+#     "Belgium",
+#     "Cyprus",
+#     "Estonia",
+#     "Finland",
+#     "France",
+#     "Germany",
+#     "Greece",
+#     "Ireland",
+#     "Italy",
+#     "Latvia",
+#     "Lithuania",
+#     "Luxembourg",
+#     "Malta",
+#     "Netherlands",
+#     "Portugal",
+#     "Slovak_Republic",
+#     "Slovenia",
+#     "Spain"
+#   )
+# )
+# 
+# 
+# pairs_list = lapply(names(countries_list),
+#                     function(temp_name){
+#                       apply(combn(countries_list[[temp_name]],2), 2,
+#                             function(temp_col){
+#                               ifelse(temp_col[1]<temp_col[2],
+#                                      paste(temp_col[1],temp_col[2],sep = "-"),
+#                                      paste(temp_col[2],temp_col[1],sep = "-"))})
+# 
+#                     })
+# 
+# names(pairs_list) = paste(names(countries_list), "pairs", sep = "_")
+# 
+# countries_list = c(countries_list, pairs_list)
+# 
+# rm(pairs_list)
+# 
+# reg_list = list()
+# 
+# hyp_test_list = list()
+# 
+# 
+# 
+# 
+# 
+# temp_names_lag = c("lag\\(bank_gdp, 1\\)",
+#                    "lag\\(Crises, 1\\)",
+#                    "lag\\(FD_tot, 1\\)",
+#                    "lag\\(Euro_both, 1\\)",
+#                    "lag\\(bank_gdp, 1\\):lag\\(Crises, 1\\)",
+#                    "lag\\(bank_gdp, 1\\):lag\\(FD_tot, 1\\)",
+#                    "lag\\(bank_gdp, 1\\):lag\\(Euro_both, 1\\)")
+# 
+# 
+# 
 
 
 
-notes_str_ctrl = paste0(notes_str,
-                       "Controls include foreign exchange ",
-                       "stability, financial ",
-                       "openness, trade linkages and GDP (log). ",
-                       "The standard errors are clustered ",
-                       "at country pair level and ",
-                       "heteroscedasticity robust.")
+
 
 roll_cor_len = 5
 
@@ -348,33 +350,7 @@ roll_cor_len = 5
 ```
 
 
-```{r temp_fin_reg, eval=FALSE}
-
-
-fin_reg_df = readRDS(paste0(file.path(Sys.getenv("USERPROFILE")),
-                            "\\Desktop\\FinSynchFinReg.rds"))
-
-country_df = readRDS(paste0(file.path(Sys.getenv("USERPROFILE")),
-                           "\\Desktop\\FinSynchCountryDF.rds"))
-
-country_pair_df = readRDS(paste0(file.path(Sys.getenv("USERPROFILE")),
-                           "\\Desktop\\FinSynchCountryPairDF.rds"))
-
-
-```
-
-
 <!-- Regression analysis -->
-
-
-```{r temp_loading, eval=FALSE}
-
-# save(list = ls(),file =  "C:\\Users\\internet\\Desktop\\cyclesynch.RData")
-
-load("C:\\Users\\internet\\Desktop\\cyclesynch.RData")
-```
-
-
 
 \section{Introduction} 
 
@@ -414,7 +390,6 @@ load("C:\\Users\\internet\\Desktop\\cyclesynch.RData")
 \section{Estimation and results} \label{results}
 
 
-
 ```{r child="estimation.rmd"}
 
 ```
@@ -440,7 +415,7 @@ load("C:\\Users\\internet\\Desktop\\cyclesynch.RData")
 \section{Robustness} \label{Robust}
 
 
-```{r child="Robustness.Rmd", eval=FALSE}
+```{r child="Robustness.Rmd"}
 
 ```
 
@@ -463,68 +438,11 @@ the structural characteristics of their financial markets into account as well.
 
 \section{Appendix}
 
-```{r child="Appendix.Rmd", eval=FALSE}
+```{r child="Appendix.Rmd",eval=FALSE}
 
 ```
 
 
-\subsection{Explanatory variables}
-
-\textbf{Total credit}
-Importantly, the data account for credit from all sources, not only that extended by domestic banks. Total credit from financial accounts, domestic bank credit, and cross-border bank credit are the three main building blocks underlying the construction of the total credit series. Trade credit (as well as other accounts payable and receivable) is excluded from the new total credit series because the quality of the underlying data is globally poor. In principle, nominal values are used for loans, corresponding to the origination price (historical cost) plus the interest that has accrued but not been paid if there has not been a default.  All other financial assets, including debt securities, are in principle valued at market prices. In practice, though, debt securities are often reported at nominal value. This may affect international comparability in cases of large volumes of debt securities and large price swings but it is impossible to adjust for it. As a rule, the total credit series are not adjusted for exchange rate movements. This correction is only possible for the international banking statistics where a currency breakdown is available but would be highly artificial for the long-run series.
-
-
-\textbf{Bank linkages}
-This variable is based on bilateral cross-border holdings (stocks) of banks. Data on banks’ cross-border bilateral stocks of assets and liabilities come from BIS’s Locational Banking Statistics. For each country pair and year there are up to four observations: i) asset holdings (stocks) of banks located in country i in all sectors of the economy in country j, ii) asset holdings (stocks) of banks located in country j in all sectors of the economy in country i, iii) liabilities (stocks) of banks located in country i to country j, and iv) liabilities (stocks) of banks located in country j to country i. The data are originally expressed in (millions) current U.S. dollars. I normalize the data with the following steps:
-
-\begin{enumerate}
-  \item
-  Deflate the four series by the U.S. CPI index
-  
-  \item
-  Standardize the series by dividing assets and liabilities by the sum of the
-two countries’ GDP in each year (using data from World Bank’s World
-Development Indicators).
-
-  \item
-  Take the average of the log value of real bilateral assets and liabilities in each year.
-
-\end{enumerate}
-
-\textbf{House Prices}
-
-The housing prices indicator shows indices of residential property prices over time. The real house price is given by the ratio of nominal price to the consumers’ expenditure deflator in each country, both seasonally adjusted, from the OECD national accounts database. This indicator is an index with base year 2015. The source is OECD (2019), Housing prices (indicator).
-
-\textbf{Share Prices}
-Share price indices are calculated from the prices of common shares of companies traded on national or foreign stock exchanges. They are usually determined by the stock exchange, using the closing daily values for the monthly data, and normally expressed as simple arithmetic averages of the daily data. The source is OECD (2019), Share prices (indicator).
-
-
-
-\textbf{Trading linkages} The measure is the log of bilateral real (deflated with the U.S. CPI) exports and imports as a share of the two countries’ GDP. Source: IMF Direction of Trade Database (2008).
-
-\textbf{Financial openness} and \textbf{Exchange Rate Stability} measures are based on the work of @Chinn2010.
-  
-
-\textbf{Exchange Rate Stability}
-
-To measure exchange rate stability, annual standard deviations of the monthly exchange rate
-between the home country and the base country are calculated and included in the following
-formula to normalize the index between 0 and 1:
-
-$ERS = \frac{0.01}{0.01 + SD(\Delta(ln(FX)))}$
-
-Merely applying this formula can easily create a downward bias in the index. That is, it would exaggerate the “flexibility” of the exchange rate especially when the rate usually follows a narrow band, but is de- or revalued infrequently. To avoid such downward bias, a threshold to the exchange rate movement is applied. That is, if the rate of monthly change in the exchange rate stayed within +/-0.33 percent bands, the exchange rate is considered “fixed” and the value of one is assigned for the ERS index. Furthermore, single year pegs are dropped because they are quite possibly not intentional ones. Higher values of this index indicate more stable movement of the exchange rate against the currency of the base country.
-
-
-\textbf{Financial openness}
-
-The financial openness measure is based on the index of capital account openness or KAOPEN, by @Chinn2006. KAOPEN is the first standardized principal component of the variables that indicate the presence of multiple exchange rates, restrictions on current account transactions, on capital account transactions, and the requirement of the surrender of export proceeds. The index is normalized between zero and one. Higher values of this index indicate that a country is more open to cross-border capital transactions.
-
-
-\textbf{Asset prices}
-I use data about house and share prices from OECD database.
-
-\textbf{GDP} - Source: World Development Index. Current US dollars
 
 \section{References}
 

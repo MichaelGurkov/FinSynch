@@ -1,4 +1,6 @@
-```{r libraries_}
+```{r libraries_robustness}
+
+library(slider)
 
 ```
 
@@ -73,33 +75,34 @@ in this setting.
 ```{r rol_cor_estimation}
 
 
-cycles_df %>% 
+roll_cor_df = cycles_df %>% 
   full_join(cycles_df, by = "year", suffix = c("","_counter")) %>% 
   filter(!country == country_counter) %>% 
   mutate(country_pair = paste_country_pair(country, country_counter)) %>% 
-  filter(country_pair == "Denmark-Portugal") %>% 
+  # filter(country_pair == "Denmark-Portugal") %>% 
   distinct(year, country_pair, .keep_all = TRUE) %>% 
-  select(country_pair, year, fin_cycle) %>% 
+  select(country_pair, year, fin_cycle,fin_cycle_counter) %>% 
   group_by(country_pair) %>% 
   arrange(year) %>% 
-  mutate(roll_corr = )
+  mutate(fin_roll_cor = slide2_dbl(fin_cycle, fin_cycle_counter, cor,
+                                .before = roll_cor_len,.complete = TRUE)) %>% 
+  ungroup() %>% 
+  select(country_pair, year, fin_roll_cor) %>% 
+  filter(complete.cases(.))
 
 
-roll_cor = get.roll.cor(cycles_df,
-                        win_len = roll_cor_len) %>% 
-  rename(Fin_roll_cor = Fin_ret)
 
-reg_list$roll_cor_reg = plm(formula = gsub("Fin_synch","Fin_roll_cor",
-                                           reg_formula_list$full_spec,
-                                           fixed = TRUE),
-                            data = fin_reg_df %>% 
-                              left_join(roll_cor) %>% 
-                              select(-Fin_synch),
+reg_list$roll_cor_reg = plm(formula = str_replace(reg_formula_list$full_spec,
+                                                  "fin_synch","fin_roll_cor"),
+                            data = country_pair_df %>% 
+                              left_join(roll_cor_df,
+                                        by = c("country_pair", "year")) %>% 
+                              select(-fin_synch),
                             model = "within",effect = "twoways",
-                            index = c("CountryPair","Date"))
+                            index = c("country_pair","year"))
 
-rm(roll_cor)
-
+rm(roll_cor_df)
+  
 ```
 
 
@@ -160,12 +163,12 @@ development. The crisis effect is insignificant in this setting as well.
 ```{r delta_estimation}
 
 reg_list$delta_reg = plm(formula = reg_formula_list$full_spec,
-                         data = fin_reg_df %>% 
-                           group_by(CountryPair) %>% 
+                         data = country_pair_df %>% 
+                           group_by(country_pair) %>% 
                            mutate(bank_gdp = c(NA, diff(bank_gdp))) %>% 
                            ungroup(),
                          model = "within",effect = "twoways",
-                         index = c("CountryPair","Date"))
+                         index = c("country_pair","year"))
 
 ```
 
@@ -258,8 +261,8 @@ all_star_reg = all_star_reg %>%
   sub(pattern = "\\textit{Note:}  & \\multicolumn{3}{l}{\\parbox[t]{8cm}{",
       replacement = "\\multicolumn{4}{l}{\\parbox[t]{15cm}{\\textit{Note:} ",
       fixed = TRUE) %>% 
-  sub(pattern = "& GFC & \\multicolumn{2}{c}{Roll}",
-      replacement = "& Excluding GFC & Roll Corr & Diff specification",
+  sub(pattern = "\\multicolumn{2}{c}{GFC} & Roll",
+      replacement = "Excluding GFC & Roll Corr & Diff specification",
       fixed = TRUE)
 
 
@@ -273,7 +276,59 @@ cat(all_star_reg,sep = "\n")
 
 ```
 
+
 Overall the robustness tests show that the main result (negative association of banking linkages and financial synchronization) holds. The financial development
 effect is also consistent across all the specifications. However, the crisis
 effect turns insignificant in specifications that use alternative variable definitions (rolling correlation as a measure of financial synchronization or differenced banking linkages).
 
+\subsection{No trend}
+
+In this section, I exclude the country-pair specific linear trend in order to test the robustness of my estimation. Table \ref{no_trend} presents the results.
+
+
+```{r estimation_no_trend}
+
+reg_list$no_trend = plm(formula = str_remove_all(reg_formula_list$baseline,
+                                                 "\\+country_pair:time_trend"),
+                   data = country_pair_df,
+                   model = "within",effect = "twoways",
+                   index = c("country_pair","year"))
+
+
+```
+
+
+```{r output_no_trend, include=FALSE}
+
+
+star_no_trend = stargazer(reg_list$no_trend, header = FALSE,digits = 2,
+          label = "no_trend",table.placement = "H",
+          title = paste0("Financial synchronization and banking integration: ",
+                         "specification with no trend"),
+          dep.var.caption = "Fin cycles synch",
+          model.numbers = FALSE,
+          dep.var.labels.include = FALSE,
+          notes = paste0("\\parbox[t]{8cm}{",
+                         paste0("The table presents panel estimation that ",
+                                "includes twoway fixed effects. ",
+                                notes_str_ctrl),"}"),
+          notes.align = "l",
+          notes.append = FALSE,
+          se = list(sqrt(diag(vcovHC(reg_list$no_trend,cluster = "group")))),
+          keep = paste0("^",temp_names,"$"),order = paste0("^",temp_names,"$"),
+          covariate.labels = temp_labels,
+          omit.stat = c("f","adj.rsq"))
+
+star_no_trend = sub("\\textit{Note:}  & \\multicolumn{1}{l}{\\parbox[t]{8cm}{",
+                    "\\multicolumn{2}{l}{\\parbox[t]{10cm}{\\textit{Note:} ",
+                    star_no_trend,fixed = TRUE)
+
+
+```
+
+
+```{r output_no_trend_table, results="asis"}
+
+cat(star_no_trend,sep = "\n")
+
+```

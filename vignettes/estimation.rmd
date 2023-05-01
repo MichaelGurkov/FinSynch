@@ -36,7 +36,6 @@ sd_ratio_isr = sd(country_pair_df$bank_gdp[isr_ind]) / sd(country_pair_df$fin_sy
 ```
 
 
-
 ```{r output_reg, include=FALSE}
 
 

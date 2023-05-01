@@ -1,5 +1,36 @@
 
 
+#' Calculate eu membership
+#'
+calculate_euro_membership = function(raw_data){
+
+  classification_df = raw_data$country_codes %>%
+    select(-code) %>%
+    filter(oecd_member == 1) %>%
+    select(-oecd_member) %>%
+    mutate(euro_member = replace_na(euro_member,0))
+
+  euro_memebership_df = classification_df %>%
+    select(country) %>%
+    expand(country, country_counter = country) %>%
+    filter(!country == country_counter) %>%
+    mutate(country_pair = paste_country_pair(country, country_counter)) %>%
+    distinct(country_pair,.keep_all = TRUE)
+
+  euro_memebership_df = euro_memebership_df %>%
+    left_join(classification_df, by = "country") %>%
+    left_join(classification_df, by = c("country_counter" = "country"),
+              suffix = c("","_counter")) %>%
+    mutate(euro_member = euro_member + euro_member_counter) %>%
+    select(country_pair, euro_member)
+
+
+  return(euro_memebership_df)
+
+}
+
+
+
 
 normalize_by_gdp = function(raw_df, deflate_data_inner){
 

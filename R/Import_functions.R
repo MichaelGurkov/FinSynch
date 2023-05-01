@@ -1,182 +1,13 @@
 
-#' This helper function imports GDP and population data from
-#' WDI  data base
-#'
-#' @import readxl
-#'
-#' @import dplyr
-#'
-#' @import stringr
-#'
-#' @export
-#'
-
-
-import_wdi_df = function(filepath_list = NULL,
-                         countries_vec = NULL){
-
-  if(is.null(filepath_list)){
-
-    dir_path = file.path(Sys.getenv("USERPROFILE"),fsep = "\\")
-
-
-    filepath_list = list(
-      GDP_per_Capita = paste0(
-        dir_path,"\\OneDrive - Bank Of Israel\\Data\\",
-        "World Bank\\GDP_per_capita_panel.csv"),
-      GDP = paste0(
-        dir_path,"\\Documents\\",
-        "Data\\World Bank\\GDP_panel.csv"),
-      Pop = paste0(
-        dir_path,"\\Documents\\",
-        "Data\\World Bank\\Population.csv"))
-
-
-  }
-
-  df = lapply(names(filepath_list), function(temp_name){
-
-    res = read.csv(filepath_list[[temp_name]],
-                   stringsAsFactors = FALSE) %>%
-             process.wdi.file(.,var_name = temp_name)
-
-    # Replace country names
-
-    res = res %>%
-      mutate(Country = str_replace(Country,"Korea, Rep.","Korea"))
-
-    if(!is.null(countries_vec)){
-
-             res = res %>%
-               filter(Country %in% countries_vec)
-    }
-
-    return(res)
-
-  })
-
-
-  wdi_data = df %>%
-    purrr::reduce(full_join, by = c("Country","Year"))
-
-  return(wdi_data)
-
-}
-#'
-#'
-#' This helper function imports credit data from BIS  data base
-#'
-#' @import dplyr
-#'
-#' @export
-#'
-
-
-import_bis_fin_cycle_df = function(filepath_list = NULL,
-                         countries_vec = NULL){
-
-  if(is.null(filepath_list)){
-
-    dir_path = file.path(Sys.getenv("USERPROFILE"),fsep = "\\")
-
-    filepath_list = list(
-      Credit_GDP = paste0(
-        dir_path,"\\OneDrive - Bank Of Israel\\Data\\",
-        "BIS\\temp_credit_gdp_BIS.rds"),
-      Total_credit = paste0(
-        dir_path,"\\OneDrive - Bank Of Israel\\Data\\",
-        "BIS\\temp_tot_credit_BIS.rds"),
-      House = paste0(
-        dir_path,"\\OneDrive - Bank Of Israel\\Data\\",
-        "BIS\\temp_house_bis.rds"),
-      FX = paste0(
-        dir_path,"\\OneDrive - Bank Of Israel\\Data\\",
-        "BIS\\temp_FX_USD.rds"),
-      Rate = paste0(
-        dir_path,"\\OneDrive - Bank Of Israel\\Data\\",
-        "BIS\\temp_Policy_Rates.rds"))
-
-  }
-
-  df = lapply(names(filepath_list), function(temp_name){
-
-    res = readRDS(filepath_list[[temp_name]])
-
-    if(!is.null(countries_vec)){
-
-      res = res %>%
-        filter(Country %in% countries_vec)
-    }
-
-    return(res)
-
-  })
-
-  bis_data = df %>%
-    purrr::reduce(full_join, by = c("Country","Date"))
-
-  return(bis_data)
-
-}
-#'
-#'
-#' This helper function imports cross border banking from BIS  data base
-#'
-#' @import dplyr
-#'
-#' @export
-#'
-
-
-import_cross_border_balance = function(filepath = NULL,
-                                countries_vec = NULL,
-                                annual_freq = TRUE){
-
-  if(is.null(filepath)){
-
-    filepath = paste0(
-      file.path(Sys.getenv("USERPROFILE"),fsep = "\\"),
-      "\\OneDrive - Bank Of Israel\\Data\\BIS",
-      "\\temp_credit_flows.rds")
-    }
-
-
-  credit_flows_df = readRDS(filepath)
-
-  credit_balance_df = credit_flows_df %>%
-    {if(!is.null(countries_vec)) filter(.,
-                                        Country %in% countries_vec) %>%
-        filter(.,Counter_Country %in% countries_vec) else .} %>%
-    rename(Balance_Pos = Balance.sheet.position) %>%
-    {if(annual_freq) mutate(.,Date = format(Date,"%Y")) %>%
-        group_by(.,Date, Country,Counter_Country,Balance_Pos) %>%
-        summarise(.,Balance = mean(Flow_Val, na.rm = TRUE)) %>%
-        ungroup(.) else rename(.,Balance = Flow_Val) %>%
-        mutate(.,Date = as.yearqtr(Date))} %>%
-    mutate(.,CountryPair = ifelse(Country < Counter_Country,
-                                paste(Country, Counter_Country,
-                                      sep = "-"),
-                                paste(Counter_Country,Country,
-                                      sep = "-"))) %>%
-    ungroup(.)
-
-
-  return(credit_balance_df)
+#' Import eu_membership data
+get_eu_membership = function(){
 
 
 
 }
-#'
-#'
-#' This function imports indexes of financial trillemma (capital openness)
-#'
-#'  @import readxl
-#'
-#'  @import dplyr
-#'
-#'  @import stringr
-#'
 
+
+#' Import trilemma indices data
 get_trilemma_ind = function(file_path = NULL){
 
   if(is.null(file_path)){
@@ -207,7 +38,7 @@ get_trilemma_ind = function(file_path = NULL){
 
 }
 
-
+#' Import financial development data
 get_fin_dev_ind = function(){
 
   file_path = paste0(Sys.getenv("USERPROFILE"),
