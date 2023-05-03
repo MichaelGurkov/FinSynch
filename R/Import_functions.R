@@ -376,7 +376,7 @@ get_fin_crises_data_Nguen = function(file_path = NULL,
 
   if(is.null(file_path)){
 
-    file_path = paste0("C:\\Users\\Home",
+    file_path = paste0(Sys.getenv("USERPROFILE"),
                        "\\OneDrive - Bank Of Israel\\Data",
                        "\\Nguyen\\fin_crises_database.csv")
 
