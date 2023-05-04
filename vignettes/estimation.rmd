@@ -1,9 +1,105 @@
 ```{r estimation_libraries}
 
+library(here)
+
 library(stargazer)
 
 ```
 
+
+```{r define_reg_formula_list}
+
+control_vars = c("trade_gdp","fx_stab","fo_ind","gdp_usd")
+
+
+reg_formula_list = list(
+  baseline = paste(
+    "fin_synch ~ lag(bank_gdp,1)",
+    paste(control_vars,
+          collapse = "+"),
+    "country_pair:time_trend",
+    sep = "+"
+  ),
+  crises = paste(
+    "fin_synch ~ lag(bank_gdp,1) * crisis_ind",
+    paste(control_vars,
+          collapse = "+"),
+    "country_pair:time_trend",
+    sep = "+"
+  ),
+  full_spec = paste(
+    "fin_synch ~ lag(bank_gdp,1) * crisis_ind",
+    "lag(bank_gdp,1) * fd_ind",
+    "lag(bank_gdp,1) * euro_member",
+    paste(control_vars,
+          collapse = "+"),
+    "country_pair:time_trend",
+    sep = "+"
+  )
+)
+```
+
+
+```{r import_data}
+
+rmarkdown::render(here("vignettes","Import_Data.Rmd"),)
+
+```
+
+
+```{r process_data}
+
+rmarkdown::render(here("vignettes","Process_Data.Rmd"))
+
+```
+
+
+```{r eda_final_data}
+
+temp = country_pair_df %>% 
+  select(-c("country_pair","euro_member")) %>% 
+  pivot_longer(-year) %>% 
+  group_by(year, name) %>% 
+  summarise(num_complete = 1 - sum(is.na(value)) / length(value),
+            .groups = "drop")
+
+
+temp %>% 
+  ggplot(aes(year, name)) + 
+  geom_point(aes(alpha = num_complete, size = num_complete))
+
+```
+
+```{r eda_cycles_components}
+
+temp = map(c("share_price","house_price"), function(temp_name){
+  
+  temp_df = raw_data %>% 
+  pluck(temp_name)
+  
+  return(temp_df)
+
+  
+  
+  
+}) %>% 
+  reduce(full_join, by = c("country_code", "date"))
+
+temp = temp %>% 
+  left_join(raw_data$country_codes[,c("code","country")],
+            by = c("country_code" = "code")) %>% 
+  select(-country_code)
+
+temp %>% 
+  full_join(raw_data %>% 
+              pluck("total_credit"), by = c("country","date")) %>% 
+  pivot_longer(-c("country","date")) %>% 
+  ggplot(aes(date, country, color = !is.na(value))) + 
+  geom_point() + 
+  facet_wrap(~name)
+  
+
+```
 
 
 ```{r estimation}
@@ -35,69 +131,3 @@ sd_ratio_isr = sd(country_pair_df$bank_gdp[isr_ind]) / sd(country_pair_df$fin_sy
 
 ```
 
-
-```{r output_reg, include=FALSE}
-
-
-robust_se = map(reg_list, function(temp_model){
-  
-  temp_se = sqrt(diag(vcovHC(temp_model,cluster = "group")))
-  
-  return(temp_se)
-})
-
-star = stargazer(reg_list, header = FALSE,digits = 2,
-          label = "baseline",
-          # table.placement = "H",
-          title = paste0("Financial synchronization and banking integration: ",
-                         "\\newline panel specification"),
-          dep.var.caption = "Fin cycles synch",
-          add.lines = lines_str,
-          model.numbers = FALSE,
-          dep.var.labels.include = FALSE,
-          notes = estimation_table_notes,
-          notes.align = "l",
-          notes.append = FALSE,
-          se = robust_se,
-          keep = paste0("^",temp_names,"$"),
-          order = paste0("^",temp_names,"$"),
-          covariate.labels = temp_labels,
-          omit.stat = c("f","adj.rsq"))
-
-star = sub("\\textit{Note:}  & \\multicolumn{3}{l}{\\parbox[t]{8cm}{",
-                    "\\multicolumn{4}{l}{\\parbox[t]{15cm}{\\textit{Note:} ",
-                    star,fixed = TRUE)
-
-
-```
-
-
-```{r output_baseline_table, results='asis'}
-
-cat(star,sep = "\n")
-
-```
-
-
-Estimation results are shown in Table \ref{baseline}. The table starts with the baseline specification and then interaction variables are added going left to right.
-
-Banking linkages enter the equation with a negative sign, meaning that integration is associated with less synchronized cycles. However, in the baseline specification this result is not statistically significant, suggesting that in my sample the "risk absorber" feature is similar in magnitude to the "risk propagator" feature, thus rendering the final result inconclusive. 
-
-Introduction of the crisis indicator variable makes it possible to disentangle the opposite effects. We see that during banking crisis periods integration is associated with higher synchronization relative to the baseline case (the overall effect remains negative). Banking (and financial) crises are often contagious events that are being hard to contain locally, and thus produce common shocks that result in higher synchronization. Addition of the financial development indicators further enhances the results. In highly developed financial markets, integration is  also associated with higher synchronization relative to the baseline case.
-
-The findings with respect to crisis periods as well as highly developed financial
-markets are in line with the theory that suggests that the "risk propagator" feature is present in these settings and thus the synchronization should increase relative to the baseline.
-
-
-Coefficient analysis shows that the banking integration effect is economically significant. A change of one standard deviation in banking linkages is
-associated with a change of
-`r abs(round(coef_vec[names(coef_vec) == "lag(bank_gdp, 1)"] * sd_ratio,2))` 
-standard deviations in financial synchronization.
-During banking crises one standard deviation change in integration contributes
-`r abs(round(coef_vec[names(coef_vec) == "lag(bank_gdp, 1):crisis_ind"] * sd_ratio,2))` standard deviations to the synchronization. In highly developed financial markets, one standard deviation change in integration contributes
-`r abs(round(coef_vec[names(coef_vec) == "lag(bank_gdp, 1):fd_ind"] * sd_ratio,2))` standard deviations to the synchronization of financial cycles.
-
-Looking at the control variables, we see that FX stability contributes to the synchronization of financial cycles, possibly because stable FX facilitates
-cross-border financial transactions. Financial openness works in the same direction, however it is statistically significant only in the baseline specification.
-The economic size of the country pair measured by the sum of GDP also promotes
-the synchronization of financial cycles.

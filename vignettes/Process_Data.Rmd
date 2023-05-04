@@ -3,6 +3,8 @@
 
 library(lubridate)
 
+library(forcats)
+
 ```
 
 
@@ -57,47 +59,18 @@ controls_df = preprocess_controls(raw_data)
 
 country_pair_df = list(fin_synch_df, bank_link, trade_link,
                        crises_df,fin_dev_df, controls_df) %>% 
-  reduce(full_join, by = c("country_pair","year")) %>% 
-  mutate(across(c("crisis_ind", "fo_ind", "fx_stab","fd_ind"),
-                ~replace_na(.,0)))
+  reduce(full_join, by = c("country_pair","year"))
 
 country_pair_df = country_pair_df %>% 
-  filter(complete.cases(.)) %>% 
   filter(is.finite(trade_gdp)) %>% 
   mutate(gdp_usd = gdp_usd * 10 ^ -6)
 
-country_pair_df = country_pair_df %>% 
-  group_by(country_pair) %>% 
-  arrange(year) %>% 
-  mutate(time_trend = 1:length(country_pair)) %>% 
-  ungroup()
 
 country_pair_df = country_pair_df %>% 
   left_join(euro_memebership_df, by = "country_pair") %>% 
   mutate(euro_member = as_factor(euro_member))
 
-# rm(list = ls()[!ls()%in% c("country_pair_df","raw_data")])
-
-```
-
-```{r filter_country_pair, eval=FALSE}
-
-# temp_fin_reg = read_rds("C:\\Users\\internet\\Desktop\\temp_fin_reg.rds")
-# 
-# temp_fin_reg = temp_fin_reg %>% 
-#   select(year = Date, country_pair = CountryPair,
-#          bank_gdp, trade_gdp, Crises, FX_stab_tot, FO_ind_tot,
-#          Fin_synch, FD_tot) %>% 
-#   filter(complete.cases(.))
-
-
-# temp_fin_reg %>% 
-#   anti_join(country_pair_df, by = c("country_pair","year")) %>% 
-#   distinct()
-# 
-# country_pair_df = country_pair_df %>% 
-#   inner_join(temp_bank_gdp, by = c("country_pair","year")) %>% 
-#   filter(year >= 1980 & year <= 2013)
+rm(list = ls()[!ls()%in% c("country_pair_df","raw_data")])
 
 ```
 
