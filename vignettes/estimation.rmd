@@ -1,44 +1,16 @@
 ```{r estimation_libraries}
 
+library(tidyverse)
+
 library(here)
 
 library(stargazer)
 
+devtools::load_all()
+
 ```
 
-
-```{r define_reg_formula_list}
-
-control_vars = c("trade_gdp","fx_stab","fo_ind","gdp_usd")
-
-
-reg_formula_list = list(
-  baseline = paste(
-    "fin_synch ~ lag(bank_gdp,1)",
-    paste(control_vars,
-          collapse = "+"),
-    "country_pair:time_trend",
-    sep = "+"
-  ),
-  crises = paste(
-    "fin_synch ~ lag(bank_gdp,1) * crisis_ind",
-    paste(control_vars,
-          collapse = "+"),
-    "country_pair:time_trend",
-    sep = "+"
-  ),
-  full_spec = paste(
-    "fin_synch ~ lag(bank_gdp,1) * crisis_ind",
-    "lag(bank_gdp,1) * fd_ind",
-    "lag(bank_gdp,1) * euro_member",
-    paste(control_vars,
-          collapse = "+"),
-    "country_pair:time_trend",
-    sep = "+"
-  )
-)
-```
-
+# Import and process data
 
 ```{r import_data}
 
@@ -53,81 +25,329 @@ rmarkdown::render(here("vignettes","Process_Data.Rmd"))
 
 ```
 
+# Make country list
 
-```{r eda_final_data}
+```{r set_countries_list}
 
-temp = country_pair_df %>% 
-  select(-c("country_pair","euro_member")) %>% 
-  pivot_longer(-year) %>% 
-  group_by(year, name) %>% 
-  summarise(num_complete = 1 - sum(is.na(value)) / length(value),
-            .groups = "drop")
+countries_list = list(
+  oecd_countries = c(
+    "Australia",
+    "Austria",
+    "Belgium",
+    "Canada",
+    "Chile",
+    "Colombia",
+    "Costa_Rica",
+    "Czech_Republic",
+    "Denmark",
+    "Estonia",
+    "Finland",
+    "France",
+    "Germany",
+    "Greece",
+    "Hungary",
+    "Iceland",
+    "Ireland",
+    "Israel",
+    "Italy",
+    "Japan",
+    "Korea",
+    "Latvia",
+    "Lithuania",
+    "Luxembourg",
+    "Mexico",
+    "Netherlands",
+    "New_Zealand",
+    "Norway",
+    "Poland",
+    "Portugal",
+    "Slovak_Republic",
+    "Slovenia",
+    "Spain",
+    "Sweden",
+    "Switzerland",
+    "Turkey",
+    "United_Kingdom"
+    ,
+    "United_States"
+  ),
+  kpp_countries = c(
+    "Australia",
+    "Austria",
+    "Belgium",
+    "Canada",
+    "Switzerland",
+    "Germany",
+    "Denmark",
+    "Spain",
+    "Finland",
+    "France",
+    "United_Kingdom",
+    "Ireland",
+    "Italy",
+    "Japan",
+    "Netherlands",
+    "Portugal",
+    "Sweden",
+    "United_States"
+  ),
+  fsap_countries = c(
+    "Austria",
+    "Belgium",
+    "Germany",
+    "Denmark",
+    "Spain",
+    "France",
+    "Finland",
+    "Greece",
+    "Ireland",
+    "Italy",
+    "Luxembourg",
+    "Netherlands",
+    "Portugal",
+    "Sweden",
+    "United_Kingdom"
+  ),
+  eu_countries = c(
+    "Austria",
+    "Belgium",
+    "Bulgaria",
+    "Croatia",
+    "Cyprus",
+    "Czech_Republic",
+    "Denmark",
+    "Estonia",
+    "Finland",
+    "France",
+    "Germany",
+    "Greece",
+    "Hungary",
+    "Ireland",
+    "Italy",
+    "Latvia",
+    "Lithuania",
+    "Luxembourg",
+    "Malta",
+    "Netherlands",
+    "Poland",
+    "Portugal",
+    "Romania",
+    "Slovak_Republic",
+    "Slovenia",
+    "Spain",
+    "Sweden",
+    "United_Kingdom"
+  ),
+  euro_countries = c(
+    "Austria",
+    "Belgium",
+    "Cyprus",
+    "Estonia",
+    "Finland",
+    "France",
+    "Germany",
+    "Greece",
+    "Ireland",
+    "Italy",
+    "Latvia",
+    "Lithuania",
+    "Luxembourg",
+    "Malta",
+    "Netherlands",
+    "Portugal",
+    "Slovak_Republic",
+    "Slovenia",
+    "Spain"
+  )
+)
+
+countries_list = map(countries_list, function(temp_list){
+  
+  list = temp_list %>% 
+    str_replace_all(., "Turkey","Turkiye") %>% 
+    str_replace(., "Czech_Republic", "Czechia") %>% 
+    str_replace(., "Slovak_Republic", "Slovakia")
+  
+  
+  
+  
+})
 
 
-temp %>% 
-  ggplot(aes(year, name)) + 
-  geom_point(aes(alpha = num_complete, size = num_complete))
+country_pair_list = map(countries_list, function(temp_list){
+  
+  temp_df = temp_list %>% 
+    as_tibble() %>% 
+    expand(a = value, b = value) %>% 
+    filter(!a == b) %>% 
+    mutate(country_pair = paste_country_pair(a,b)) %>% 
+    select(country_pair) %>% 
+    distinct()
+  
+  
+  return(temp_df)
+  
+  
+  
+})
 
 ```
 
-```{r eda_cycles_components}
 
-temp = map(c("share_price","house_price"), function(temp_name){
+
+```{r define_reg_formula_list}
+
+control_vars = c("trade_gdp","fx_stab","fo_ind","gdp_usd")
+
+
+reg_formula_list = list(
+  baseline = paste(
+    "fin_synch_diff ~ lag(bank_gdp,1)",
+    paste(control_vars,
+          collapse = "+"),
+    sep = "+"
+  ),
+  crises = paste(
+    "fin_synch_diff ~ lag(bank_gdp,1) * crisis_ind",
+    paste(control_vars,
+          collapse = "+"),
+    sep = "+"
+  ),
+  full_spec = paste(
+    "fin_synch_diff ~ lag(bank_gdp,1) * crisis_ind",
+    "lag(bank_gdp,1) * fd_ind",
+    paste(control_vars,
+          collapse = "+"),
+    sep = "+"
+  )
+)
+
+rm(control_vars)
+
+# Add correlation
+
+cor_formula_list = map(c(5,8), function(temp_cor){
   
-  temp_df = raw_data %>% 
-  pluck(temp_name)
+  cor_formula_list = map(reg_formula_list, function(temp_formula){
   
-  return(temp_df)
+  new_formula = str_replace(temp_formula,"fin_synch_diff",
+                            paste0("fin_synch_corr_",temp_cor))
+  
+  
+})
+  
+  names(cor_formula_list) = paste(names(cor_formula_list),
+                                  temp_cor, sep = "_")
+  
+  return(cor_formula_list)
+}) %>% 
+  reduce(c)
+
+# Add trend
+
+trend_formula_list = map(reg_formula_list, function(temp_formula){
+  
+  new_formula = paste(temp_formula, "country_pair:time_trend", sep = "+")
+  
+  
+  
+})
+
+names(trend_formula_list) = paste0(names(trend_formula_list),"_time_trend")
+
+# Merge formula
+
+reg_formula_list = c(reg_formula_list, trend_formula_list, cor_formula_list)
+
+rm(trend_formula_list, cor_formula_list)
+
+reg_formula_list = map(names(country_pair_list),
+                       function(temp_name){
+  
+  countries_formula_list = map(reg_formula_list,
+                               function(temp_formula){
+  
+  temp_list = list(formula = temp_formula,
+                   index = country_pair_list[[temp_name]])
+
+  return(temp_list)
+  
+  
+})
+  
+  names(countries_formula_list) = paste(names(countries_formula_list),
+                                              temp_name, sep = "_")
+  
+  return(countries_formula_list)
 
   
   
   
 }) %>% 
-  reduce(full_join, by = c("country_code", "date"))
+  unlist(., recursive = FALSE)
 
-temp = temp %>% 
-  left_join(raw_data$country_codes[,c("code","country")],
-            by = c("country_code" = "code")) %>% 
-  select(-country_code)
-
-temp %>% 
-  full_join(raw_data %>% 
-              pluck("total_credit"), by = c("country","date")) %>% 
-  pivot_longer(-c("country","date")) %>% 
-  ggplot(aes(date, country, color = !is.na(value))) + 
-  geom_point() + 
-  facet_wrap(~name)
-  
+rm(countries_list, country_pair_list)
 
 ```
 
 
+# Estimation
+
 ```{r estimation}
 
-reg_list = map(reg_formula_list, function(temp_formula){
+
+reg_list = map(reg_formula_list, function(temp_list){
   
-  temp_model = plm(formula = formula(temp_formula),
-                   data = country_pair_df,
+  temp_formula = temp_list$formula
+  
+  temp_df = country_pair_df %>% 
+    inner_join(temp_list$index)
+  
+  temp_model = plm(formula = temp_formula,
+                   data = temp_df,
           model = "within",effect = "twoways",
           index = c("country_pair","year"))
+  
+  print(temp_formula)
+  
   return(temp_model)
   
 })
 
 
-coef_vec = coefficients(reg_list$full_spec)
+```
 
-coef_vec = coef_vec[names(coef_vec) %in% c("lag(bank_gdp, 1)",
-                                           "lag(bank_gdp, 1):crisis_ind",
-                                           "lag(bank_gdp, 1):fd_ind")]
+```{r plot_results}
 
-sd_ratio = sd(country_pair_df$bank_gdp) / sd(country_pair_df$fin_synch)
+extract_coeffs = function(temp_reg_obj, temp_name){
+  
+  temp_coefs = coefficients(temp_reg_obj)
+  
+  temp_sign = sign(temp_coefs[names(temp_coefs) %in% c("lag(bank_gdp, 1)",
+                                         "lag(bank_gdp, 1):crisis_ind",
+                                         "lag(bank_gdp, 1):fd_ind")])
+  
+  temp_df = tibble(names = names(temp_sign),
+                   !!sym(temp_name) := temp_sign)
+  
+ 
+}
 
-isr_ind = str_detect("Israel",country_pair_df$country_pair)
+temp_coef = map2(reg_list,names(reg_list), extract_coeffs) %>% 
+  reduce(full_join, by = "names")
 
-sd_ratio_isr = sd(country_pair_df$bank_gdp[isr_ind]) / sd(country_pair_df$fin_synch[isr_ind])
-
-
+temp_coef %>% 
+  pivot_longer(-names) %>% 
+  mutate(type = str_extract(name,"[a-z]+_countries$")) %>% 
+  mutate(name = str_remove(name, "_[a-z]+_countries$")) %>% 
+  mutate(type = str_remove(type, "_countries")) %>% 
+  group_by(name) %>% 
+  mutate(len = sum(!is.na(value))) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = names, y = reorder(name,len), color = as_factor(value))) + 
+  geom_point() + 
+  facet_wrap(~type) + 
+  xlab(NULL) + ylab(NULL)
 
 ```
 

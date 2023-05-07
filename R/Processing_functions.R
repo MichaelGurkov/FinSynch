@@ -202,9 +202,33 @@ preprocess_synch_df = function(cycles_df){
     left_join(cycles_df, by = c("counter_country" = "country","year"),
               suffix = c("_country","_counter_country")) %>%
     select(country_pair, year, contains("cycle")) %>%
-    filter(complete.cases(.)) %>%
-    mutate(fin_synch = -1 * abs(fin_cycle_country - fin_cycle_counter_country)) %>%
-    select(-starts_with("fin_cycle"))
+    filter(complete.cases(.))
+
+  cor_df = map(c(5,8), function(temp_corr){
+
+    temp_name = paste("fin_synch_corr",temp_corr, sep = "_")
+
+    temp_df = fin_synch_df %>%
+      group_by(country_pair) %>%
+      mutate(!!sym(temp_name) := slide2_dbl(fin_cycle_country,
+                                           fin_cycle_counter_country,
+                                           cor,
+                                           .before = temp_corr,
+                                           .complete = TRUE)) %>%
+      ungroup() %>%
+      select(-contains("fin_cycle"))
+
+    return(temp_df)
+
+
+  }) %>%
+    reduce(full_join, by = c("country_pair","year"))
+
+  fin_synch_df = fin_synch_df %>%
+    mutate(fin_synch_diff = -1 * abs(fin_cycle_country
+                                     - fin_cycle_counter_country)) %>%
+    select(-starts_with("fin_cycle")) %>%
+    full_join(cor_df, by = c("country_pair","year"))
 
   return(fin_synch_df)
 
