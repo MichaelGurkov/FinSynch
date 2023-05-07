@@ -28,11 +28,6 @@
 
 get_wdi_gdp = function(file_path){
 
-  country_codes_df = raw_data %>%
-    pluck("country_codes") %>%
-    filter(oecd_member == 1) %>%
-    select(country)
-
   raw_df = read_csv(file = file_path, show_col_types = FALSE, skip = 4)
 
 
@@ -42,7 +37,6 @@ get_wdi_gdp = function(file_path){
     mutate(country = str_replace(country, "Korea,_Rep\\.","Korea")) %>%
     mutate(country = str_replace(country, "Slovak_Republic","Slovakia")) %>%
     mutate(country = str_replace(country, "Turkey","Turkiye")) %>%
-    inner_join(country_codes_df, by = "country") %>%
     pivot_longer(-country,names_to = "year",values_to = "gdp_usd")
 
   df = df %>%

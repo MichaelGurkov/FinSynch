@@ -1,6 +1,8 @@
 
 ```{r load_libraries}
 
+library(slider)
+
 library(lubridate)
 
 library(forcats)
@@ -44,10 +46,9 @@ fin_dev_df = preprocess_fin_dev(raw_data)
 
 ```{r euro_membership}
 
-euro_memebership_df = calculate_euro_membership(raw_data)
+euro_membership_df = calculate_euro_membership(raw_data)
 
 ```
-
 
 ```{r controls}
 
@@ -67,8 +68,9 @@ country_pair_df = country_pair_df %>%
 
 
 country_pair_df = country_pair_df %>% 
-  left_join(euro_memebership_df, by = "country_pair") %>% 
-  mutate(euro_member = as_factor(euro_member))
+  group_by(country_pair) %>% 
+  mutate(time_trend = seq_along(year)) %>% 
+  ungroup()
 
 rm(list = ls()[!ls()%in% c("country_pair_df","raw_data")])
 
