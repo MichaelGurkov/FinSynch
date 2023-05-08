@@ -320,9 +320,7 @@ reg_list = map(reg_formula_list, function(temp_list){
 ```{r plot_results}
 
 extract_coeffs = function(temp_reg_obj, temp_name){
-  
 
-  
   temp_coefs = coefficients(temp_reg_obj)
   
   temp_significance = summary(temp_reg_obj)$coefficients[,4]
@@ -367,7 +365,6 @@ temp_coef %>%
              color = as_factor(value), shape = as_factor(significance))) + 
   geom_point() + 
   facet_wrap(~sample) + 
-  xlab(NULL) + ylab(NULL)
 
 ```
 
