@@ -321,32 +321,52 @@ reg_list = map(reg_formula_list, function(temp_list){
 
 extract_coeffs = function(temp_reg_obj, temp_name){
   
+
+  
   temp_coefs = coefficients(temp_reg_obj)
   
-  temp_sign = sign(temp_coefs[names(temp_coefs) %in% c("lag(bank_gdp, 1)",
-                                         "lag(bank_gdp, 1):crisis_ind",
-                                         "lag(bank_gdp, 1):fd_ind")])
+  temp_significance = summary(temp_reg_obj)$coefficients[,4]
   
-  temp_df = tibble(names = names(temp_sign),
-                   !!sym(temp_name) := temp_sign)
+  temp_sign = sign(temp_coefs)
+  
+  temp_ind = names(temp_coefs) %in% c("lag(bank_gdp, 1)",
+                                      "lag(bank_gdp, 1):crisis_ind",
+                                      "lag(bank_gdp, 1):fd_ind")
+  
+  
+  
+  temp_df = tibble(var_name = names(temp_sign)[temp_ind],
+                   value = temp_sign[temp_ind],
+                   significance = temp_significance[temp_ind],
+                   model = temp_name) %>% 
+    mutate(significance = if_else(significance < 0.1,
+                                  "significant", "non_significant"))
+  
+  return(temp_df)
   
  
 }
 
 temp_coef = map2(reg_list,names(reg_list), extract_coeffs) %>% 
-  reduce(full_join, by = "names")
+  list_rbind()
+
+# temp_coef %>% 
+#   write_csv("C:\\Users\\internet\\Desktop\\full_fin_cycle.csv")
 
 temp_coef %>% 
-  pivot_longer(-names) %>% 
-  mutate(type = str_extract(name,"[a-z]+_countries$")) %>% 
-  mutate(name = str_remove(name, "_[a-z]+_countries$")) %>% 
-  mutate(type = str_remove(type, "_countries")) %>% 
-  group_by(name) %>% 
-  mutate(len = sum(!is.na(value))) %>% 
-  ungroup() %>% 
-  ggplot(aes(x = names, y = reorder(name,len), color = as_factor(value))) + 
+  mutate(var_name = case_match(var_name,
+                    "lag(bank_gdp, 1)" ~ "bank_gdp",
+                    "lag(bank_gdp, 1):crisis_ind" ~ "crises effect",
+                    "lag(bank_gdp, 1):fd_ind" ~ "FD effect")) %>% 
+  extract(model, into = c("model","sample"), "(.*)_([a-z]+_countries$)") %>% 
+  mutate(sample = str_remove(sample, "_countries")) %>%  
+  # mutate(model = factor(model,
+  #                       levels = c("full_spec","crises","baseline"))) %>% 
+  filter(complete.cases(.)) %>% 
+  ggplot(aes(x = var_name, y = model, 
+             color = as_factor(value), shape = as_factor(significance))) + 
   geom_point() + 
-  facet_wrap(~type) + 
+  facet_wrap(~sample) + 
   xlab(NULL) + ylab(NULL)
 
 ```

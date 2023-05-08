@@ -144,7 +144,7 @@ preprocess_fin_cycle = function(raw_data){
     mutate(country_code = str_replace_all(country_code,"FYUG-SVN","SVN"))
 
 
-  country_df = raw_data[c("house_price","share_price")] %>%
+  country_df = raw_data[c("house_price")] %>%
     reduce(inner_join, by = c("country_code","date")) %>%
     left_join(codes, by = "country_code") %>%
     select(-country_code) %>%
