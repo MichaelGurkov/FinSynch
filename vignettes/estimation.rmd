@@ -201,21 +201,30 @@ control_vars = c("trade_gdp","fx_stab","fo_ind","gdp_usd")
 
 
 reg_formula_list = list(
-  baseline = paste(
-    "fin_synch_diff ~ lag(bank_gdp,1)",
+  fd_spec = paste(
+    "fin_synch_diff ~ lag(bank_gdp,1) * crisis_ind",
+    "lag(bank_gdp,1) * fd_ind",
     paste(control_vars,
           collapse = "+"),
     sep = "+"
   ),
-  crises = paste(
+  euro_spec = paste(
     "fin_synch_diff ~ lag(bank_gdp,1) * crisis_ind",
+    "lag(bank_gdp,1) * euro_member",
+    paste(control_vars,
+          collapse = "+"),
+    sep = "+"
+  ),
+  total_spec = paste(
+    "fin_synch_diff ~ lag(bank_gdp,1) * crisis_ind",
+    "lag(bank_gdp,1) * fd_ind",
+    "lag(bank_gdp,1) * euro_member",
     paste(control_vars,
           collapse = "+"),
     sep = "+"
   ),
   full_spec = paste(
-    "fin_synch_diff ~ lag(bank_gdp,1) * crisis_ind",
-    "lag(bank_gdp,1) * fd_ind",
+    "fin_synch_diff ~ lag(bank_gdp,1) * crisis_ind * euro_member",
     paste(control_vars,
           collapse = "+"),
     sep = "+"
@@ -245,51 +254,12 @@ cor_formula_list = map(c(5,8), function(temp_cor){
 
 
 
-
-# Add trend
-
-trend_formula_list = map(reg_formula_list, function(temp_formula){
-  
-  new_formula = paste(temp_formula, "country_pair:time_trend", sep = "+")
-  
-  
-  
-})
-
-names(trend_formula_list) = paste0(names(trend_formula_list),"_time_trend")
-
 # Merge formula
 
-reg_formula_list = c(reg_formula_list, trend_formula_list, cor_formula_list)
+reg_formula_list = c(reg_formula_list, cor_formula_list)
 
-rm(trend_formula_list, cor_formula_list)
+rm(cor_formula_list)
 
-reg_formula_list = map(names(country_pair_list),
-                       function(temp_name){
-  
-  countries_formula_list = map(reg_formula_list,
-                               function(temp_formula){
-  
-  temp_list = list(formula = temp_formula,
-                   index = country_pair_list[[temp_name]])
-
-  return(temp_list)
-  
-  
-})
-  
-  names(countries_formula_list) = paste(names(countries_formula_list),
-                                              temp_name, sep = "_")
-  
-  return(countries_formula_list)
-
-  
-  
-  
-}) %>% 
-  unlist(., recursive = FALSE)
-
-rm(countries_list, country_pair_list)
 
 ```
 
@@ -301,18 +271,16 @@ rm(countries_list, country_pair_list)
 
 reg_list = map(reg_formula_list, function(temp_list){
   
-  temp_formula = temp_list$formula
+  temp_formula = temp_list
   
-  temp_df = country_pair_df %>% 
-    inner_join(temp_list$index, by = "country_pair")
+  # temp_df = country_pair_df %>% 
+  #   inner_join(temp_list$index, by = "country_pair")
   
   temp_model = plm(formula = temp_formula,
-                   data = temp_df,
+                   data = country_pair_df,
           model = "within",effect = "twoways",
           index = c("country_pair","year"))
-  
-  print(temp_formula)
-  
+
   return(temp_model)
   
 })
@@ -336,7 +304,9 @@ extract_coeffs = function(temp_reg_obj, temp_name){
   
   temp_ind = names(temp_coeffs) %in% c("lag(bank_gdp, 1)",
                                       "lag(bank_gdp, 1):crisis_ind",
-                                      "lag(bank_gdp, 1):fd_ind")
+                                      "lag(bank_gdp, 1):fd_ind",
+                                      "lag(bank_gdp, 1):euro_member",
+                                      "crisis_ind:euro_member")
   
   temp_df = tibble(var_name = names(temp_sign)[temp_ind],
                    value = temp_sign[temp_ind],
@@ -361,10 +331,12 @@ temp_coef %>%
   mutate(var_name = case_match(var_name,
                     "lag(bank_gdp, 1)" ~ "bank_gdp",
                     "lag(bank_gdp, 1):crisis_ind" ~ "crises effect",
-                    "lag(bank_gdp, 1):fd_ind" ~ "FD effect")) %>% 
-  extract(model, into = c("model","sample"), "(.*)_([a-z]+_countries$)") %>% 
-  mutate(sample = str_remove(sample, "_countries")) %>%  
-  filter(complete.cases(.)) %>% 
+                    "lag(bank_gdp, 1):euro_member" ~ "euro effect",
+                    "crisis_ind:euro_member" ~ "crises euro effect",
+                    "lag(bank_gdp, 1):fd_ind" ~ "FD effect")) %>%
+  # extract(model, into = c("model","sample"), "(.*)_([a-z]+_countries$)") %>% 
+  # mutate(sample = str_remove(sample, "_countries")) %>%  
+  # filter(complete.cases(.)) %>% 
   filter(significance == "significant") %>% 
   ggplot(aes(x = var_name, y = model, 
              color = as_factor(value))) + 
