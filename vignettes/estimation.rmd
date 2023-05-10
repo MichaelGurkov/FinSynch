@@ -243,6 +243,9 @@ cor_formula_list = map(c(5,8), function(temp_cor){
 }) %>% 
   reduce(c)
 
+
+
+
 # Add trend
 
 trend_formula_list = map(reg_formula_list, function(temp_formula){
@@ -301,7 +304,7 @@ reg_list = map(reg_formula_list, function(temp_list){
   temp_formula = temp_list$formula
   
   temp_df = country_pair_df %>% 
-    inner_join(temp_list$index)
+    inner_join(temp_list$index, by = "country_pair")
   
   temp_model = plm(formula = temp_formula,
                    data = temp_df,
@@ -320,24 +323,26 @@ reg_list = map(reg_formula_list, function(temp_list){
 ```{r plot_results}
 
 extract_coeffs = function(temp_reg_obj, temp_name){
-
-  temp_coefs = coefficients(temp_reg_obj)
   
-  temp_significance = summary(temp_reg_obj)$coefficients[,4]
+  temp_coeffs = coefficients(temp_reg_obj)
   
-  temp_sign = sign(temp_coefs)
+  temp_se = sqrt(diag(vcovHC(temp_reg_obj,cluster = "group")))
   
-  temp_ind = names(temp_coefs) %in% c("lag(bank_gdp, 1)",
+  if(!length(temp_coeffs) == length(temp_se)){browser()}
+  
+  temp_significance = abs(temp_coeffs / temp_se)
+  
+  temp_sign = sign(temp_coeffs)
+  
+  temp_ind = names(temp_coeffs) %in% c("lag(bank_gdp, 1)",
                                       "lag(bank_gdp, 1):crisis_ind",
                                       "lag(bank_gdp, 1):fd_ind")
-  
-  
   
   temp_df = tibble(var_name = names(temp_sign)[temp_ind],
                    value = temp_sign[temp_ind],
                    significance = temp_significance[temp_ind],
                    model = temp_name) %>% 
-    mutate(significance = if_else(significance < 0.1,
+    mutate(significance = if_else(significance > 2,
                                   "significant", "non_significant"))
   
   return(temp_df)
@@ -345,7 +350,8 @@ extract_coeffs = function(temp_reg_obj, temp_name){
  
 }
 
-temp_coef = map2(reg_list,names(reg_list), extract_coeffs) %>% 
+temp_coef = pmap(list(reg_list,names(reg_list)),
+                 extract_coeffs) %>% 
   list_rbind()
 
 # temp_coef %>% 
@@ -358,13 +364,14 @@ temp_coef %>%
                     "lag(bank_gdp, 1):fd_ind" ~ "FD effect")) %>% 
   extract(model, into = c("model","sample"), "(.*)_([a-z]+_countries$)") %>% 
   mutate(sample = str_remove(sample, "_countries")) %>%  
-  # mutate(model = factor(model,
-  #                       levels = c("full_spec","crises","baseline"))) %>% 
   filter(complete.cases(.)) %>% 
+  filter(significance == "significant") %>% 
   ggplot(aes(x = var_name, y = model, 
-             color = as_factor(value), shape = as_factor(significance))) + 
+             color = as_factor(value))) + 
   geom_point() + 
+  xlab(NULL) + ylab(NULL) + 
   facet_wrap(~sample) + 
+  theme(legend.position = "none")
 
 ```
 

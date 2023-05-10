@@ -8,41 +8,40 @@ calculate_euro_membership = function(raw_data){
     select(-code) %>%
     filter(oecd_member == 1) %>%
     select(-oecd_member) %>%
-    mutate(euro_member = replace_na(euro_member,0))
+    mutate(across(contains("euro"), ~replace_na(.,0)))
 
-  euro_memebership_df = classification_df %>%
+  country_pairs_df = classification_df %>%
     select(country) %>%
     expand(country, country_counter = country) %>%
     filter(!country == country_counter) %>%
     mutate(country_pair = paste_country_pair(country, country_counter)) %>%
     distinct(country_pair,.keep_all = TRUE)
 
-  euro_memebership_df = euro_memebership_df %>%
+  euro_membership_df = country_pairs_df %>%
     left_join(classification_df, by = "country") %>%
     left_join(classification_df, by = c("country_counter" = "country"),
               suffix = c("","_counter")) %>%
-    mutate(euro_member = euro_member + euro_member_counter) %>%
-    select(country_pair, euro_member)
+    rowwise() %>%
+    mutate(euro_member = min(c(euro_member,euro_member_counter))) %>%
+    mutate(year = max(c(euro_year,euro_year_counter))) %>%
+    mutate(year = as.character(year * euro_member)) %>%
+    ungroup() %>%
+    select(country_pair, euro_member, year)
 
 
-  return(euro_memebership_df)
+  return(euro_membership_df)
 
 }
 
 
 
 
-normalize_by_gdp = function(raw_df, deflate_data_inner){
+normalize_by_gdp = function(lbs_df, deflate_data_inner){
 
   if(deflate_data_inner){
 
-    cpi_df = raw_data$cpi
-
     gdp_df = raw_data$gdp_constant
 
-    raw_df = raw_df %>%
-      left_join(cpi_df, by = "date") %>%
-      mutate(value = value / us_cpi)
 
   } else {
 
@@ -52,14 +51,14 @@ normalize_by_gdp = function(raw_df, deflate_data_inner){
   }
 
 
-  raw_df_gdp = raw_df %>%
+  lbs_df_gdp = lbs_df %>%
     left_join(gdp_df,
               by = c("country" = "country", "year")) %>%
     left_join(gdp_df,
               by = c("counterparty_country" = "country", "year"),
               suffix = c("_country","_counterparty"))
 
-  raw_df_normalized = raw_df_gdp %>%
+  lbs_df_normalized = lbs_df_gdp %>%
     mutate(gdp_sum = gdp_usd_country + gdp_usd_counterparty) %>%
     mutate(value_gdp = value / gdp_sum) %>%
     group_by(country_pair, year) %>%
@@ -67,7 +66,7 @@ normalize_by_gdp = function(raw_df, deflate_data_inner){
 
 
 
-  return(raw_df_normalized)
+  return(lbs_df_normalized)
 
 
 
@@ -83,21 +82,35 @@ normalize_by_gdp = function(raw_df, deflate_data_inner){
 
 preprocess_lbs_data = function(raw_data, deflate_data = FALSE){
 
-  lbs_df = raw_data$bis_lbs %>%
-    select(-balance_sheet_position) %>%
+
+  if(deflate_data){
+
+      lbs_df = raw_data$bis_lbs %>%
+      select(-balance_sheet_position) %>%
+      rename(value = balance, country = reporting_country) %>%
+      left_join(raw_data$cpi, by = "date") %>%
+      mutate(value = value / us_cpi * 100) %>%
+      select(-us_cpi)
+
+  } else {
+
+    lbs_df = raw_data$bis_lbs %>%
+      select(-balance_sheet_position) %>%
+      rename(value = balance, country = reporting_country)
+
+
+  }
+
+  lbs_df = lbs_df %>%
     filter(quarter(date) == 4) %>%
     mutate(year = as.character(year(date))) %>%
-    select(-date) %>%
-    rename(value = balance, country = reporting_country)
+    select(-date)
 
   lbs_normalized = normalize_by_gdp(lbs_df,
                                     deflate_data_inner = deflate_data) %>%
     rename(bank_gdp = value_gdp)
 
   return(lbs_normalized)
-
-
-
 
 
 }
@@ -130,7 +143,7 @@ preprocess_imf_trade_data = function(raw_data, deflate_data = FALSE){
 
 #' This function calculates the financial cycle for countries
 #'
-preprocess_fin_cycle = function(raw_data){
+preprocess_fin_cycle = function(raw_data,fin_cycle_comps){
 
   codes = raw_data %>%
     pluck("country_codes") %>%
@@ -144,7 +157,7 @@ preprocess_fin_cycle = function(raw_data){
     mutate(country_code = str_replace_all(country_code,"FYUG-SVN","SVN"))
 
 
-  country_df = raw_data[c("house_price")] %>%
+  country_df = raw_data[fin_cycle_comps] %>%
     reduce(inner_join, by = c("country_code","date")) %>%
     left_join(codes, by = "country_code") %>%
     select(-country_code) %>%
@@ -154,7 +167,7 @@ preprocess_fin_cycle = function(raw_data){
 
   cycles_df = country_df %>%
     left_join(raw_data$cpi, by = "date") %>%
-    mutate(total_credit = total_credit / us_cpi) %>%
+    mutate(across(-c("country","date"), ~. / us_cpi) * 100) %>%
     select(-us_cpi) %>%
     filter(quarter(date) == 4) %>%
     mutate(year = as.character(year(date))) %>%
