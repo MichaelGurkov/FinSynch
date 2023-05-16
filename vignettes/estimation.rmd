@@ -342,7 +342,6 @@ temp_coef %>%
              color = as_factor(value))) + 
   geom_point() + 
   xlab(NULL) + ylab(NULL) + 
-  facet_wrap(~sample) + 
   theme(legend.position = "none")
 
 ```
