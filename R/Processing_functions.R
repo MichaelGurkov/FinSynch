@@ -12,21 +12,29 @@ calculate_euro_membership = function(raw_data){
 
   country_pairs_df = classification_df %>%
     select(country) %>%
-    expand(country, country_counter = country) %>%
+    expand(country, country_counter = country, year = 1978:2019) %>%
     filter(!country == country_counter) %>%
     mutate(country_pair = paste_country_pair(country, country_counter)) %>%
-    distinct(country_pair,.keep_all = TRUE)
+    distinct(country_pair, year,.keep_all = TRUE)
 
-  euro_membership_df = country_pairs_df %>%
-    left_join(classification_df, by = "country") %>%
-    left_join(classification_df, by = c("country_counter" = "country"),
+   euro_membership_df = country_pairs_df %>%
+     group_by(country_pair) %>%
+     arrange(year) %>%
+     left_join(classification_df,
+              by = c("country","year" = "euro_year")) %>%
+     fill(euro_member,.direction = "down") %>%
+     left_join(classification_df,
+               by = c("country_counter" = "country",
+                      "year" = "euro_year"),
               suffix = c("","_counter")) %>%
-    rowwise() %>%
-    mutate(euro_member = min(c(euro_member,euro_member_counter))) %>%
-    mutate(year = max(c(euro_year,euro_year_counter))) %>%
-    mutate(year = as.character(year * euro_member)) %>%
-    ungroup() %>%
-    select(country_pair, euro_member, year)
+     fill(euro_member_counter,.direction = "down") %>%
+     ungroup() %>%
+     mutate(across(contains("member"), ~replace_na(.,0))) %>%
+     rowwise() %>%
+     mutate(euro_member = min(c(euro_member,euro_member_counter))) %>%
+     ungroup() %>%
+     mutate(year = as.character(year)) %>%
+     select(country_pair, euro_member, year)
 
 
   return(euro_membership_df)

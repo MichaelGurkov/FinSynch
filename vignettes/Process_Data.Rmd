@@ -66,15 +66,12 @@ country_pair_df = list(fin_synch_df, bank_link, trade_link,
   reduce(full_join, by = c("country_pair","year"))
 
 country_pair_df = country_pair_df %>% 
+  mutate(crisis_ind = replace_na(crisis_ind,0))
+
+country_pair_df = country_pair_df %>% 
   filter(is.finite(trade_gdp)) %>% 
   mutate(gdp_usd = gdp_usd * 10 ^ -6)
 
-country_pair_df = country_pair_df %>% 
-  group_by(country_pair) %>% 
-  arrange(year) %>% 
-  fill(euro_member,.direction = "down") %>% 
-  mutate(euro_member = replace_na(euro_member,0)) %>% 
-  ungroup()
 
 
 country_pair_df = country_pair_df %>% 
